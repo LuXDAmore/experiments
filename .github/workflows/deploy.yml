@@ -1,0 +1,65 @@
+# https://github.com/actions/deploy-pages#usage
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: corepack enable
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - run: npx nypm install --ignore-scripts
+        env:
+          NUXT_APP_BASE_URL: /gtl-fronend/
+          NUXT_APP_ENV: production
+          NUXT_NAME: Torre Libraria - Unibo
+          NUXT_DESCRIPTION: Library management system | UniBo
+          NUXT_URL: https://twoteamit.github.com/gtl-fronend
+          NUXT_COLORS: '#be2912,#103b5e'
+          NUXT_API_HTTPS_URL: https://nonplausible-curledly-kendrick.ngrok-free.dev
+          NUXT_API_HTTP_URL: https://nonplausible-curledly-kendrick.ngrok-free.dev
+          NUXT_API_SWAGGER_URL: https://nonplausible-curledly-kendrick.ngrok-free.dev/swagger/v1/swagger.json
+          NUXT_PUBLIC_OPEN_FETCH_UNIBO_BASE_URL: https://nonplausible-curledly-kendrick.ngrok-free.dev
+          NUXT_PUBLIC_RSA_KEY: -----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAspfJh5IFZBNIaK3xot+vn6UVMrvAo3zrvJ9Bj1GL0DA4WpVidb2ToXnh/X8wXNrZ69c9BNfE1ms21tSG+V74JwevGgZh7tKWznwG0hA/je1lCxKQqPqrVJAG90pvt0cYXBAxyQSlSdI0Q9LvZb8nQ+eohjohkS1SC1KzHWr3LR1Y8IGzfln6VklhqKxiMAwHtJ6Da98PbypxeZxDuNaXNUdci8XEGOGRlHuQHVktp7IGL6jthqG1DSb+pRjOlugj3/lBvv9xIrYciaZTG16W4ZL2YIy/PQP3bZJvyoF2S8EpmJrGQDkzgNz9WZbbRZ4wuCkA+fGckMNfvKmC+auURwIDAQAB-----END PUBLIC KEY-----
+          NUXT_SECRET: sddu4th/TS4e/tJjcdzJp60kzdHn/k2544MPr3SetS7/PKziDj2vmfkTuSgoFfwkE/TfVjr1rwbwHWQp6aaklrH2LnX+bm3mBdBECxjLads+/Q7ksW82yhEw+pBzniyU68Gd0DqOIHs=
+          NUXT_SESSION_PASSWORD: a2b90be171cd4853bac03aefeabdd4f1
+      - run: pnpm run generate:testing
+        env:
+          NITRO_PRESET: github_pages
+          NUXT_APP_BASE_URL: /gtl-fronend/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./.output/public
+
+  # Deployment job
+  deploy:
+    # Add a dependency to the build job
+    needs: build
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github_pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
