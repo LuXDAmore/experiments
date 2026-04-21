@@ -1,0 +1,29 @@
+{
+  "name": "@experiments/experiment-01-chromatic",
+  "version": "1.0.0",
+  "description": "CHROMATIC — A scroll-driven photographic journey through color, light, and motion. Built with ThreeJS, GSAP, Lenis, and TailwindCSS.",
+  "main": "index.html",
+  "scripts": {
+    "serve": "npx serve . -p 3001 --no-clipboard",
+    "dev": "npx serve . -p 3001 --no-clipboard",
+    "preview": "npx serve . -p 3001 --no-clipboard"
+  },
+  "keywords": [
+    "threejs",
+    "gsap",
+    "lenis",
+    "photography",
+    "scroll",
+    "animation",
+    "portfolio",
+    "webgl",
+    "tailwindcss"
+  ],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.169.0",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.14"
+  }
+}

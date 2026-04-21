@@ -1,0 +1,30 @@
+{
+  "name": "@experiments/experiment-02-vortex",
+  "version": "1.0.0",
+  "description": "VORTEX — An abstract 3D scroll journey through geometric space. Built with ThreeJS (bloom post-processing), GSAP ScrollTrigger, Lenis, and TailwindCSS.",
+  "main": "index.html",
+  "scripts": {
+    "serve": "npx serve . -p 3002 --no-clipboard",
+    "dev": "npx serve . -p 3002 --no-clipboard",
+    "preview": "npx serve . -p 3002 --no-clipboard"
+  },
+  "keywords": [
+    "threejs",
+    "gsap",
+    "lenis",
+    "3d",
+    "webgl",
+    "scroll",
+    "animation",
+    "portfolio",
+    "bloom",
+    "postprocessing"
+  ],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.169.0",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.14"
+  }
+}

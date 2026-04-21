@@ -1,0 +1,26 @@
+{
+  "name": "experiments",
+  "version": "1.0.0",
+  "description": "A monorepo of interactive frontend experiments combining ThreeJS, GSAP, Lenis and MotionDev",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "preview": "npm run preview --workspaces --if-present",
+    "serve:01": "npm run serve --workspace=packages/experiment-01",
+    "serve:02": "npm run serve --workspace=packages/experiment-02"
+  },
+  "keywords": [
+    "threejs",
+    "gsap",
+    "lenis",
+    "motion",
+    "portfolio",
+    "scroll-animation",
+    "webgl"
+  ],
+  "author": "LuXDAmore",
+  "license": "MIT"
+}

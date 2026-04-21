@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CHROMATIC — A scroll-driven photographic journey through color, light, and motion.">
+  <meta name="theme-color" content="#000000">
+  <title>CHROMATIC — Experiment 01</title>
+
+  <!-- THREE.js ImportMap — must appear before any type="module" script -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- TailwindCSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (window.tailwind) {
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+              mono: ['"Space Mono"', 'monospace']
+            }
+          }
+        }
+      };
+    }
+  </script>
+
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --bg:     #000;
+      --fg:     #fff;
+      --pink:   #FF006E;
+      --cyan:   #00F5FF;
+      --yellow: #FFE600;
+      --green:  #39FF14;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { overflow-x: hidden; scroll-behavior: auto; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Hide custom cursor on touch/coarse devices */
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-dot, #cursor-ring { display: none !important; }
+    }
+
+    /* ── Custom cursor ── */
+    #cursor-dot {
+      position: fixed;
+      top: 0; left: 0;
+      width: 8px; height: 8px;
+      background: var(--pink);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .2s, height .2s, background .2s;
+    }
+
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 44px; height: 44px;
+      border: 1.5px solid rgba(255,255,255,.35);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .25s ease, height .25s ease, border-color .25s ease;
+    }
+
+    body.is-hovering #cursor-ring {
+      width: 64px; height: 64px;
+      border-color: var(--pink);
+    }
+
+    /* ── ThreeJS canvas ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Content wrapper ── */
+    .content { position: relative; z-index: 1; }
+
+    /* ── HERO ── */
+    .hero {
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 20px;
+      position: relative;
+    }
+
+    .hero__label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .32em;
+      color: var(--pink);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      opacity: 0;
+    }
+
+    .hero__title {
+      font-size: clamp(60px, 14vw, 200px);
+      font-weight: 800;
+      line-height: .88;
+      letter-spacing: -.03em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      overflow: hidden;
+      display: block;
+    }
+
+    .hero__title .char {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .hero__sub {
+      font-size: clamp(13px, 1.5vw, 17px);
+      font-weight: 300;
+      color: rgba(255,255,255,.5);
+      max-width: 400px;
+      line-height: 1.75;
+      opacity: 0;
+    }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      opacity: 0;
+    }
+
+    .hero__scroll-line {
+      width: 1px;
+      height: 56px;
+      background: linear-gradient(to bottom, rgba(255,255,255,.35), transparent);
+      animation: scrollPulse 2.2s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      60%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
+    }
+
+    /* ── COUNT SECTION ── */
+    .count-section {
+      min-height: 100svh;
+      display: flex;
+      align-items: center;
+      padding: 80px clamp(24px, 8vw, 120px);
+    }
+
+    .count-number {
+      font-size: clamp(120px, 28vw, 440px);
+      font-weight: 800;
+      line-height: .82;
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--pink) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: block;
+    }
+
+    .count-label {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(16px, 4vw, 52px);
+      color: rgba(255,255,255,.12);
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .count-divider {
+      width: 48px; height: 2px;
+      background: var(--yellow);
+      margin: 40px 0;
+    }
+
+    .count-text {
+      font-size: clamp(13px, 1.3vw, 16px);
+      color: rgba(255,255,255,.4);
+      line-height: 1.9;
+      max-width: 460px;
+    }
+
+    /* ── HORIZONTAL GALLERY ── */
+    .h-gallery {
+      height: 100svh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .h-gallery__label {
+      position: absolute;
+      top: 36px;
+      left: clamp(24px, 8vw, 120px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.3);
+      text-transform: uppercase;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .h-gallery__track {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      height: 100%;
+      padding: 0 clamp(24px, 8vw, 120px);
+      width: max-content;
+    }
+
+    .photo-card {
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+      background: #0d0d0d;
+    }
+
+    .photo-card--portrait  { width: 220px; height: 300px; }
+    .photo-card--landscape { width: 380px; height: 240px; }
+    .photo-card--square    { width: 260px; height: 260px; }
+    .photo-card--tall      { width: 200px; height: 360px; }
+    .photo-card--wide      { width: 440px; height: 270px; }
+
+    .photo-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform .7s cubic-bezier(.25,.46,.45,.94);
+    }
+
+    .photo-card:hover img { transform: scale(1.08); }
+
+    .photo-card__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.72) 0%, transparent 55%);
+      opacity: 0;
+      transition: opacity .4s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+    }
+
+    .photo-card:hover .photo-card__overlay { opacity: 1; }
+
+    .photo-card__num {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: var(--cyan);
+    }
+
+    .photo-card__tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .2em;
+      color: rgba(255,255,255,.5);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── FEATURED SECTION ── */
+    .featured-section {
+      padding: 130px clamp(24px, 8vw, 120px);
+    }
+
+    .section-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: var(--yellow);
+      text-transform: uppercase;
+      margin-bottom: 80px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .section-eyebrow::before {
+      content: '';
+      display: block;
+      width: 40px; height: 1px;
+      background: var(--yellow);
+    }
+
+    .featured-item {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(40px, 6vw, 100px);
+      align-items: center;
+      margin-bottom: 130px;
+      opacity: 0;
+      transform: translateY(60px);
+    }
+
+    .featured-item:last-child { margin-bottom: 0; }
+
+    .featured-item:nth-child(even) .feat-img  { order: 2; }
+    .featured-item:nth-child(even) .feat-copy { order: 1; }
+
+    .feat-img {
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+    }
+
+    .feat-img img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      will-change: transform;
+      transition: transform .8s ease;
+    }
+
+    .feat-img:hover img { transform: scale(1); }
+
+    .feat-copy { padding: 16px 0; }
+
+    .feat-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: var(--pink);
+      margin-bottom: 24px;
+    }
+
+    .feat-title {
+      font-size: clamp(32px, 4vw, 68px);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: -.025em;
+      margin-bottom: 28px;
+    }
+
+    .feat-desc {
+      font-size: clamp(13px, 1.2vw, 15px);
+      color: rgba(255,255,255,.42);
+      line-height: 1.9;
+      max-width: 360px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 60px clamp(24px, 8vw, 120px);
+      border-top: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-brand {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+
+    .footer-brand em { color: var(--pink); font-style: normal; }
+
+    .footer-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: rgba(255,255,255,.22);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .featured-item {
+        grid-template-columns: 1fr;
+      }
+      .featured-item:nth-child(even) .feat-img  { order: 1; }
+      .featured-item:nth-child(even) .feat-copy { order: 2; }
+    }
+
+    /* ── Accessibility: reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+      .hero__title .char { transform: none !important; }
+      .hero__label, .hero__sub, .hero__scroll { opacity: 1 !important; }
+      .featured-item { opacity: 1 !important; transform: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Custom cursor (hidden on touch screens via CSS) -->
+  <div id="cursor-dot"  aria-hidden="true"></div>
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- ThreeJS background canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════════════ -->
+  <div class="content">
+
+    <!-- ── HERO ── -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <span class="hero__label" aria-hidden="true">Experiment No. 01</span>
+      <h1 class="hero__title" id="hero-heading">CHROMATIC</h1>
+      <p class="hero__sub">
+        A scroll-driven photographic journey through color, light, and motion.
+      </p>
+      <div class="hero__scroll" aria-hidden="true">
+        <span>SCROLL</span>
+        <div class="hero__scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- ── COUNT ── -->
+    <section class="count-section" aria-label="Gallery overview — 60 photographs">
+      <div>
+        <span class="count-number" aria-label="60 frames">60</span>
+        <div class="count-label">FRAMES</div>
+        <div class="count-divider"></div>
+        <p class="count-text">
+          Each image is a moment suspended in time — an intersection of light
+          and shadow, color and form, stillness and motion. A visual diary of
+          places, textures, and transient phenomena.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── HORIZONTAL GALLERY ── -->
+    <section class="h-gallery" id="h-gallery" aria-label="Horizontal photo gallery — 60 images">
+      <span class="h-gallery__label" aria-hidden="true">← DRAG TO EXPLORE →</span>
+      <div class="h-gallery__track" id="gallery-track">
+        <!-- Populated by JavaScript -->
+      </div>
+    </section>
+
+    <!-- ── FEATURED WORKS ── -->
+    <section class="featured-section" aria-label="Selected works">
+      <p class="section-eyebrow" aria-hidden="true">Selected works</p>
+
+      <article class="featured-item">
+        <div class="feat-img">
+          <img src="https://picsum.photos/seed/chrom-feat1/1200/900"
+               alt="Light and shadow study — abstract interplay of luminosity and darkness"
+               loading="lazy" width="1200" height="900">
+        </div>
+        <div class="feat-copy">
+          <div class="feat-num" aria-hidden="true">FRAME 001</div>
+          <h2 class="feat-title">Light<br>&amp; Shadow</h2>
+          <p class="feat-desc">
+            The interplay of light and shadow creates depth and dimension,
+            transforming the ordinary into something extraordinary.
+          </p>
+        </div>
+      </article>
+
+      <article class="featured-item">
+        <div class="feat-img">
+          <img src="https://picsum.photos/seed/chrom-feat2/1200/900"
+               alt="Urban geometry — architectural patterns and repetitive structural forms"
+               loading="lazy" width="1200" height="900">
+        </div>
+        <div class="feat-copy">
+          <div class="feat-num" aria-hidden="true">FRAME 002</div>
+          <h2 class="feat-title">Urban<br>Geometry</h2>
+          <p class="feat-desc">
+            Cities are organic geometric systems — patterns emerge from chaos,
+            order from the apparent randomness of human construction.
+          </p>
+        </div>
+      </article>
+
+      <article class="featured-item">
+        <div class="feat-img">
+          <img src="https://picsum.photos/seed/chrom-feat3/1200/900"
+               alt="Natural textures — macro detail of organic surfaces and materials"
+               loading="lazy" width="1200" height="900">
+        </div>
+        <div class="feat-copy">
+          <div class="feat-num" aria-hidden="true">FRAME 003</div>
+          <h2 class="feat-title">Natural<br>Textures</h2>
+          <p class="feat-desc">
+            Nature's surfaces are endlessly fascinating — each texture tells a
+            story of time, elements, and slow transformation.
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer aria-label="Footer">
+      <div class="footer-brand">CHROM<em>ATIC</em></div>
+      <p class="footer-meta">EXPERIMENT 01 · PORTFOLIO 2024</p>
+    </footer>
+
+  </div><!-- /content -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCRIPTS  (non-module scripts before the module script)
+  ════════════════════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.umd.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* ══════════════════════════════════════════════════════
+       GUARD: verify critical globals loaded correctly
+    ══════════════════════════════════════════════════════ */
+    if (typeof gsap === 'undefined') {
+      console.error('[CHROMATIC] GSAP failed to load.');
+    }
+    if (typeof ScrollTrigger === 'undefined') {
+      console.error('[CHROMATIC] GSAP ScrollTrigger failed to load.');
+    }
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ══════════════════════════════════════════════════════
+       LENIS SMOOTH SCROLL
+    ══════════════════════════════════════════════════════ */
+    let lenis = null;
+    const LenisClass = (typeof Lenis !== 'undefined')
+      ? (Lenis.default || Lenis)
+      : null;
+
+    if (LenisClass) {
+      lenis = new LenisClass({
+        duration: 1.4,
+        easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 1,
+        touchMultiplier: 2,
+      });
+
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add(time => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CUSTOM CURSOR
+    ══════════════════════════════════════════════════════ */
+    const cursorDot  = document.getElementById('cursor-dot');
+    const cursorRing = document.getElementById('cursor-ring');
+
+    if (cursorDot && cursorRing) {
+      let ringX = 0, ringY = 0;
+      let targetX = 0, targetY = 0;
+
+      window.addEventListener('mousemove', e => {
+        targetX = e.clientX;
+        targetY = e.clientY;
+        gsap.set(cursorDot, { x: e.clientX, y: e.clientY });
+      });
+
+      // Smooth ring follow
+      (function animRing() {
+        ringX += (targetX - ringX) * 0.14;
+        ringY += (targetY - ringY) * 0.14;
+        gsap.set(cursorRing, { x: ringX, y: ringY });
+        requestAnimationFrame(animRing);
+      })();
+
+      document.querySelectorAll('a, button, .photo-card, .feat-img').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       THREE.JS — GALAXY PARTICLE SYSTEM
+    ══════════════════════════════════════════════════════ */
+    const canvas = document.getElementById('bg-canvas');
+
+    // Graceful WebGL check
+    const webglAvailable = (() => {
+      try {
+        const c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch {
+        return false;
+      }
+    })();
+
+    let threeCleanup = () => {};
+
+    if (webglAvailable && canvas) {
+      const scene    = new THREE.Scene();
+      const camera   = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 2, 7);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 0);
+
+      /* ── Galaxy geometry ── */
+      const PARTICLE_COUNT = 6000;
+      const BRANCHES       = 3;
+      const RADIUS         = 5;
+      const SPIN           = 1.2;
+      const RANDOMNESS_PWR = 3;
+
+      const positions = new Float32Array(PARTICLE_COUNT * 3);
+      const colors    = new Float32Array(PARTICLE_COUNT * 3);
+
+      const colorInside  = new THREE.Color('#ff6b35');  // warm orange
+      const colorOutside = new THREE.Color('#00f5ff');  // cyan
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const i3     = i * 3;
+        const r      = Math.random() * RADIUS;
+        const spin   = r * SPIN;
+        const branch = ((i % BRANCHES) / BRANCHES) * Math.PI * 2;
+
+        const rndX = Math.pow(Math.random(), RANDOMNESS_PWR) * (Math.random() < .5 ? 1 : -1) * .4 * r;
+        const rndY = Math.pow(Math.random(), RANDOMNESS_PWR) * (Math.random() < .5 ? 1 : -1) * .4 * r;
+        const rndZ = Math.pow(Math.random(), RANDOMNESS_PWR) * (Math.random() < .5 ? 1 : -1) * .4 * r;
+
+        positions[i3]     = Math.cos(branch + spin) * r + rndX;
+        positions[i3 + 1] = rndY;
+        positions[i3 + 2] = Math.sin(branch + spin) * r + rndZ;
+
+        const mixed = colorInside.clone().lerp(colorOutside, r / RADIUS);
+        colors[i3]     = mixed.r;
+        colors[i3 + 1] = mixed.g;
+        colors[i3 + 2] = mixed.b;
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('color',    new THREE.BufferAttribute(colors,    3));
+
+      const mat = new THREE.PointsMaterial({
+        size: 0.022,
+        sizeAttenuation: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        vertexColors: true,
+      });
+
+      const galaxy = new THREE.Points(geo, mat);
+      scene.add(galaxy);
+
+      /* ── Mouse parallax ── */
+      const mouse = { x: 0, y: 0 };
+      window.addEventListener('mousemove', e => {
+        mouse.x = (e.clientX / window.innerWidth  - 0.5) * 2;
+        mouse.y = (e.clientY / window.innerHeight - 0.5) * 2;
+      });
+
+      /* ── Scroll-driven galaxy tilt ── */
+      let scrollProgress = 0;
+      const scrollHandler = () => {
+        scrollProgress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+      };
+      window.addEventListener('scroll', scrollHandler, { passive: true });
+
+      /* ── Resize handler ── */
+      const onResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      };
+      window.addEventListener('resize', onResize);
+
+      /* ── Render loop ── */
+      let rafId;
+      const clock = new THREE.Clock();
+
+      const tick = () => {
+        rafId = requestAnimationFrame(tick);
+        const elapsed = clock.getElapsedTime();
+
+        galaxy.rotation.y = elapsed * 0.04;
+        galaxy.rotation.x += (mouse.y * 0.18 - galaxy.rotation.x) * 0.04;
+        galaxy.rotation.z += (-mouse.x * 0.12 - galaxy.rotation.z) * 0.04;
+
+        // Pull galaxy slightly forward as user scrolls
+        camera.position.z = 7 - scrollProgress * 3;
+
+        renderer.render(scene, camera);
+      };
+      tick();
+
+      // Cleanup
+      threeCleanup = () => {
+        cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', onResize);
+        window.removeEventListener('scroll', scrollHandler);
+        geo.dispose();
+        mat.dispose();
+        renderer.dispose();
+      };
+    }
+
+    /* ══════════════════════════════════════════════════════
+       BUILD GALLERY TRACK  (60 photo cards)
+    ══════════════════════════════════════════════════════ */
+    const TYPES      = ['portrait','landscape','square','tall','wide','portrait','landscape','square','tall','square'];
+    const CATEGORIES = ['PORTRAIT','LANDSCAPE','STREET','ABSTRACT','NATURE','URBAN','MACRO','ARCHITECTURE','TRAVEL','TEXTURE'];
+    const SIZES = {
+      portrait:  { w: 480, h: 640 },
+      landscape: { w: 640, h: 426 },
+      square:    { w: 500, h: 500 },
+      tall:      { w: 400, h: 600 },
+      wide:      { w: 720, h: 480 },
+    };
+
+    const track = document.getElementById('gallery-track');
+    if (track) {
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < 60; i++) {
+        const type = TYPES[i % TYPES.length];
+        const cat  = CATEGORIES[i % CATEGORIES.length];
+        const num  = String(i + 1).padStart(2, '0');
+        const s    = SIZES[type];
+
+        const card = document.createElement('div');
+        card.className = `photo-card photo-card--${type}`;
+        card.setAttribute('role', 'img');
+        card.setAttribute('aria-label', `Photo ${num} — ${cat}`);
+
+        card.innerHTML = `
+          <img src="https://picsum.photos/seed/chrom${i + 1}/${s.w}/${s.h}"
+               alt="Frame ${num}: ${cat.toLowerCase()} photograph"
+               loading="lazy"
+               width="${s.w}" height="${s.h}">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <span class="photo-card__num">${num}</span>
+            <span class="photo-card__tag">${cat}</span>
+          </div>`;
+
+        fragment.appendChild(card);
+      }
+      track.appendChild(fragment);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — HERO ENTRANCE
+    ══════════════════════════════════════════════════════ */
+    const heroTitle = document.querySelector('.hero__title');
+    if (heroTitle) {
+      // Manual character split (no SplitText plugin needed)
+      const text = heroTitle.textContent.trim();
+      heroTitle.innerHTML = text.split('').map(ch =>
+        `<span class="char" aria-hidden="true">${ch === ' ' ? '&nbsp;' : ch}</span>`
+      ).join('');
+      heroTitle.setAttribute('aria-label', text);
+
+      const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+      tl.to('.hero__label',           { opacity: 1, duration: 0.8, delay: 0.2 })
+        .to('.hero__title .char',     { y: '0%', duration: 1, stagger: 0.04 }, '-=0.4')
+        .to('.hero__sub',             { opacity: 1, y: 0, duration: 0.8 }, '-=0.4')
+        .to('.hero__scroll',          { opacity: 1, duration: 0.6 }, '-=0.2');
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — HORIZONTAL GALLERY SCROLL
+    ══════════════════════════════════════════════════════ */
+    const gallerySection = document.getElementById('h-gallery');
+    const galleryTrack   = document.getElementById('gallery-track');
+
+    if (gallerySection && galleryTrack) {
+      // Wait a tick for images to be in DOM so scrollWidth is accurate
+      requestAnimationFrame(() => {
+        const totalScroll = galleryTrack.scrollWidth - window.innerWidth;
+
+        if (totalScroll > 0) {
+          gsap.to(galleryTrack, {
+            x: -totalScroll,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: gallerySection,
+              pin: true,
+              scrub: 1.2,
+              end: () => `+=${totalScroll}`,
+              invalidateOnRefresh: true,
+            },
+          });
+        }
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — FEATURED ITEMS REVEAL
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.featured-item').forEach(item => {
+      gsap.to(item, {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: item,
+          start: 'top 82%',
+          toggleActions: 'play none none none',
+        },
+      });
+
+      // Parallax on image inside featured item
+      const img = item.querySelector('.feat-img img');
+      if (img) {
+        gsap.to(img, {
+          scale: 1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: item,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: true,
+          },
+        });
+      }
+    });
+
+    /* ══════════════════════════════════════════════════════
+       COUNT SECTION — number animate in
+    ══════════════════════════════════════════════════════ */
+    const countNum = document.querySelector('.count-number');
+    if (countNum) {
+      gsap.from(countNum, {
+        x: -80,
+        opacity: 0,
+        duration: 1.2,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: countNum,
+          start: 'top 80%',
+        },
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CLEANUP on unload
+    ══════════════════════════════════════════════════════ */
+    window.addEventListener('beforeunload', threeCleanup);
+
+  </script>
+</body>
+</html>

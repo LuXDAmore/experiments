@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="VORTEX — An abstract scroll-driven 3D journey through geometric space, built with ThreeJS, GSAP, and Lenis.">
+  <meta name="theme-color" content="#0d0221">
+  <title>VORTEX — Experiment 02</title>
+
+  <!-- THREE.js ImportMap — must appear before any type="module" script -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- TailwindCSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (window.tailwind) {
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+              mono: ['"Space Mono"', 'monospace'],
+            }
+          }
+        }
+      };
+    }
+  </script>
+
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --bg:      #0d0221;
+      --fg:      #ffffff;
+      --blue:    #4361EE;
+      --purple:  #7209B7;
+      --teal:    #4CC9F0;
+      --pink:    #F72585;
+      --yellow:  #FFE600;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { overflow-x: hidden; scroll-behavior: auto; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-dot, #cursor-ring { display: none !important; }
+    }
+
+    /* ── Custom cursor ── */
+    #cursor-dot {
+      position: fixed;
+      top: 0; left: 0;
+      width: 6px; height: 6px;
+      background: var(--teal);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+    }
+
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 40px; height: 40px;
+      border: 1px solid rgba(76, 201, 240, 0.4);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .25s ease, height .25s ease, border-color .25s ease;
+    }
+
+    body.is-hovering #cursor-ring {
+      width: 60px; height: 60px;
+      border-color: var(--pink);
+    }
+
+    /* ── ThreeJS fullscreen canvas ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Scroll container (long page drives camera) ── */
+    .scroll-driver {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Each scene section ── */
+    .scene-section {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px clamp(24px, 8vw, 120px);
+      position: relative;
+    }
+
+    /* ── Text overlay panels ── */
+    .panel {
+      max-width: 600px;
+    }
+
+    .panel--right {
+      margin-left: auto;
+    }
+
+    .panel__phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--teal);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+
+    .panel__title {
+      font-size: clamp(48px, 8vw, 120px);
+      font-weight: 800;
+      line-height: .9;
+      letter-spacing: -.035em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .panel__title .char { display: inline-block; }
+
+    .panel__body {
+      font-size: clamp(13px, 1.4vw, 16px);
+      color: rgba(255,255,255,.45);
+      line-height: 1.9;
+      max-width: 400px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .panel__counter {
+      position: absolute;
+      bottom: 40px;
+      right: clamp(24px, 8vw, 120px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: rgba(255,255,255,.2);
+      opacity: 0;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(to right, var(--teal), var(--pink));
+      z-index: 9000;
+      transition: width .1s linear;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      position: fixed;
+      top: 28px;
+      left: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.35);
+      text-decoration: none;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .25s;
+    }
+
+    .back-link:hover { color: var(--teal); }
+    .back-link::before { content: '←'; }
+
+    /* ── Experiment label ── */
+    .exp-label {
+      position: fixed;
+      top: 28px;
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.2);
+      z-index: 9000;
+    }
+
+    /* ── Infinite symbol final section ── */
+    .terminus {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .terminus__symbol {
+      font-size: clamp(80px, 20vw, 220px);
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--teal), var(--pink), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      opacity: 0;
+      transform: scale(.7);
+    }
+
+    .terminus__label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .4em;
+      color: rgba(255,255,255,.25);
+      text-transform: uppercase;
+      margin-top: 24px;
+      opacity: 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 60px clamp(24px, 8vw, 120px);
+      border-top: 1px solid rgba(255,255,255,.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-brand {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+    }
+
+    .footer-brand em { color: var(--teal); font-style: normal; }
+
+    .footer-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: rgba(255,255,255,.2);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+      .panel__phase, .panel__title, .panel__body,
+      .panel__counter, .terminus__symbol, .terminus__label {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Progress bar -->
+  <div id="progress-bar" aria-hidden="true"></div>
+
+  <!-- Custom cursor -->
+  <div id="cursor-dot"  aria-hidden="true"></div>
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Navigation hints -->
+  <a href="../experiment-01/index.html" class="back-link" aria-label="Back to experiment 01">EXP 01</a>
+  <span class="exp-label" aria-hidden="true">EXP 02 / VORTEX</span>
+
+  <!-- ThreeJS fullscreen canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCROLL DRIVER — long page content overlays the 3D scene
+  ════════════════════════════════════════════════════════ -->
+  <main class="scroll-driver">
+
+    <!-- ── PHASE 00: ENTRY ── -->
+    <section class="scene-section" id="phase-00" aria-labelledby="phase00-title">
+      <div class="panel">
+        <div class="panel__phase">Phase 00 — Entry</div>
+        <h1 class="panel__title" id="phase00-title">VOR<br>TEX</h1>
+        <p class="panel__body">
+          An abstract journey through geometric space. Scroll to travel deeper
+          into the field — where form dissolves into pure light.
+        </p>
+      </div>
+      <span class="panel__counter" aria-hidden="true">00 / 04</span>
+    </section>
+
+    <!-- ── PHASE 01: EMERGENCE ── -->
+    <section class="scene-section" id="phase-01" aria-labelledby="phase01-title">
+      <div class="panel panel--right">
+        <div class="panel__phase">Phase 01 — Emergence</div>
+        <h2 class="panel__title" id="phase01-title">EMER<br>GENCE</h2>
+        <p class="panel__body">
+          From the void, structure appears. Geometric forms crystallize from
+          entropy — each surface a node in an infinite lattice.
+        </p>
+      </div>
+      <span class="panel__counter" aria-hidden="true">01 / 04</span>
+    </section>
+
+    <!-- ── PHASE 02: EXPANSION ── -->
+    <section class="scene-section" id="phase-02" aria-labelledby="phase02-title">
+      <div class="panel">
+        <div class="panel__phase">Phase 02 — Expansion</div>
+        <h2 class="panel__title" id="phase02-title">EXPAN<br>SION</h2>
+        <p class="panel__body">
+          The field expands. Boundaries dissolve and new geometries emerge from
+          the chaos — an ever-shifting topology of color and form.
+        </p>
+      </div>
+      <span class="panel__counter" aria-hidden="true">02 / 04</span>
+    </section>
+
+    <!-- ── PHASE 03: CONVERGENCE ── -->
+    <section class="scene-section" id="phase-03" aria-labelledby="phase03-title">
+      <div class="panel panel--right">
+        <div class="panel__phase">Phase 03 — Convergence</div>
+        <h2 class="panel__title" id="phase03-title">CONVER<br>GENCE</h2>
+        <p class="panel__body">
+          All paths lead to the centre. The vortex collapses inward, drawing
+          every fragment of geometry into a single luminous point.
+        </p>
+      </div>
+      <span class="panel__counter" aria-hidden="true">03 / 04</span>
+    </section>
+
+    <!-- ── PHASE 04: TERMINUS ── -->
+    <section class="terminus" id="phase-04" aria-label="Terminus — end of journey">
+      <div class="terminus__symbol" aria-hidden="true">∞</div>
+      <p class="terminus__label" aria-label="End — begin again">END · BEGIN AGAIN</p>
+      <span class="panel__counter" style="position:relative;bottom:auto;right:auto;margin-top:60px;" aria-hidden="true">04 / 04</span>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer aria-label="Footer">
+      <div class="footer-brand">VOR<em>TEX</em></div>
+      <p class="footer-meta">EXPERIMENT 02 · PORTFOLIO 2024</p>
+    </footer>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.umd.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+    /* ══════════════════════════════════════════════════════
+       GUARD
+    ══════════════════════════════════════════════════════ */
+    if (typeof gsap === 'undefined')          console.error('[VORTEX] GSAP failed to load.');
+    if (typeof ScrollTrigger === 'undefined') console.error('[VORTEX] ScrollTrigger failed to load.');
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ══════════════════════════════════════════════════════
+       LENIS SMOOTH SCROLL
+    ══════════════════════════════════════════════════════ */
+    let lenis = null;
+    const LenisClass = (typeof Lenis !== 'undefined') ? (Lenis.default || Lenis) : null;
+
+    if (LenisClass) {
+      lenis = new LenisClass({
+        duration: 1.6,
+        easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 0.8,
+        touchMultiplier: 1.8,
+      });
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add(time => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCROLL PROGRESS BAR
+    ══════════════════════════════════════════════════════ */
+    const progressBar = document.getElementById('progress-bar');
+    window.addEventListener('scroll', () => {
+      const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+    }, { passive: true });
+
+    /* ══════════════════════════════════════════════════════
+       CUSTOM CURSOR
+    ══════════════════════════════════════════════════════ */
+    const cursorDot  = document.getElementById('cursor-dot');
+    const cursorRing = document.getElementById('cursor-ring');
+
+    if (cursorDot && cursorRing) {
+      let rx = 0, ry = 0, tx = 0, ty = 0;
+
+      window.addEventListener('mousemove', e => {
+        tx = e.clientX; ty = e.clientY;
+        gsap.set(cursorDot, { x: e.clientX, y: e.clientY });
+      });
+
+      (function animRing() {
+        rx += (tx - rx) * 0.12;
+        ry += (ty - ry) * 0.12;
+        gsap.set(cursorRing, { x: rx, y: ry });
+        requestAnimationFrame(animRing);
+      })();
+
+      document.querySelectorAll('a, button').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       THREE.JS — SCENE SETUP
+    ══════════════════════════════════════════════════════ */
+    const canvas = document.getElementById('bg-canvas');
+
+    const webglAvailable = (() => {
+      try {
+        const c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch { return false; }
+    })();
+
+    let threeCleanup = () => {};
+
+    if (webglAvailable && canvas) {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+
+      const scene    = new THREE.Scene();
+      scene.fog      = new THREE.FogExp2(0x0d0221, 0.04);
+
+      const camera   = new THREE.PerspectiveCamera(70, W / H, 0.1, 200);
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping     = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.0;
+
+      /* ── Bloom post-processing ── */
+      const composer    = new EffectComposer(renderer);
+      const renderPass  = new RenderPass(scene, camera);
+      const bloomPass   = new UnrealBloomPass(
+        new THREE.Vector2(W, H),
+        1.0,   // strength
+        0.4,   // radius
+        0.1    // threshold
+      );
+      composer.addPass(renderPass);
+      composer.addPass(bloomPass);
+
+      /* ── Lights ── */
+      scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+
+      const pLight1 = new THREE.PointLight(0x4361EE, 80, 40);
+      pLight1.position.set(5, 5, 5);
+      scene.add(pLight1);
+
+      const pLight2 = new THREE.PointLight(0xF72585, 80, 40);
+      pLight2.position.set(-5, -3, -10);
+      scene.add(pLight2);
+
+      const pLight3 = new THREE.PointLight(0x4CC9F0, 60, 40);
+      pLight3.position.set(0, 8, -20);
+      scene.add(pLight3);
+
+      /* ── Geometry factory ── */
+      const NEON_COLORS = [0x4361EE, 0x7209B7, 0x4CC9F0, 0xF72585, 0xFFE600, 0x39FF14];
+
+      function randomNeonColor() {
+        return NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)];
+      }
+
+      function makeMaterial(color) {
+        return new THREE.MeshStandardMaterial({
+          color,
+          emissive: color,
+          emissiveIntensity: 0.6,
+          roughness: 0.2,
+          metalness: 0.8,
+          wireframe: Math.random() > 0.5,
+        });
+      }
+
+      const objects = [];
+
+      /* ── Torus knots ── */
+      for (let i = 0; i < 24; i++) {
+        const geo = new THREE.TorusKnotGeometry(
+          0.3 + Math.random() * 0.5,
+          0.08 + Math.random() * 0.08,
+          96, 16,
+          Math.floor(Math.random() * 3) + 2,
+          Math.floor(Math.random() * 3) + 3
+        );
+        const mesh = new THREE.Mesh(geo, makeMaterial(randomNeonColor()));
+        mesh.position.set(
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 20,
+          -5 - Math.random() * 60
+        );
+        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+        mesh.userData.rotSpeed = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.012,
+          (Math.random() - 0.5) * 0.012,
+          (Math.random() - 0.5) * 0.008
+        );
+        scene.add(mesh);
+        objects.push(mesh);
+      }
+
+      /* ── Icosahedrons ── */
+      for (let i = 0; i < 20; i++) {
+        const detail = Math.random() > 0.5 ? 0 : 1;
+        const geo  = new THREE.IcosahedronGeometry(0.3 + Math.random() * 0.7, detail);
+        const mesh = new THREE.Mesh(geo, makeMaterial(randomNeonColor()));
+        mesh.position.set(
+          (Math.random() - 0.5) * 22,
+          (Math.random() - 0.5) * 22,
+          -2 - Math.random() * 65
+        );
+        mesh.userData.rotSpeed = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.015,
+          (Math.random() - 0.5) * 0.015,
+          0
+        );
+        scene.add(mesh);
+        objects.push(mesh);
+      }
+
+      /* ── Octahedrons ── */
+      for (let i = 0; i < 16; i++) {
+        const geo  = new THREE.OctahedronGeometry(0.4 + Math.random() * 0.6);
+        const mesh = new THREE.Mesh(geo, makeMaterial(randomNeonColor()));
+        mesh.position.set(
+          (Math.random() - 0.5) * 18,
+          (Math.random() - 0.5) * 18,
+          -8 - Math.random() * 55
+        );
+        mesh.userData.rotSpeed = new THREE.Vector3(
+          (Math.random() - 0.5) * 0.018,
+          (Math.random() - 0.5) * 0.012,
+          0
+        );
+        scene.add(mesh);
+        objects.push(mesh);
+      }
+
+      /* ── Background star particles ── */
+      const starCount  = 3000;
+      const starPos    = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount; i++) {
+        starPos[i * 3]     = (Math.random() - 0.5) * 80;
+        starPos[i * 3 + 1] = (Math.random() - 0.5) * 80;
+        starPos[i * 3 + 2] = -Math.random() * 80;
+      }
+      const starGeo = new THREE.BufferGeometry();
+      starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+      const starMat = new THREE.PointsMaterial({
+        size: 0.06,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.55,
+        sizeAttenuation: true,
+      });
+      scene.add(new THREE.Points(starGeo, starMat));
+
+      /* ── Camera path (Catmull-Rom curve) ── */
+      const cameraPath = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0,  0,  12),
+        new THREE.Vector3(3,  2,   0),
+        new THREE.Vector3(-4, -2, -15),
+        new THREE.Vector3(2,  3,  -28),
+        new THREE.Vector3(-2, -1, -42),
+        new THREE.Vector3(0,  0,  -58),
+      ]);
+
+      /* ── Camera path target (slightly ahead) ── */
+      const cameraTarget = new THREE.Vector3();
+
+      /* ── Scroll progress (0 → 1) ── */
+      let scrollT = 0;
+
+      ScrollTrigger.create({
+        trigger: document.body,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 2,
+        onUpdate: self => { scrollT = self.progress; },
+      });
+
+      /* ── Mouse parallax ── */
+      const mouse = { x: 0, y: 0 };
+      window.addEventListener('mousemove', e => {
+        mouse.x = (e.clientX / window.innerWidth  - 0.5) * 2;
+        mouse.y = (e.clientY / window.innerHeight - 0.5) * 2;
+      });
+
+      /* ── Resize ── */
+      const onResize = () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        composer.setSize(w, h);
+        bloomPass.resolution.set(w, h);
+      };
+      window.addEventListener('resize', onResize);
+
+      /* ── Render loop ── */
+      let rafId;
+      const clock = new THREE.Clock();
+
+      const tick = () => {
+        rafId = requestAnimationFrame(tick);
+        const elapsed = clock.getElapsedTime();
+
+        // Move camera along path
+        const t     = Math.min(scrollT, 0.9999);
+        const tAhead = Math.min(t + 0.012, 0.9999);
+        const camPos = cameraPath.getPoint(t);
+        cameraPath.getPoint(tAhead, cameraTarget);
+
+        camera.position.lerp(camPos, 0.06);
+
+        // Mouse-based subtle parallax offset
+        camera.position.x += mouse.x * 0.4;
+        camera.position.y += mouse.y * 0.4;
+        camera.lookAt(cameraTarget);
+
+        // Rotate all objects
+        objects.forEach(obj => {
+          obj.rotation.x += obj.userData.rotSpeed.x;
+          obj.rotation.y += obj.userData.rotSpeed.y;
+          obj.rotation.z += obj.userData.rotSpeed.z;
+        });
+
+        // Animate point lights
+        pLight1.position.set(
+          Math.sin(elapsed * 0.5) * 8,
+          Math.cos(elapsed * 0.3) * 6,
+          camPos.z + 5
+        );
+        pLight2.position.set(
+          Math.cos(elapsed * 0.4) * 8,
+          Math.sin(elapsed * 0.6) * 6,
+          camPos.z - 5
+        );
+
+        // Bloom intensity rises as we go deeper
+        bloomPass.strength = 0.8 + scrollT * 1.2;
+
+        composer.render();
+      };
+      tick();
+
+      threeCleanup = () => {
+        cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', onResize);
+        objects.forEach(obj => {
+          obj.geometry.dispose();
+          obj.material.dispose();
+        });
+        starGeo.dispose();
+        starMat.dispose();
+        renderer.dispose();
+        composer.dispose();
+      };
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — PANEL TEXT REVEALS
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.scene-section').forEach(section => {
+      const phase   = section.querySelector('.panel__phase');
+      const title   = section.querySelector('.panel__title');
+      const body    = section.querySelector('.panel__body');
+      const counter = section.querySelector('.panel__counter');
+
+      if (phase) {
+        gsap.to(phase, {
+          opacity: 1, x: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: section, start: 'top 72%' },
+        });
+      }
+      if (title) {
+        gsap.to(title, {
+          opacity: 1, y: 0, duration: 1, ease: 'power4.out',
+          scrollTrigger: { trigger: section, start: 'top 68%' },
+          delay: 0.1,
+        });
+      }
+      if (body) {
+        gsap.to(body, {
+          opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: section, start: 'top 64%' },
+          delay: 0.25,
+        });
+      }
+      if (counter) {
+        gsap.to(counter, {
+          opacity: 1, duration: 0.6,
+          scrollTrigger: { trigger: section, start: 'top 55%' },
+        });
+      }
+    });
+
+    /* ── Terminus animations ── */
+    const terminus = document.getElementById('phase-04');
+    if (terminus) {
+      const symbol = terminus.querySelector('.terminus__symbol');
+      const label  = terminus.querySelector('.terminus__label');
+      const counter = terminus.querySelector('.panel__counter');
+
+      if (symbol) {
+        gsap.to(symbol, {
+          opacity: 1, scale: 1, duration: 1.4, ease: 'elastic.out(1, 0.5)',
+          scrollTrigger: { trigger: terminus, start: 'top 70%' },
+        });
+      }
+      if (label) {
+        gsap.to(label, {
+          opacity: 1, duration: 0.8, ease: 'power2.out',
+          scrollTrigger: { trigger: terminus, start: 'top 60%' },
+          delay: 0.4,
+        });
+      }
+      if (counter) {
+        gsap.to(counter, {
+          opacity: 1, duration: 0.6,
+          scrollTrigger: { trigger: terminus, start: 'top 55%' },
+        });
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CLEANUP
+    ══════════════════════════════════════════════════════ */
+    window.addEventListener('beforeunload', threeCleanup);
+
+  </script>
+</body>
+</html>
