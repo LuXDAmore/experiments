@@ -1244,7 +1244,6 @@
       const tick = () => {
         rafId = requestAnimationFrame(tick);
         const elapsed = clock.getElapsedTime();
-        const dt      = clock.getDelta ? 1/60 : 0.016;
 
         // Update background gradient
         updateBgUniforms(scrollT);
