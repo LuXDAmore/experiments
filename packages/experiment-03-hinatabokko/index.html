@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HINATABOKKO — Un viaggio fotografico scroll-driven attraverso la luce del tramonto, i colori caldi e lo scorrere del tempo.">
+  <meta name="theme-color" content="#FFD700">
+  <title>HINATABOKKO 日向ぼっこ — Experiment 03</title>
+
+  <!-- THREE.js ImportMap — must appear before any type="module" script -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Noto+Serif+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- TailwindCSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    if (window.tailwind) {
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              serif:  ['"Cormorant Garamond"', 'Georgia', 'serif'],
+              jp:     ['"Noto Serif JP"', 'serif'],
+              mono:   ['"Space Mono"', 'monospace'],
+            }
+          }
+        }
+      };
+    }
+  </script>
+
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --gold:    #FFD700;
+      --orange:  #FF8C00;
+      --red:     #C0392B;
+      --violet:  #4B0082;
+      --night:   #0d0015;
+      --fg:      #fff;
+
+      /* Dynamic tokens updated by JS */
+      --sky-top:    #FFD700;
+      --sky-bottom: #FF8C00;
+      --accent:     #FFD700;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { overflow-x: hidden; scroll-behavior: auto; }
+
+    body {
+      background: var(--night);
+      color: var(--fg);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-dot, #cursor-ring { display: none !important; }
+    }
+
+    /* ── Custom cursor ── */
+    #cursor-dot {
+      position: fixed;
+      top: 0; left: 0;
+      width: 7px; height: 7px;
+      background: var(--gold);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: background .4s ease;
+    }
+
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 42px; height: 42px;
+      border: 1px solid rgba(255, 215, 0, .35);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .25s ease, height .25s ease, border-color .35s ease;
+    }
+
+    body.is-hovering #cursor-ring {
+      width: 62px; height: 62px;
+      border-color: var(--accent);
+    }
+
+    /* ── ThreeJS fullscreen canvas ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(to right, var(--gold), var(--red));
+      z-index: 9000;
+      transition: background .6s ease;
+    }
+
+    /* ── Nav ── */
+    .back-link {
+      position: fixed;
+      top: 28px;
+      left: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.4);
+      text-decoration: none;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .25s;
+    }
+    .back-link:hover { color: var(--gold); }
+    .back-link::before { content: '←'; }
+
+    .exp-label {
+      position: fixed;
+      top: 28px;
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.25);
+      z-index: 9000;
+    }
+
+    /* ── Content wrapper ── */
+    .content { position: relative; z-index: 1; }
+
+    /* ── HERO ── */
+    .hero {
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 clamp(24px, 6vw, 80px);
+      position: relative;
+    }
+
+    .hero__label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .4em;
+      color: rgba(255, 215, 0, .7);
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      opacity: 0;
+    }
+
+    .hero__kanji {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(48px, 10vw, 130px);
+      font-weight: 300;
+      line-height: 1;
+      color: rgba(255,255,255,.15);
+      letter-spacing: .05em;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) translateY(-60px);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .hero__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(56px, 12vw, 160px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.02em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      overflow: hidden;
+      display: block;
+    }
+
+    .hero__title .char {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .hero__sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 2vw, 22px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(255,255,255,.5);
+      max-width: 440px;
+      line-height: 1.8;
+      opacity: 0;
+      margin-bottom: 12px;
+    }
+
+    .hero__jp-subtitle {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(11px, 1.2vw, 14px);
+      font-weight: 300;
+      color: rgba(255, 215, 0, .45);
+      letter-spacing: .12em;
+      opacity: 0;
+    }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+    }
+
+    .hero__scroll-line {
+      width: 1px;
+      height: 52px;
+      background: linear-gradient(to bottom, rgba(255,215,0,.5), transparent);
+      animation: scrollPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      65%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
+    }
+
+    /* ── SECTION COMMON ── */
+    .photo-section {
+      min-height: 100svh;
+      padding: 100px clamp(24px, 8vw, 120px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .section-header {
+      margin-bottom: 60px;
+    }
+
+    .section-phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateX(-20px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-phase::before {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+      transition: background .6s ease;
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(42px, 7vw, 100px);
+      font-weight: 700;
+      line-height: .95;
+      letter-spacing: -.02em;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .section-title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(13px, 1.4vw, 17px);
+      font-weight: 300;
+      color: rgba(255,255,255,.35);
+      letter-spacing: .12em;
+      margin-bottom: 24px;
+      opacity: 0;
+    }
+
+    .section-desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-style: italic;
+      color: rgba(255,255,255,.5);
+      line-height: 1.85;
+      max-width: 520px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    /* ── PHOTO GRID ── */
+    .photo-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .photo-grid--2col { grid-template-columns: 1fr 1fr; }
+    .photo-grid--3col { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-grid--asymm { grid-template-columns: 2fr 1fr; }
+    .photo-grid--asymm-r { grid-template-columns: 1fr 2fr; }
+
+    @media (max-width: 640px) {
+      .photo-grid--2col,
+      .photo-grid--3col,
+      .photo-grid--asymm,
+      .photo-grid--asymm-r { grid-template-columns: 1fr; }
+    }
+
+    /* ── PHOTO CARD ── */
+    .photo-card {
+      position: relative;
+      overflow: hidden;
+      background: rgba(0,0,0,.3);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .photo-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      will-change: transform;
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94);
+    }
+
+    .photo-card:hover img { transform: scale(1); }
+
+    .photo-card__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity .4s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 20px 18px;
+    }
+
+    .photo-card:hover .photo-card__overlay { opacity: 1; }
+
+    .photo-card__poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      font-style: italic;
+      color: rgba(255,255,255,.85);
+      line-height: 1.65;
+      margin-bottom: 6px;
+    }
+
+    .photo-card__poem-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 10px;
+      font-weight: 300;
+      color: rgba(255, 215, 0, .6);
+      letter-spacing: .1em;
+    }
+
+    .photo-card__num {
+      position: absolute;
+      top: 14px; left: 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .2em;
+      color: rgba(255,255,255,.4);
+    }
+
+    /* Tall aspect for portrait cards */
+    .photo-card--tall  { aspect-ratio: 2 / 3; }
+    .photo-card--wide  { aspect-ratio: 16 / 9; }
+    .photo-card--sq    { aspect-ratio: 1 / 1; }
+    .photo-card--port  { aspect-ratio: 3 / 4; }
+
+    /* ── QUOTE SECTION ── */
+    .quote-section {
+      min-height: 60svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px clamp(24px, 10vw, 160px);
+      position: relative;
+    }
+
+    .quote-line {
+      width: 1px; height: 60px;
+      background: linear-gradient(to bottom, transparent, var(--accent));
+      margin: 0 auto 40px;
+      opacity: 0;
+    }
+
+    .quote-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 4vw, 54px);
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.45;
+      max-width: 800px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .quote-attr {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.3);
+      margin-top: 32px;
+      opacity: 0;
+    }
+
+    /* ── OUTRO / CREPUSCOLO ── */
+    .outro {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px clamp(24px, 8vw, 120px);
+      position: relative;
+    }
+
+    .outro__symbol {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(60px, 14vw, 160px);
+      font-weight: 300;
+      color: rgba(255,255,255,.06);
+      line-height: 1;
+      opacity: 0;
+      transform: scale(.85);
+      margin-bottom: 40px;
+    }
+
+    .outro__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(36px, 6vw, 80px);
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.2;
+      opacity: 0;
+      transform: translateY(20px);
+      margin-bottom: 24px;
+    }
+
+    .outro__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(14px, 1.5vw, 18px);
+      font-style: italic;
+      color: rgba(255,255,255,.45);
+      max-width: 480px;
+      line-height: 1.9;
+      opacity: 0;
+    }
+
+    /* ── LIGHTBOX ── */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 8000;
+      background: rgba(0,0,0,.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .4s ease;
+    }
+
+    #lightbox.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #lightbox img {
+      max-width: 88vw;
+      max-height: 88vh;
+      object-fit: contain;
+      display: block;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 24px; right: 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.4);
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: color .2s;
+    }
+
+    #lightbox-close:hover { color: var(--gold); }
+
+    #lightbox-poem {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+
+    #lightbox-poem p {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 15px;
+      font-style: italic;
+      color: rgba(255,255,255,.6);
+    }
+
+    #lightbox-poem span {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: rgba(255, 215, 0, .45);
+      display: block;
+      margin-top: 4px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 60px clamp(24px, 8vw, 120px);
+      border-top: 1px solid rgba(255,255,255,.06);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: .05em;
+    }
+
+    .footer-brand em {
+      color: var(--gold);
+      font-style: italic;
+    }
+
+    .footer-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .2em;
+      color: rgba(255,255,255,.2);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+      .hero__title .char { transform: none !important; }
+      .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; }
+      .section-phase, .section-title, .section-title-jp,
+      .section-desc, .photo-card, .quote-line, .quote-text,
+      .quote-attr, .outro__symbol, .outro__title, .outro__desc { opacity: 1 !important; transform: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Progress bar -->
+  <div id="progress-bar" aria-hidden="true"></div>
+
+  <!-- Custom cursor -->
+  <div id="cursor-dot"  aria-hidden="true"></div>
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Navigation -->
+  <a href="../experiment-02/index.html" class="back-link" aria-label="Back to experiment 02">EXP 02</a>
+  <span class="exp-label" aria-hidden="true">EXP 03 / HINATABOKKO</span>
+
+  <!-- Lightbox -->
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo lightbox">
+    <button id="lightbox-close" aria-label="Close lightbox">ESC · CLOSE</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-poem">
+      <p id="lightbox-poem-text"></p>
+      <span id="lightbox-poem-jp"></span>
+    </div>
+  </div>
+
+  <!-- ThreeJS background canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════════════ -->
+  <div class="content">
+
+    <!-- ── HERO: GOLDEN HOUR ── -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero__kanji" aria-hidden="true">日向ぼっこ</div>
+      <span class="hero__label" aria-hidden="true">Esperimento No. 03</span>
+      <h1 class="hero__title" id="hero-heading">HINATA<br>BOKKO</h1>
+      <p class="hero__sub">The warmth that stays when the sun is gone.</p>
+      <p class="hero__jp-subtitle" lang="ja">ひなたぼっこ — 日向ぼっこ</p>
+      <div class="hero__scroll" aria-hidden="true">
+        <span>SCROLL</span>
+        <div class="hero__scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE I: LA LUCE ── -->
+    <section class="photo-section" id="section-01" aria-labelledby="s1-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">I — La Luce</div>
+        <h2 class="section-title" id="s1-title">Golden<br>Hour</h2>
+        <p class="section-title-jp" lang="ja">黄金色の光</p>
+        <p class="section-desc">
+          La luce del tardo pomeriggio si distende sul mondo come oro liquido.
+          Ogni superficie diventa specchio, ogni ombra diventa carezza.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm" role="list">
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="La luce scende lenta, dorata come il miele che cola" data-poem-jp="光が蜂蜜のように降りてくる">
+          <span class="photo-card__num" aria-hidden="true">001</span>
+          <img src="https://picsum.photos/seed/hina-01/1200/750" alt="Tramonto dorato — luce calda che illumina un paesaggio aperto" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">La luce scende lenta, dorata come il miele che cola</p>
+            <span class="photo-card__poem-jp">光が蜂蜜のように降りてくる</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="Un attimo sospeso tra il giorno e la notte" data-poem-jp="昼と夜の間の一瞬">
+          <span class="photo-card__num" aria-hidden="true">002</span>
+          <img src="https://picsum.photos/seed/hina-02/600/900" alt="Silhouette contro il cielo arancione" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Un attimo sospeso tra il giorno e la notte</p>
+            <span class="photo-card__poem-jp">昼と夜の間の一瞬</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE I ── -->
+    <div class="quote-section" aria-label="Citazione">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Hinatabokko non è solo scaldarsi al sole —
+        è concedersi il permesso di esistere lentamente."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">Essenza di Hinatabokko</p>
+    </div>
+
+    <!-- ── SEZIONE II: IL CALORE ── -->
+    <section class="photo-section" id="section-02" aria-labelledby="s2-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">II — Il Calore</div>
+        <h2 class="section-title" id="s2-title">Raggi<br>Tangenti</h2>
+        <p class="section-title-jp" lang="ja">触れる光</p>
+        <p class="section-desc">
+          Il sole si abbassa e i raggi diventano quasi orizzontali,
+          sfiorando ogni cosa con una delicatezza che appartiene solo a questo momento.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--3col" role="list">
+        <div class="photo-card photo-card--port" role="listitem" data-poem="Il sole tocca piano, come chi sa di dover partire" data-poem-jp="去り際の優しい光">
+          <span class="photo-card__num" aria-hidden="true">003</span>
+          <img src="https://picsum.photos/seed/hina-03/600/800" alt="Luce del tramonto che tocca una superficie" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Il sole tocca piano, come chi sa di dover partire</p>
+            <span class="photo-card__poem-jp">去り際の優しい光</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="L'ombra lunga racconta dove sei stato" data-poem-jp="長い影が語る旅の記憶">
+          <span class="photo-card__num" aria-hidden="true">004</span>
+          <img src="https://picsum.photos/seed/hina-04/600/800" alt="Ombra lunga sul pavimento nella luce del tramonto" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">L'ombra lunga racconta dove sei stato</p>
+            <span class="photo-card__poem-jp">長い影が語る旅の記憶</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="Nella polvere illuminata, un universo intero" data-poem-jp="光る塵の中に宇宙がある">
+          <span class="photo-card__num" aria-hidden="true">005</span>
+          <img src="https://picsum.photos/seed/hina-05/600/800" alt="Particelle di polvere illuminate dalla luce arancione" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Nella polvere illuminata, un universo intero</p>
+            <span class="photo-card__poem-jp">光る塵の中に宇宙がある</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE III: IL DECLINO ── -->
+    <section class="photo-section" id="section-03" aria-labelledby="s3-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">III — Il Declino</div>
+        <h2 class="section-title" id="s3-title">Il Sole<br>Scende</h2>
+        <p class="section-title-jp" lang="ja">日没</p>
+        <p class="section-desc">
+          Il cielo si tinge di arancione profondo. Il sole si fa più grande,
+          più rosso, più vicino all'orizzonte. Tutto rallenta. Anche il respiro.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm-r" role="list">
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="Più si avvicina alla fine, più diventa bello" data-poem-jp="終わりに近づくほど、美しくなる">
+          <span class="photo-card__num" aria-hidden="true">006</span>
+          <img src="https://picsum.photos/seed/hina-06/600/900" alt="Tramonto con il sole quasi all'orizzonte" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Più si avvicina alla fine, più diventa bello</p>
+            <span class="photo-card__poem-jp">終わりに近づくほど、美しくなる</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="Il rosso del tramonto è il colore della resa" data-poem-jp="夕焼けの赤は、手放す色">
+          <span class="photo-card__num" aria-hidden="true">007</span>
+          <img src="https://picsum.photos/seed/hina-07/1200/750" alt="Cielo rosso-arancione durante il tramonto" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Il rosso del tramonto è il colore della resa</p>
+            <span class="photo-card__poem-jp">夕焼けの赤は、手放す色</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE IV: L'ULTIMO ROSSO ── -->
+    <section class="photo-section" id="section-04" aria-labelledby="s4-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">IV — L'Ultimo Rosso</div>
+        <h2 class="section-title" id="s4-title">Silhouette<br>&amp; Fuoco</h2>
+        <p class="section-title-jp" lang="ja">最後の赤</p>
+        <p class="section-desc">
+          Il cielo brucia. Le sagome si fanno nette, nere contro il rosso,
+          il viola, l'oro degli ultimi minuti. Le nuvole sono fiamme immobili.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--2col" role="list">
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="Silhouette di vita contro un cielo in fiamme" data-poem-jp="燃える空に映る、命の影">
+          <span class="photo-card__num" aria-hidden="true">008</span>
+          <img src="https://picsum.photos/seed/hina-08/800/800" alt="Silhouette scura contro cielo rosso-viola" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Silhouette di vita contro un cielo in fiamme</p>
+            <span class="photo-card__poem-jp">燃える空に映る、命の影</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="Le nuvole raccolgono tutto il fuoco prima che sparisca" data-poem-jp="雲が消える前の火を集める">
+          <span class="photo-card__num" aria-hidden="true">009</span>
+          <img src="https://picsum.photos/seed/hina-09/800/800" alt="Nuvole viola-rosso nel cielo del tramonto" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Le nuvole raccolgono tutto il fuoco prima che sparisca</p>
+            <span class="photo-card__poem-jp">雲が消える前の火を集める</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE II ── -->
+    <div class="quote-section" aria-label="Citazione">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Il tramonto non finisce mai davvero —
+        il cielo lo ricorda ancora per ore,
+        con tracce di rosa e viola nell'oscurità."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">日向ぼっこ — La memoria del calore</p>
+    </div>
+
+    <!-- ── SEZIONE V: IL CREPUSCOLO (outro) ── -->
+    <section class="outro" id="section-05" aria-labelledby="outro-title">
+      <div class="outro__symbol" aria-hidden="true">日</div>
+      <h2 class="outro__title" id="outro-title">
+        Il crepuscolo.<br>Il calore che rimane.
+      </h2>
+      <p class="outro__desc">
+        Hinatabokko insegna che il vero riposo non è l'assenza di luce,
+        ma la gratitudine per il caldo che si porta nella pelle quando il sole è già andato.
+        Ogni tramonto è un invito a fermarsi, a ricordare, a sentire.
+      </p>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer aria-label="Footer">
+      <div class="footer-brand">HINATA<em>BOKKO</em></div>
+      <p class="footer-meta">EXPERIMENT 03 · PORTFOLIO 2024 · 日向ぼっこ</p>
+    </footer>
+
+  </div><!-- /content -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.umd.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* ══════════════════════════════════════════════════════
+       GUARD
+    ══════════════════════════════════════════════════════ */
+    if (typeof gsap === 'undefined')          console.error('[HINATABOKKO] GSAP failed to load.');
+    if (typeof ScrollTrigger === 'undefined') console.error('[HINATABOKKO] ScrollTrigger failed to load.');
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ══════════════════════════════════════════════════════
+       LENIS SMOOTH SCROLL
+    ══════════════════════════════════════════════════════ */
+    let lenis = null;
+    const LenisClass = (typeof Lenis !== 'undefined') ? (Lenis.default || Lenis) : null;
+
+    if (LenisClass) {
+      lenis = new LenisClass({
+        duration: 1.5,
+        easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 0.85,
+        touchMultiplier: 1.8,
+      });
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add(time => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCROLL PROGRESS (0 → 1)
+    ══════════════════════════════════════════════════════ */
+    const progressBar = document.getElementById('progress-bar');
+    let scrollT = 0;
+
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 2,
+      onUpdate: self => {
+        scrollT = self.progress;
+        if (progressBar) progressBar.style.width = `${scrollT * 100}%`;
+        updateDynamicColors(scrollT);
+      },
+    });
+
+    /* ══════════════════════════════════════════════════════
+       DYNAMIC COLOR PALETTE — updates CSS vars on scroll
+       Keyframes: 0 → golden, .25 → orange, .5 → red,
+                  .75 → violet dusk, 1 → night
+    ══════════════════════════════════════════════════════ */
+    const PALETTE = [
+      { t: 0,    top: [1.00, 0.843, 0.00],  bottom: [1.00, 0.549, 0.00], accent: [1.00, 0.843, 0.00] },  // gold/orange
+      { t: 0.25, top: [1.00, 0.420, 0.00],  bottom: [1.00, 0.271, 0.00], accent: [1.00, 0.420, 0.00] },  // deep orange
+      { t: 0.5,  top: [0.87, 0.133, 0.00],  bottom: [0.753, 0.224, 0.169], accent: [1.00, 0.133, 0.00] }, // red
+      { t: 0.75, top: [0.545, 0.00, 0.00],  bottom: [0.294, 0.00, 0.510], accent: [0.8, 0.2, 0.5] },      // violet dusk
+      { t: 1,    top: [0.102, 0.039, 0.086], bottom: [0.051, 0.00, 0.082], accent: [0.6, 0.3, 0.8] },     // night
+    ];
+
+    function lerpPalette(t) {
+      let i = 0;
+      for (let k = PALETTE.length - 2; k >= 0; k--) {
+        if (t >= PALETTE[k].t) { i = k; break; }
+      }
+      const a = PALETTE[i], b = PALETTE[i + 1];
+      const f = (t - a.t) / (b.t - a.t);
+
+      const lerp = (x, y, f) => x + (y - x) * f;
+      const rgb = arr => `rgb(${arr.map(v => Math.round(v * 255)).join(',')})`;
+      const hex = arr => '#' + arr.map(v => Math.round(v * 255).toString(16).padStart(2,'0')).join('');
+
+      return {
+        top:    rgb(a.top.map((v,j) => lerp(v, b.top[j], f))),
+        bottom: rgb(a.bottom.map((v,j) => lerp(v, b.bottom[j], f))),
+        accent: hex(a.accent.map((v,j) => lerp(v, b.accent[j], f))),
+      };
+    }
+
+    function updateDynamicColors(t) {
+      const { top, bottom, accent } = lerpPalette(t);
+      document.documentElement.style.setProperty('--sky-top',    top);
+      document.documentElement.style.setProperty('--sky-bottom', bottom);
+      document.documentElement.style.setProperty('--accent',     accent);
+
+      if (cursorDot) cursorDot.style.background = accent;
+      if (progressBar) progressBar.style.background = `linear-gradient(to right, ${accent}, ${bottom})`;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CUSTOM CURSOR
+    ══════════════════════════════════════════════════════ */
+    const cursorDot  = document.getElementById('cursor-dot');
+    const cursorRing = document.getElementById('cursor-ring');
+
+    if (cursorDot && cursorRing) {
+      let rx = 0, ry = 0, tx = 0, ty = 0;
+
+      window.addEventListener('mousemove', e => {
+        tx = e.clientX; ty = e.clientY;
+        gsap.set(cursorDot, { x: e.clientX, y: e.clientY });
+      });
+
+      (function animRing() {
+        rx += (tx - rx) * 0.11;
+        ry += (ty - ry) * 0.11;
+        gsap.set(cursorRing, { x: rx, y: ry });
+        requestAnimationFrame(animRing);
+      })();
+
+      document.querySelectorAll('a, button, .photo-card').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       THREE.JS — SUNSET SKY + SUN + CLOUDS
+    ══════════════════════════════════════════════════════ */
+    const canvas = document.getElementById('bg-canvas');
+
+    const webglAvailable = (() => {
+      try {
+        const c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch { return false; }
+    })();
+
+    let threeCleanup = () => {};
+
+    if (webglAvailable && canvas) {
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.2;
+
+      const scene  = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      /* ── Full-screen sky gradient (ShaderMaterial on a quad) ── */
+      const SKY_COLORS = [
+        // [topR,topG,topB, bottomR,bottomG,bottomB, horizR,horizG,horizB]
+        // 0.00: golden hour
+        [1.00, 0.843, 0.00,  1.00, 0.549, 0.00,   1.00, 0.780, 0.20],
+        // 0.25: deep orange
+        [1.00, 0.420, 0.00,  1.00, 0.271, 0.00,   1.00, 0.55, 0.10],
+        // 0.50: deep red
+        [0.87, 0.133, 0.00,  0.75, 0.224, 0.17,   0.95, 0.30, 0.10],
+        // 0.75: violet dusk
+        [0.29, 0.00, 0.51,   0.54, 0.00, 0.00,    0.80, 0.25, 0.40],
+        // 1.00: night
+        [0.050, 0.010, 0.06, 0.051, 0.00, 0.082,  0.25, 0.05, 0.20],
+      ];
+
+      const skyVS = `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `;
+
+      const skyFS = `
+        precision mediump float;
+        varying vec2 vUv;
+        uniform float uScroll;
+        uniform vec3 uTopA; uniform vec3 uTopB;
+        uniform vec3 uBotA; uniform vec3 uBotB;
+        uniform vec3 uHorA; uniform vec3 uHorB;
+
+        vec3 lerpColors(vec3 a, vec3 b, float t) { return mix(a, b, t); }
+
+        void main() {
+          float y = vUv.y;
+          vec3 top  = lerpColors(uTopA, uTopB, uScroll);
+          vec3 bot  = lerpColors(uBotA, uBotB, uScroll);
+          vec3 hor  = lerpColors(uHorA, uHorB, uScroll);
+
+          // Three-band gradient: top → horizon at y=0.45 → bottom
+          float band = smoothstep(0.35, 0.65, y);
+          vec3 skyColor = mix(bot, mix(hor, top, smoothstep(0.45, 1.0, y)), band);
+
+          // Warm atmospheric glow near horizon
+          float glow = exp(-abs(y - 0.42) * 8.0) * (1.0 - uScroll * 0.7);
+          skyColor += glow * vec3(1.0, 0.6, 0.2) * 0.4;
+
+          // Night stars (appearing from t=0.65 onwards)
+          float starT = smoothstep(0.65, 1.0, uScroll);
+          if (starT > 0.0) {
+            vec2 st = vUv * vec2(120.0, 80.0);
+            vec2 fi = fract(st);
+            vec2 id = floor(st);
+            float h = fract(sin(dot(id, vec2(127.1, 311.7))) * 43758.5453);
+            float star = smoothstep(0.92, 1.0, h) * step(0.5, 1.0 - length(fi - 0.5) * 2.0);
+            skyColor += star * starT * 0.7;
+          }
+
+          gl_FragColor = vec4(skyColor, 1.0);
+        }
+      `;
+
+      // Build uniform arrays from palette
+      function getPaletteSlice(t) {
+        const steps = [0, 0.25, 0.5, 0.75, 1.0];
+        let i = 0;
+        for (let k = steps.length - 2; k >= 0; k--) {
+          if (t >= steps[k]) { i = k; break; }
+        }
+        return {
+          a: SKY_COLORS[i],
+          b: SKY_COLORS[i + 1],
+          f: (t - steps[i]) / (steps[i + 1] - steps[i]),
+        };
+      }
+
+      const skyUniforms = {
+        uScroll: { value: 0 },
+        uTopA:   { value: new THREE.Color(SKY_COLORS[0][0], SKY_COLORS[0][1], SKY_COLORS[0][2]) },
+        uTopB:   { value: new THREE.Color(SKY_COLORS[1][0], SKY_COLORS[1][1], SKY_COLORS[1][2]) },
+        uBotA:   { value: new THREE.Color(SKY_COLORS[0][3], SKY_COLORS[0][4], SKY_COLORS[0][5]) },
+        uBotB:   { value: new THREE.Color(SKY_COLORS[1][3], SKY_COLORS[1][4], SKY_COLORS[1][5]) },
+        uHorA:   { value: new THREE.Color(SKY_COLORS[0][6], SKY_COLORS[0][7], SKY_COLORS[0][8]) },
+        uHorB:   { value: new THREE.Color(SKY_COLORS[1][6], SKY_COLORS[1][7], SKY_COLORS[1][8]) },
+      };
+
+      const skyGeo = new THREE.PlaneGeometry(2, 2);
+      const skyMat = new THREE.ShaderMaterial({
+        vertexShader: skyVS,
+        fragmentShader: skyFS,
+        uniforms: skyUniforms,
+        depthWrite: false,
+      });
+      const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+      scene.add(skyMesh);
+
+      /* ── Sun ── */
+      const sunVS = `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `;
+
+      const sunFS = `
+        precision mediump float;
+        varying vec2 vUv;
+        uniform vec3 uColor;
+        uniform float uGlow;
+
+        void main() {
+          vec2 center = vUv - 0.5;
+          float dist = length(center);
+          float disc = 1.0 - smoothstep(0.3, 0.5, dist);
+          float halo = exp(-dist * 4.0) * uGlow * 0.6;
+          float outer = exp(-dist * 1.8) * uGlow * 0.3;
+          float alpha = disc + halo + outer;
+          gl_FragColor = vec4(uColor * (disc + halo * 0.7 + outer * 0.4), alpha);
+        }
+      `;
+
+      const sunUniforms = {
+        uColor: { value: new THREE.Color(1, 0.9, 0) },
+        uGlow:  { value: 1.0 },
+      };
+
+      const sunGeo = new THREE.PlaneGeometry(1, 1);
+      const sunMat = new THREE.ShaderMaterial({
+        vertexShader: sunVS,
+        fragmentShader: sunFS,
+        uniforms: sunUniforms,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
+      const sun3D = new THREE.Mesh(sunGeo, sunMat);
+      scene.add(sun3D);
+
+      // Sun uses a separate perspective scene so it can be positioned in world space
+      const sunScene  = new THREE.Scene();
+      const sunCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
+      sunCamera.position.z = 2;
+      sunScene.add(sun3D);
+
+      /* ── Cloud layers ── */
+      const cloudVS = `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `;
+
+      const cloudFS = `
+        precision mediump float;
+        varying vec2 vUv;
+        uniform vec3 uColor;
+        uniform float uOpacity;
+        uniform float uTime;
+        uniform float uOffset;
+
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+        float noise(vec2 p) {
+          vec2 i = floor(p), f = fract(p);
+          vec2 u = f*f*(3.0-2.0*f);
+          return mix(
+            mix(hash(i), hash(i+vec2(1,0)), u.x),
+            mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
+        }
+        float fbm(vec2 p) {
+          float v = 0.0, a = 0.5;
+          for (int i = 0; i < 5; i++) { v += a*noise(p); p*=2.1; a*=0.5; }
+          return v;
+        }
+
+        void main() {
+          vec2 st = vUv + vec2(uTime * 0.015 + uOffset, 0.0);
+          float n = fbm(st * 3.0);
+          float cloud = smoothstep(0.44, 0.68, n);
+          float fade  = smoothstep(0.0, 0.15, vUv.x) * smoothstep(1.0, 0.85, vUv.x)
+                      * smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.7, vUv.y);
+          gl_FragColor = vec4(uColor, cloud * fade * uOpacity);
+        }
+      `;
+
+      const cloudLayers = [];
+      const cloudDefs = [
+        { y: 0.2,  scale: [4, 0.7], speed: 0.7, opacity: 0.55 },
+        { y: 0.08, scale: [3, 0.5], speed: 1.0, opacity: 0.40 },
+        { y: 0.32, scale: [5, 0.8], speed: 0.4, opacity: 0.30 },
+      ];
+
+      cloudDefs.forEach((def, i) => {
+        const geo  = new THREE.PlaneGeometry(def.scale[0], def.scale[1]);
+        const uni  = {
+          uColor:   { value: new THREE.Color(1.0, 0.8, 0.4) },
+          uOpacity: { value: def.opacity },
+          uTime:    { value: 0 },
+          uOffset:  { value: i * 1.37 },
+        };
+        const mat  = new THREE.ShaderMaterial({
+          vertexShader: cloudVS,
+          fragmentShader: cloudFS,
+          uniforms: uni,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.NormalBlending,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(0, def.y * 2 - 1, -0.5);
+        sunScene.add(mesh);
+        cloudLayers.push({ mesh, uni, speed: def.speed });
+      });
+
+      /* ── Update Three.js uniforms from scroll value ── */
+      function updateSkyUniforms(t) {
+        const steps = [0, 0.25, 0.5, 0.75, 1.0];
+        let i = 0;
+        for (let k = steps.length - 2; k >= 0; k--) {
+          if (t >= steps[k]) { i = k; break; }
+        }
+        const a   = SKY_COLORS[i];
+        const b   = SKY_COLORS[i + 1];
+        const segT = (t - steps[i]) / (steps[i + 1] - steps[i]);
+
+        skyUniforms.uScroll.value = t;
+        skyUniforms.uTopA.value.setRGB(a[0], a[1], a[2]);
+        skyUniforms.uTopB.value.setRGB(b[0], b[1], b[2]);
+        skyUniforms.uBotA.value.setRGB(a[3], a[4], a[5]);
+        skyUniforms.uBotB.value.setRGB(b[3], b[4], b[5]);
+        skyUniforms.uHorA.value.setRGB(a[6], a[7], a[8]);
+        skyUniforms.uHorB.value.setRGB(b[6], b[7], b[8]);
+        skyUniforms.uScroll.value = t;
+
+        // Sun: descend from y=0.28 (top-ish) to y=-0.35 (below horizon)
+        const sunY = 0.28 - t * 0.63;
+        sun3D.position.set(0, sunY, -1);
+
+        // Sun scale: large at horizon (t=0.6-0.8), small at end
+        const sunSize = 0.22 + Math.max(0, 0.14 - Math.abs(t - 0.7) * 0.7);
+        sun3D.scale.setScalar(sunSize);
+
+        // Sun color: gold → orange → red
+        const sc = t < 0.5
+          ? new THREE.Color().lerpColors(new THREE.Color(1, 0.9, 0), new THREE.Color(1, 0.35, 0.0), t * 2)
+          : new THREE.Color().lerpColors(new THREE.Color(1, 0.35, 0.0), new THREE.Color(0.85, 0.05, 0.0), (t - 0.5) * 2);
+        sunUniforms.uColor.value.copy(sc);
+
+        // Glow burst just before disappearing
+        const glowBurst = t > 0.62 && t < 0.82
+          ? 1.0 + Math.sin((t - 0.62) / 0.2 * Math.PI) * 1.8
+          : 1.0;
+        sunUniforms.uGlow.value = glowBurst * (1 - Math.max(0, (t - 0.82) / 0.18));
+
+        // Cloud colors transition with sky
+        const cloudColors = [
+          new THREE.Color(1.0, 0.80, 0.35),  // golden
+          new THREE.Color(1.0, 0.50, 0.15),  // orange
+          new THREE.Color(0.95, 0.25, 0.25), // red
+          new THREE.Color(0.75, 0.20, 0.60), // violet
+          new THREE.Color(0.40, 0.10, 0.55), // night violet
+        ];
+        const ca = cloudColors[i];
+        const cb = cloudColors[i + 1];
+        const cc = new THREE.Color().lerpColors(ca, cb, segT);
+        cloudLayers.forEach(layer => layer.uni.uColor.value.copy(cc));
+      }
+
+      /* ── Resize ── */
+      const onResize = () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        sunCamera.aspect = w / h;
+        sunCamera.updateProjectionMatrix();
+      };
+      window.addEventListener('resize', onResize);
+
+      /* ── Render loop ── */
+      let rafId;
+      const clock = new THREE.Clock();
+
+      const tick = () => {
+        rafId = requestAnimationFrame(tick);
+        const elapsed = clock.getElapsedTime();
+
+        updateSkyUniforms(scrollT);
+
+        cloudLayers.forEach((layer, i) => {
+          layer.uni.uTime.value = elapsed * layer.speed;
+        });
+
+        // Clear and render sky (orthographic)
+        renderer.autoClear = true;
+        renderer.render(scene, camera);
+
+        // Render sun + clouds on top (perspective, no depth clear)
+        renderer.autoClear = false;
+        renderer.render(sunScene, sunCamera);
+        renderer.autoClear = true;
+      };
+      tick();
+
+      threeCleanup = () => {
+        cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', onResize);
+        skyGeo.dispose(); skyMat.dispose();
+        sunGeo.dispose(); sunMat.dispose();
+        cloudLayers.forEach(l => { l.mesh.geometry.dispose(); l.mesh.material.dispose(); });
+        renderer.dispose();
+      };
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — HERO ENTRANCE
+    ══════════════════════════════════════════════════════ */
+    const heroTitle = document.querySelector('.hero__title');
+    if (heroTitle) {
+      const text = heroTitle.textContent;
+      heroTitle.innerHTML = '';
+      [...text].forEach(ch => {
+        if (ch === '\n') { heroTitle.appendChild(document.createElement('br')); return; }
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        heroTitle.appendChild(span);
+      });
+      heroTitle.setAttribute('aria-label', text.replace('\n', ' '));
+
+      gsap.to('.hero__title .char', {
+        y: 0,
+        duration: 1.1,
+        ease: 'power4.out',
+        stagger: 0.035,
+        delay: 0.3,
+      });
+    }
+
+    gsap.to('.hero__label',       { opacity: 1, duration: .8, delay: .2 });
+    gsap.to('.hero__sub',         { opacity: 1, duration: .8, delay: .9 });
+    gsap.to('.hero__jp-subtitle', { opacity: 1, duration: .8, delay: 1.1 });
+    gsap.to('.hero__scroll',      { opacity: 1, duration: .8, delay: 1.4 });
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — SCROLL REVEALS
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-section').forEach(section => {
+      const phase  = section.querySelector('.section-phase');
+      const title  = section.querySelector('.section-title');
+      const titleJp = section.querySelector('.section-title-jp');
+      const desc   = section.querySelector('.section-desc');
+
+      if (phase)   gsap.to(phase,   { opacity: 1, x: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%' } });
+      if (title)   gsap.to(title,   { opacity: 1, y: 0,  duration: 1,  ease: 'power4.out', scrollTrigger: { trigger: section, start: 'top 70%' }, delay: .1 });
+      if (titleJp) gsap.to(titleJp, { opacity: 1,        duration: .7, ease: 'power2.out', scrollTrigger: { trigger: section, start: 'top 65%' }, delay: .2 });
+      if (desc)    gsap.to(desc,    { opacity: 1, y: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 62%' }, delay: .3 });
+    });
+
+    document.querySelectorAll('.photo-card').forEach((card, i) => {
+      gsap.to(card, {
+        opacity: 1, y: 0, duration: .9, ease: 'power3.out',
+        scrollTrigger: { trigger: card, start: 'top 85%' },
+        delay: (i % 3) * 0.12,
+      });
+    });
+
+    document.querySelectorAll('.quote-section').forEach(q => {
+      gsap.to(q.querySelector('.quote-line'),  { opacity: 1, duration: .8, scrollTrigger: { trigger: q, start: 'top 75%' } });
+      gsap.to(q.querySelector('.quote-text'),  { opacity: 1, y: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 70%' }, delay: .2 });
+      gsap.to(q.querySelector('.quote-attr'),  { opacity: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 60%' }, delay: .4 });
+    });
+
+    const outro = document.getElementById('section-05');
+    if (outro) {
+      gsap.to(outro.querySelector('.outro__symbol'), { opacity: 1, scale: 1, duration: 1.5, ease: 'power3.out', scrollTrigger: { trigger: outro, start: 'top 70%' } });
+      gsap.to(outro.querySelector('.outro__title'),  { opacity: 1, y: 0,   duration: 1.1, ease: 'power4.out', scrollTrigger: { trigger: outro, start: 'top 65%' }, delay: .2 });
+      gsap.to(outro.querySelector('.outro__desc'),   { opacity: 1,         duration: .9,  ease: 'power2.out', scrollTrigger: { trigger: outro, start: 'top 60%' }, delay: .4 });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       PARALLAX ON PHOTOS (subtle zoom on scroll)
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-card img').forEach(img => {
+      gsap.to(img, {
+        scale: 1.12,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: img.closest('.photo-card'),
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 1.5,
+        },
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════
+       LIGHTBOX
+    ══════════════════════════════════════════════════════ */
+    const lightbox     = document.getElementById('lightbox');
+    const lbImg        = document.getElementById('lightbox-img');
+    const lbPoemText   = document.getElementById('lightbox-poem-text');
+    const lbPoemJp     = document.getElementById('lightbox-poem-jp');
+    const lbClose      = document.getElementById('lightbox-close');
+
+    function openLightbox(card) {
+      const img     = card.querySelector('img');
+      const poem    = card.dataset.poem || '';
+      const poemJp  = card.dataset.poemJp || '';
+
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbPoemText.textContent  = poem;
+      lbPoemJp.textContent    = poemJp;
+
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(() => { lbImg.src = ''; }, 400);
+    }
+
+    document.querySelectorAll('.photo-card').forEach(card => {
+      card.addEventListener('click', () => openLightbox(card));
+      card.setAttribute('tabindex', '0');
+      card.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(card); });
+    });
+
+    if (lbClose)   lbClose.addEventListener('click', closeLightbox);
+    if (lightbox)  lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ══════════════════════════════════════════════════════
+       CLEANUP
+    ══════════════════════════════════════════════════════ */
+    window.addEventListener('beforeunload', threeCleanup);
+
+  </script>
+</body>
+</html>

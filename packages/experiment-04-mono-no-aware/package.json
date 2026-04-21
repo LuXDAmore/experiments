@@ -1,0 +1,33 @@
+{
+  "name": "@experiments/experiment-04-mono-no-aware",
+  "version": "1.0.0",
+  "description": "MONO NO AWARE — A scroll-driven photographic meditation on cherry blossoms, ephemeral beauty, and the passage of life. Built with ThreeJS, GSAP, Lenis, and TailwindCSS.",
+  "main": "index.html",
+  "scripts": {
+    "serve": "npx serve . -p 3004 --no-clipboard",
+    "dev": "npx serve . -p 3004 --no-clipboard",
+    "preview": "npx serve . -p 3004 --no-clipboard"
+  },
+  "keywords": [
+    "threejs",
+    "gsap",
+    "lenis",
+    "photography",
+    "scroll",
+    "animation",
+    "portfolio",
+    "webgl",
+    "tailwindcss",
+    "cherry-blossom",
+    "sakura",
+    "japanese",
+    "mono-no-aware"
+  ],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.169.0",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.14"
+  }
+}
