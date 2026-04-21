@@ -1,0 +1,32 @@
+{
+  "name": "@experiments/experiment-03-hinatabokko",
+  "version": "1.0.0",
+  "description": "HINATABOKKO — A scroll-driven photographic journey through sunset light, warm colors, and the passage of time. Built with ThreeJS, GSAP, Lenis, and TailwindCSS.",
+  "main": "index.html",
+  "scripts": {
+    "serve": "npx serve . -p 3003 --no-clipboard",
+    "dev": "npx serve . -p 3003 --no-clipboard",
+    "preview": "npx serve . -p 3003 --no-clipboard"
+  },
+  "keywords": [
+    "threejs",
+    "gsap",
+    "lenis",
+    "photography",
+    "scroll",
+    "animation",
+    "portfolio",
+    "webgl",
+    "tailwindcss",
+    "sunset",
+    "japanese",
+    "hinatabokko"
+  ],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.169.0",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.14"
+  }
+}

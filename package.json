@@ -10,7 +10,9 @@
     "dev": "npm run dev --workspaces --if-present",
     "preview": "npm run preview --workspaces --if-present",
     "serve:01": "npm run serve --workspace=packages/experiment-01",
-    "serve:02": "npm run serve --workspace=packages/experiment-02"
+    "serve:02": "npm run serve --workspace=packages/experiment-02",
+    "serve:03": "npm run serve --workspace=packages/experiment-03-hinatabokko",
+    "serve:04": "npm run serve --workspace=packages/experiment-04-mono-no-aware"
   },
   "keywords": [
     "threejs",
