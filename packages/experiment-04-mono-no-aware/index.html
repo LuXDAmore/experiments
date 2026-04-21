@@ -1173,9 +1173,10 @@
       petalGeo.setAttribute('color',    new THREE.BufferAttribute(petalColors, 3));
 
       // Custom petal shader — draws a soft elliptical petal shape
+      // Note: 'attribute vec3 color' is injected automatically by THREE.js
+      // when vertexColors: true is set on the ShaderMaterial — do not redeclare it.
       const petalVS = `
         attribute float aSize;
-        attribute vec3 color;
         varying vec3 vColor;
         varying float vAlpha;
         uniform float uDensity;
