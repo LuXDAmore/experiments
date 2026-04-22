@@ -12,7 +12,12 @@
     "serve:01": "npm run serve --workspace=packages/experiment-01",
     "serve:02": "npm run serve --workspace=packages/experiment-02",
     "serve:03": "npm run serve --workspace=packages/experiment-03-hinatabokko",
-    "serve:04": "npm run serve --workspace=packages/experiment-04-mono-no-aware"
+    "serve:04": "npm run serve --workspace=packages/experiment-04-mono-no-aware",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^3.1.2"
   },
   "keywords": [
     "threejs",
