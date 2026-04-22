@@ -9,6 +9,7 @@ This is a repository containing multiple applications and design systems, primar
 ### Frontend Frameworks
 - **Nuxt.js**: Primary framework for applications and design systems
 - **Vue.js**: Used within Nuxt applications
+- **VanillaJs**: Plain Javascript
 
 ### Build Tools & Package Management
 - **pnpm**: Package manager
@@ -48,7 +49,7 @@ This is a repository containing multiple applications and design systems, primar
 - Store state management in `stores/` directory
 
 ### API
-- **.DOTNET**: API are served through .NET backend on IIS
+- **REST API**: API are served through a REST API backend serer
 
 ### Styling
 - Follow Stylelint rules defined in `stylelint.config.cjs`
