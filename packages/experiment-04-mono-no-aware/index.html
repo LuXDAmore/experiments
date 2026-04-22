@@ -677,6 +677,129 @@
       color: rgba(255,255,255,.18);
     }
 
+    /* ── HORIZONTAL SCROLL SECTION ── */
+    .h-scroll {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .h-scroll__inner {
+      display: flex;
+      height: 100svh;
+      align-items: center;
+    }
+
+    .h-scroll__label {
+      position: absolute;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .4em;
+      color: rgba(255,255,255,.2);
+      text-transform: uppercase;
+      white-space: nowrap;
+      z-index: 2;
+    }
+
+    .h-scroll__track {
+      display: flex;
+      gap: 28px;
+      padding: 0 clamp(24px, 6vw, 80px);
+      will-change: transform;
+    }
+
+    .h-scroll__card {
+      flex-shrink: 0;
+      width: clamp(260px, 30vw, 400px);
+      height: clamp(340px, 52vh, 540px);
+      position: relative;
+      overflow: hidden;
+      background: rgba(26,16,37,.4);
+    }
+
+    .h-scroll__card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94), filter .5s ease;
+      filter: saturate(0.85);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .h-scroll__card:hover img {
+        transform: scale(1);
+        filter: saturate(1.1);
+      }
+    }
+
+    .h-scroll__card-body {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 22px 18px;
+      background: linear-gradient(to top, rgba(26,16,37,.8) 0%, transparent 100%);
+    }
+
+    .h-scroll__card-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .25em;
+      color: rgba(255,255,255,.35);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .h-scroll__card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.01em;
+      color: rgba(255,255,255,.9);
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 12px;
+      font-style: italic;
+      color: rgba(255,255,255,.5);
+      line-height: 1.5;
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-sub {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: .1em;
+      opacity: .65;
+    }
+
+    .h-scroll__progress {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .h-scroll__pip {
+      width: 20px;
+      height: 1px;
+      background: rgba(255,183,197,.2);
+      transition: background .3s ease, width .3s ease;
+    }
+
+    .h-scroll__pip.active {
+      background: var(--blush);
+      width: 36px;
+    }
+
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -684,12 +807,13 @@
         transition-duration: .01ms !important;
       }
       .hero__title .char { transform: none !important; }
-      .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; }
+      .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; visibility: visible !important; }
       .section-phase, .section-title, .section-title-jp,
       .section-desc, .photo-card, .quote-line, .quote-text,
       .quote-attr, .hanafubuki__phase, .hanafubuki__title,
       .hanafubuki__title-jp, .hanafubuki__desc,
-      .outro__symbol, .outro__title, .outro__desc { opacity: 1 !important; transform: none !important; }
+      .outro__symbol, .outro__title, .outro__desc,
+      .h-scroll__card { opacity: 1 !important; visibility: visible !important; transform: none !important; clip-path: none !important; }
     }
   </style>
 </head>
@@ -892,6 +1016,73 @@
       <p class="quote-attr" aria-hidden="true">無常 Mujō — L'impermanenza come dono</p>
     </div>
 
+    <!-- ── ORIZZONTALE: LE STAGIONI DEL SAKURA ── -->
+    <section class="h-scroll" id="h-scroll-sakura" aria-label="Le stagioni del sakura">
+      <p class="h-scroll__label" aria-hidden="true">LE STAGIONI DEL SAKURA</p>
+      <div class="h-scroll__inner">
+        <div class="h-scroll__track" id="h-scroll-track">
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/mna-h01/800/1040" alt="Inverno — i rami spogli prima della fioritura" loading="lazy" width="800" height="1040">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">冬 INVERNO</span>
+              <p class="h-scroll__card-title">Il Ramo<br>Nudo</p>
+              <p class="h-scroll__card-poem">Prima della fioritura, il silenzio.</p>
+              <span class="h-scroll__card-sub" lang="ja">静けさの中に、次の春がある</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/mna-h02/800/1040" alt="Primavera precoce — i primi boccioli rosa" loading="lazy" width="800" height="1040">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">早春 INIZIO PRIMAVERA</span>
+              <p class="h-scroll__card-title">I Primi<br>Boccioli</p>
+              <p class="h-scroll__card-poem">Un rosa timido nell'aria fredda.</p>
+              <span class="h-scroll__card-sub" lang="ja">寒さの中に、ピンクの希望</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/mna-h03/800/1040" alt="Piena fioritura — sakura in tutto il suo splendore" loading="lazy" width="800" height="1040">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">満開 PIENA FIORITURA</span>
+              <p class="h-scroll__card-title">Sakura<br>Mankai</p>
+              <p class="h-scroll__card-poem">Il momento più bello — e più fragile.</p>
+              <span class="h-scroll__card-sub" lang="ja">満開の桜、儚い永遠</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/mna-h04/800/1040" alt="Hanafubuki — la bufera di petali" loading="lazy" width="800" height="1040">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">花吹雪 HANAFUBUKI</span>
+              <p class="h-scroll__card-title">La Bufera<br>di Petali</p>
+              <p class="h-scroll__card-poem">I petali cadono come neve rosa.</p>
+              <span class="h-scroll__card-sub" lang="ja">花びらが舞う、春の雪</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/mna-h05/800/1040" alt="Fine fioritura — petali sul suolo" loading="lazy" width="800" height="1040">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">散り FINE</span>
+              <p class="h-scroll__card-title">Il Completamento<br>della Caduta</p>
+              <p class="h-scroll__card-poem">Ogni fine è già un inizio.</p>
+              <span class="h-scroll__card-sub" lang="ja">散ることで、また咲く</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="h-scroll__progress" aria-hidden="true">
+        <div class="h-scroll__pip active"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+      </div>
+    </section>
+
     <!-- ── OUTRO: IL RAMO SPOGLIO ── -->
     <section class="outro" id="section-05" aria-labelledby="outro-title">
       <div class="outro__symbol" aria-hidden="true">桜</div>
@@ -1055,6 +1246,7 @@
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
 
       /* ── Background Sky Gradient ── */
       const bgScene  = new THREE.Scene();
@@ -1125,11 +1317,13 @@
       const petalCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 20);
       petalCamera.position.z = 5;
 
-      const PETAL_COUNT  = 350;
+      const PETAL_COUNT  = 500;
       const petalPositions  = new Float32Array(PETAL_COUNT * 3);
       const petalVelocities = new Float32Array(PETAL_COUNT * 3); // x-drift, y-fall, z-depth
       const petalPhases     = new Float32Array(PETAL_COUNT);     // random phase offset
       const petalSizes      = new Float32Array(PETAL_COUNT);
+      const petalRotations  = new Float32Array(PETAL_COUNT);    // per-petal initial rotation
+      const petalRotSpeeds  = new Float32Array(PETAL_COUNT);    // rotation speed
       const petalColors     = new Float32Array(PETAL_COUNT * 3);
 
       // Spread viewport: use frustum half-widths at z=0
@@ -1147,12 +1341,15 @@
       function resetPetal(i) {
         petalPositions[i*3]     = (Math.random() - 0.5) * SPREAD_X * 2;
         petalPositions[i*3+1]   = SPREAD_Y * 0.6 + Math.random() * SPREAD_Y;
-        petalPositions[i*3+2]   = (Math.random() - 0.5) * 2;
-        petalVelocities[i*3]    = (Math.random() - 0.5) * 0.008; // horizontal drift
-        petalVelocities[i*3+1]  = -(0.008 + Math.random() * 0.012);  // fall speed
+        petalPositions[i*3+2]   = (Math.random() - 0.5) * 2.5;
+        // Realistic fall: 0.03–0.08 per frame (~1.8–4.8 units/s at 60fps)
+        petalVelocities[i*3]    = (Math.random() - 0.5) * 0.014;   // horizontal drift
+        petalVelocities[i*3+1]  = -(0.030 + Math.random() * 0.050); // fall speed (realistic)
         petalVelocities[i*3+2]  = 0;
         petalPhases[i]           = Math.random() * Math.PI * 2;
-        petalSizes[i]            = 0.04 + Math.random() * 0.06;
+        petalSizes[i]            = 0.10 + Math.random() * 0.14;     // larger petals
+        petalRotations[i]        = Math.random() * Math.PI * 2;
+        petalRotSpeeds[i]        = (Math.random() - 0.5) * 0.06;
 
         const col = petalColorPalette[Math.floor(Math.random() * petalColorPalette.length)];
         petalColors[i*3]     = col.r;
@@ -1164,6 +1361,7 @@
         resetPetal(i);
         // Randomize initial Y so they don't all start at top on load
         petalPositions[i*3+1] = (Math.random() - 0.5) * SPREAD_Y * 2;
+        petalRotations[i] = Math.random() * Math.PI * 2;
       }
 
       const petalGeo = new THREE.BufferGeometry();
@@ -1177,15 +1375,18 @@
       // when vertexColors: true is set on the ShaderMaterial — do not redeclare it.
       const petalVS = `
         attribute float aSize;
+        attribute float aRotation;
         varying vec3 vColor;
         varying float vAlpha;
+        varying float vRot;
         uniform float uDensity;
         void main() {
           vColor = color;
           vAlpha = uDensity;
+          vRot   = aRotation;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mv;
-          gl_PointSize = aSize * (300.0 / -mv.z);
+          gl_PointSize = aSize * (600.0 / -mv.z);
         }
       `;
 
@@ -1193,20 +1394,43 @@
         precision mediump float;
         varying vec3 vColor;
         varying float vAlpha;
+        varying float vRot;
         void main() {
           vec2 c = gl_PointCoord - 0.5;
-          // Ellipse shape (petal elongated vertically)
-          float ell = (c.x * c.x) / 0.09 + (c.y * c.y) / 0.25;
-          float shape = 1.0 - smoothstep(0.7, 1.0, ell);
-          if (shape < 0.01) discard;
-          float alpha = shape * vAlpha * 0.85;
-          gl_FragColor = vec4(vColor, alpha);
+
+          // Rotate the point coordinate by per-petal angle
+          float ca = cos(vRot);
+          float sa = sin(vRot);
+          vec2 r = vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
+
+          // Cherry blossom petal: wide upper lobe, narrow lower tip
+          // Upper ellipse (body of petal)
+          float body = (r.x * r.x) / 0.055 + ((r.y - 0.06) * (r.y - 0.06)) / 0.18;
+          // Lower pointed tip — a smaller ellipse shifted down
+          float tip  = (r.x * r.x) / 0.022 + ((r.y + 0.22) * (r.y + 0.22)) / 0.055;
+          // Combine: inside body OR inside tip
+          float shape = 1.0 - smoothstep(0.75, 1.0, min(body, tip));
+          if (shape < 0.02) discard;
+
+          // Soft shading: lighter at center, slightly darker at edges for translucency
+          float centerGlow = 1.0 - smoothstep(0.0, 0.6, body);
+          vec3 col = mix(vColor * 1.15, vColor * 0.85, 1.0 - centerGlow);
+
+          // Thin central vein
+          float vein = 1.0 - smoothstep(0.0, 0.012, abs(r.x)) * smoothstep(-0.38, 0.3, r.y);
+          col += vein * 0.06;
+
+          float alpha = shape * vAlpha * 0.88;
+          gl_FragColor = vec4(col, alpha);
         }
       `;
 
-      // Add per-vertex size attribute
+      // Add per-vertex size and rotation attributes
       const sizeAttr = new THREE.BufferAttribute(petalSizes, 1);
       petalGeo.setAttribute('aSize', sizeAttr);
+      const rotAttr  = new THREE.BufferAttribute(petalRotations, 1);
+      rotAttr.setUsage(THREE.DynamicDrawUsage);
+      petalGeo.setAttribute('aRotation', rotAttr);
 
       const petalMat = new THREE.ShaderMaterial({
         vertexShader: petalVS,
@@ -1257,20 +1481,30 @@
         const repelX = mouse.x * 3;
         const repelY = mouse.y * 3;
 
+        // Wind oscillation: horizontal gust changes direction slowly
+        const windX  = Math.sin(elapsed * 0.18) * 0.008 + Math.cos(elapsed * 0.31) * 0.004;
+
         for (let i = 0; i < PETAL_COUNT; i++) {
           const ix = i*3, iy = i*3+1, iz = i*3+2;
 
-          // Sinusoidal sway
-          const sway = Math.sin(elapsed * 0.7 + petalPhases[i]) * 0.006;
+          // Air resistance damps horizontal velocity over time
+          petalVelocities[ix] *= 0.992;
+
+          // Sinusoidal sway (tumbling oscillation)
+          const sway = Math.sin(elapsed * 1.1 + petalPhases[i]) * 0.009
+                     + Math.cos(elapsed * 0.6 + petalPhases[i] * 1.7) * 0.004;
 
           // Mouse repulsion
           const dx = petalPositions[ix] - repelX;
           const dy = petalPositions[iy] - repelY;
           const dist2 = dx*dx + dy*dy;
-          const repelForce = dist2 < 0.8 ? (0.8 - dist2) * 0.012 : 0;
+          const repelForce = dist2 < 1.2 ? (1.2 - dist2) * 0.014 : 0;
 
-          petalPositions[ix]  += petalVelocities[ix] + sway + dx * repelForce;
-          petalPositions[iy]  += petalVelocities[iy] + dy * repelForce * 0.5;
+          petalPositions[ix]  += petalVelocities[ix] + sway + windX + dx * repelForce;
+          petalPositions[iy]  += petalVelocities[iy] + dy * repelForce * 0.4;
+
+          // Animate rotation: tumbling as petal falls
+          petalRotations[i] += petalRotSpeeds[i] * (1.0 + Math.abs(petalVelocities[iy]) * 4);
 
           // Reset when below screen
           if (petalPositions[iy] < -SPREAD_Y) {
@@ -1279,6 +1513,7 @@
         }
 
         posAttr.needsUpdate = true;
+        rotAttr.needsUpdate = true;
 
         // Render
         renderer.autoClear = true;
@@ -1315,62 +1550,115 @@
       });
       heroTitle.setAttribute('aria-label', text.replace('\n', ' '));
 
-      gsap.to('.hero__title .char', {
-        y: 0,
-        duration: 1.2,
-        ease: 'power4.out',
-        stagger: 0.04,
-        delay: 0.3,
-      });
+      const heroTl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+      heroTl
+        .to('.hero__label',       { autoAlpha: 1, duration: .8 })
+        .to('.hero__title .char', { y: 0, duration: 1.2, stagger: 0.04 }, '-=0.5')
+        .to('.hero__sub',         { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__jp-subtitle', { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__scroll',      { autoAlpha: 1, duration: .8 }, '-=0.3');
     }
 
-    gsap.to('.hero__label',       { opacity: 1, duration: .8, delay: .2 });
-    gsap.to('.hero__sub',         { opacity: 1, duration: .8, delay: 1.0 });
-    gsap.to('.hero__jp-subtitle', { opacity: 1, duration: .8, delay: 1.2 });
-    gsap.to('.hero__scroll',      { opacity: 1, duration: .8, delay: 1.5 });
-
     /* ══════════════════════════════════════════════════════
-       GSAP — SCROLL REVEALS
+       GSAP — SCROLL REVEALS (petal-fall themed, scrub-linked)
     ══════════════════════════════════════════════════════ */
+
+    // Section label: slide in from left
     document.querySelectorAll('.photo-section').forEach(section => {
       const phase   = section.querySelector('.section-phase');
       const title   = section.querySelector('.section-title');
       const titleJp = section.querySelector('.section-title-jp');
       const desc    = section.querySelector('.section-desc');
 
-      if (phase)   gsap.to(phase,   { opacity: 1, x: 0, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%' } });
-      if (title)   gsap.to(title,   { opacity: 1, y: 0, duration: 1,  ease: 'power4.out', scrollTrigger: { trigger: section, start: 'top 70%' }, delay: .1 });
-      if (titleJp) gsap.to(titleJp, { opacity: 1,       duration: .7, ease: 'power2.out', scrollTrigger: { trigger: section, start: 'top 65%' }, delay: .2 });
-      if (desc)    gsap.to(desc,    { opacity: 1, y: 0, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 62%' }, delay: .3 });
+      if (phase) {
+        gsap.fromTo(phase,
+          { autoAlpha: 0, x: -24 },
+          { autoAlpha: 1, x: 0, duration: .7, ease: 'power3.out',
+            scrollTrigger: { trigger: section, start: 'top 78%', toggleActions: 'play none none none' } }
+        );
+      }
+
+      // Title: clip-path reveal top→bottom (petals fall away revealing text)
+      if (title) {
+        gsap.fromTo(title,
+          { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 },
+          { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1,
+            duration: 1.1, ease: 'cubic-bezier(0.23, 1, 0.32, 1)',
+            scrollTrigger: {
+              trigger: section, start: 'top 72%', end: 'top 38%',
+              scrub: 1.4,
+            }
+          }
+        );
+      }
+
+      if (titleJp) {
+        gsap.fromTo(titleJp,
+          { autoAlpha: 0, y: 8 },
+          { autoAlpha: 1, y: 0, duration: .8, ease: 'power2.out',
+            scrollTrigger: { trigger: section, start: 'top 65%', toggleActions: 'play none none none' } }
+        );
+      }
+
+      // Description: fade + rise, scrub-linked
+      if (desc) {
+        gsap.fromTo(desc,
+          { autoAlpha: 0, y: 22 },
+          { autoAlpha: 1, y: 0,
+            scrollTrigger: {
+              trigger: section, start: 'top 68%', end: 'top 30%',
+              scrub: 1.8,
+            }
+          }
+        );
+      }
     });
 
+    // Hanafubuki section — petal storm: titles bloom into view
     const hana = document.getElementById('section-03');
     if (hana) {
-      gsap.to(hana.querySelector('.hanafubuki__phase'),    { opacity: 1, duration: .7, scrollTrigger: { trigger: hana, start: 'top 75%' } });
-      gsap.to(hana.querySelector('.hanafubuki__title'),    { opacity: 1, y: 0, duration: 1.2, ease: 'power4.out', scrollTrigger: { trigger: hana, start: 'top 70%' }, delay: .1 });
-      gsap.to(hana.querySelector('.hanafubuki__title-jp'), { opacity: 1, duration: .8, scrollTrigger: { trigger: hana, start: 'top 65%' }, delay: .25 });
-      gsap.to(hana.querySelector('.hanafubuki__desc'),     { opacity: 1, duration: .9, scrollTrigger: { trigger: hana, start: 'top 60%' }, delay: .4 });
+      const hPhase    = hana.querySelector('.hanafubuki__phase');
+      const hTitle    = hana.querySelector('.hanafubuki__title');
+      const hTitleJp  = hana.querySelector('.hanafubuki__title-jp');
+      const hDesc     = hana.querySelector('.hanafubuki__desc');
+
+      if (hPhase)   gsap.fromTo(hPhase,   { autoAlpha: 0 }, { autoAlpha: 1, duration: .7, scrollTrigger: { trigger: hana, start: 'top 78%', toggleActions: 'play none none none' } });
+      if (hTitle)   gsap.fromTo(hTitle,   { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 }, { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1, scrollTrigger: { trigger: hana, start: 'top 72%', end: 'top 30%', scrub: 1.6 } });
+      if (hTitleJp) gsap.fromTo(hTitleJp, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: .8, scrollTrigger: { trigger: hana, start: 'top 62%', toggleActions: 'play none none none' } });
+      if (hDesc)    gsap.fromTo(hDesc,    { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, scrollTrigger: { trigger: hana, start: 'top 64%', end: 'top 26%', scrub: 1.8 } });
     }
 
     document.querySelectorAll('.photo-card').forEach((card, i) => {
-      gsap.to(card, {
-        opacity: 1, y: 0, duration: .9, ease: 'power3.out',
-        scrollTrigger: { trigger: card, start: 'top 85%' },
-        delay: (i % 3) * 0.12,
-      });
+      gsap.fromTo(card,
+        { autoAlpha: 0, y: 36 },
+        { autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out',
+          scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none none' },
+          delay: (i % 3) * 0.10,
+        }
+      );
     });
 
+    // Quote sections: line drops in, then text clips up (like falling blossom)
     document.querySelectorAll('.quote-section').forEach(q => {
-      gsap.to(q.querySelector('.quote-line'),  { opacity: 1, duration: .8, scrollTrigger: { trigger: q, start: 'top 75%' } });
-      gsap.to(q.querySelector('.quote-text'),  { opacity: 1, y: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 70%' }, delay: .2 });
-      gsap.to(q.querySelector('.quote-attr'),  { opacity: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 60%' }, delay: .4 });
+      const qLine = q.querySelector('.quote-line');
+      const qText = q.querySelector('.quote-text');
+      const qAttr = q.querySelector('.quote-attr');
+
+      if (qLine) gsap.fromTo(qLine, { autoAlpha: 0, scaleY: 0 }, { autoAlpha: 1, scaleY: 1, duration: .8, transformOrigin: 'top', ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 78%', toggleActions: 'play none none none' } });
+      if (qText) gsap.fromTo(qText, { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 }, { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1, scrollTrigger: { trigger: q, start: 'top 70%', end: 'top 30%', scrub: 1.5 } });
+      if (qAttr) gsap.fromTo(qAttr, { autoAlpha: 0 }, { autoAlpha: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 58%', toggleActions: 'play none none none' } });
     });
 
+    // Outro: symbol scales in, then title and desc clip-reveal
     const outro = document.getElementById('section-05');
     if (outro) {
-      gsap.to(outro.querySelector('.outro__symbol'), { opacity: 1, scale: 1, duration: 1.5, ease: 'power3.out', scrollTrigger: { trigger: outro, start: 'top 70%' } });
-      gsap.to(outro.querySelector('.outro__title'),  { opacity: 1, y: 0,   duration: 1.1, ease: 'power4.out', scrollTrigger: { trigger: outro, start: 'top 65%' }, delay: .2 });
-      gsap.to(outro.querySelector('.outro__desc'),   { opacity: 1,         duration: .9,  ease: 'power2.out', scrollTrigger: { trigger: outro, start: 'top 60%' }, delay: .4 });
+      const oSymbol = outro.querySelector('.outro__symbol');
+      const oTitle  = outro.querySelector('.outro__title');
+      const oDesc   = outro.querySelector('.outro__desc');
+
+      if (oSymbol) gsap.fromTo(oSymbol, { autoAlpha: 0, scale: .82 }, { autoAlpha: 1, scale: 1, duration: 1.6, ease: 'power3.out', scrollTrigger: { trigger: outro, start: 'top 72%', toggleActions: 'play none none none' } });
+      if (oTitle)  gsap.fromTo(oTitle,  { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 }, { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1, scrollTrigger: { trigger: outro, start: 'top 66%', end: 'top 28%', scrub: 1.5 } });
+      if (oDesc)   gsap.fromTo(oDesc,   { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, scrollTrigger: { trigger: outro, start: 'top 62%', end: 'top 20%', scrub: 1.8 } });
     }
 
     /* ── Parallax on photos ── */
@@ -1386,6 +1674,32 @@
         },
       });
     });
+
+    /* ══════════════════════════════════════════════════════
+       HORIZONTAL SCROLL — LE STAGIONI DEL SAKURA
+    ══════════════════════════════════════════════════════ */
+    const hSection = document.getElementById('h-scroll-sakura');
+    const hTrack   = document.getElementById('h-scroll-track');
+    const hPips    = document.querySelectorAll('#h-scroll-sakura .h-scroll__pip');
+
+    if (hSection && hTrack) {
+      gsap.to(hTrack, {
+        x: () => -(hTrack.scrollWidth - window.innerWidth),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: hSection,
+          start: 'top top',
+          end: () => `+=${hTrack.scrollWidth - window.innerWidth}`,
+          pin: true,
+          scrub: 1.2,
+          invalidateOnRefresh: true,
+          onUpdate: self => {
+            const idx = Math.round(self.progress * (hPips.length - 1));
+            hPips.forEach((p, i) => p.classList.toggle('active', i === idx));
+          },
+        },
+      });
+    }
 
     /* ══════════════════════════════════════════════════════
        LIGHTBOX

@@ -432,8 +432,8 @@
         transition-duration: .01ms !important;
       }
       .hero__title .char { transform: none !important; }
-      .hero__label, .hero__sub, .hero__scroll { opacity: 1 !important; }
-      .featured-item { opacity: 1 !important; transform: none !important; }
+      .hero__label, .hero__sub, .hero__scroll { opacity: 1 !important; visibility: visible !important; }
+      .featured-item { opacity: 1 !important; visibility: visible !important; transform: none !important; }
     }
   </style>
 </head>
@@ -647,6 +647,7 @@
       const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.setClearColor(0x000000, 0);
 
       /* ── Galaxy geometry ── */
@@ -805,10 +806,10 @@
       heroTitle.setAttribute('aria-label', text);
 
       const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
-      tl.to('.hero__label',           { opacity: 1, duration: 0.8, delay: 0.2 })
+      tl.to('.hero__label',           { autoAlpha: 1, duration: 0.8 })
         .to('.hero__title .char',     { y: '0%', duration: 1, stagger: 0.04 }, '-=0.4')
-        .to('.hero__sub',             { opacity: 1, y: 0, duration: 0.8 }, '-=0.4')
-        .to('.hero__scroll',          { opacity: 1, duration: 0.6 }, '-=0.2');
+        .to('.hero__sub',             { autoAlpha: 1, y: 0, duration: 0.8 }, '-=0.4')
+        .to('.hero__scroll',          { autoAlpha: 1, duration: 0.6 }, '-=0.2');
     }
 
     /* ══════════════════════════════════════════════════════
@@ -843,7 +844,7 @@
     ══════════════════════════════════════════════════════ */
     document.querySelectorAll('.featured-item').forEach(item => {
       gsap.to(item, {
-        opacity: 1,
+        autoAlpha: 1,
         y: 0,
         duration: 1,
         ease: 'power3.out',
