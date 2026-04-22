@@ -339,10 +339,12 @@
       opacity: 0.7;
     }
 
-    .h-scroll__card:hover img {
-      transform: scale(1);
-      filter: saturate(1) hue-rotate(200deg);
-      opacity: 0.9;
+    @media (hover: hover) and (pointer: fine) {
+      .h-scroll__card:hover img {
+        transform: scale(1);
+        filter: saturate(1) hue-rotate(200deg);
+        opacity: 0.9;
+      }
     }
 
     .h-scroll__card-body {
@@ -407,7 +409,7 @@
       }
       .panel__phase, .panel__title, .panel__body,
       .panel__counter, .terminus__symbol, .terminus__label,
-      .h-scroll__card { opacity: 1 !important; transform: none !important; }
+      .h-scroll__card { opacity: 1 !important; visibility: visible !important; transform: none !important; }
     }
   </style>
 </head>
@@ -663,6 +665,7 @@
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
       renderer.setSize(W, H);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping     = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.0;
 
@@ -909,28 +912,28 @@
 
       if (phase) {
         gsap.to(phase, {
-          opacity: 1, x: 0, duration: 0.8, ease: 'power3.out',
-          scrollTrigger: { trigger: section, start: 'top 72%' },
+          autoAlpha: 1, x: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: section, start: 'top 72%', toggleActions: 'play none none none' },
         });
       }
       if (title) {
         gsap.to(title, {
-          opacity: 1, y: 0, duration: 1, ease: 'power4.out',
-          scrollTrigger: { trigger: section, start: 'top 68%' },
+          autoAlpha: 1, y: 0, duration: 1, ease: 'power4.out',
+          scrollTrigger: { trigger: section, start: 'top 68%', toggleActions: 'play none none none' },
           delay: 0.1,
         });
       }
       if (body) {
         gsap.to(body, {
-          opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
-          scrollTrigger: { trigger: section, start: 'top 64%' },
+          autoAlpha: 1, y: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: { trigger: section, start: 'top 64%', toggleActions: 'play none none none' },
           delay: 0.25,
         });
       }
       if (counter) {
         gsap.to(counter, {
-          opacity: 1, duration: 0.6,
-          scrollTrigger: { trigger: section, start: 'top 55%' },
+          autoAlpha: 1, duration: 0.6,
+          scrollTrigger: { trigger: section, start: 'top 55%', toggleActions: 'play none none none' },
         });
       }
     });
@@ -944,21 +947,21 @@
 
       if (symbol) {
         gsap.to(symbol, {
-          opacity: 1, scale: 1, duration: 1.4, ease: 'elastic.out(1, 0.5)',
-          scrollTrigger: { trigger: terminus, start: 'top 70%' },
+          autoAlpha: 1, scale: 1, duration: 1.4, ease: 'elastic.out(1, 0.5)',
+          scrollTrigger: { trigger: terminus, start: 'top 70%', toggleActions: 'play none none none' },
         });
       }
       if (label) {
         gsap.to(label, {
-          opacity: 1, duration: 0.8, ease: 'power2.out',
-          scrollTrigger: { trigger: terminus, start: 'top 60%' },
+          autoAlpha: 1, duration: 0.8, ease: 'power2.out',
+          scrollTrigger: { trigger: terminus, start: 'top 60%', toggleActions: 'play none none none' },
           delay: 0.4,
         });
       }
       if (counter) {
         gsap.to(counter, {
-          opacity: 1, duration: 0.6,
-          scrollTrigger: { trigger: terminus, start: 'top 55%' },
+          autoAlpha: 1, duration: 0.6,
+          scrollTrigger: { trigger: terminus, start: 'top 55%', toggleActions: 'play none none none' },
         });
       }
     }
