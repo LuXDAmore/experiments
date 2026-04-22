@@ -596,6 +596,113 @@
       color: rgba(255,255,255,.2);
     }
 
+    /* ── HORIZONTAL SCROLL SECTION ── */
+    .h-scroll {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .h-scroll__inner {
+      display: flex;
+      height: 100svh;
+      align-items: center;
+    }
+
+    .h-scroll__label {
+      position: absolute;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .4em;
+      color: rgba(255,255,255,.25);
+      text-transform: uppercase;
+      z-index: 2;
+    }
+
+    .h-scroll__track {
+      display: flex;
+      gap: 24px;
+      padding: 0 clamp(24px, 6vw, 80px);
+      will-change: transform;
+    }
+
+    .h-scroll__card {
+      flex-shrink: 0;
+      width: clamp(280px, 32vw, 440px);
+      height: clamp(360px, 55vh, 560px);
+      position: relative;
+      overflow: hidden;
+      background: rgba(0,0,0,.3);
+    }
+
+    .h-scroll__card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.05);
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94);
+    }
+
+    .h-scroll__card:hover img { transform: scale(1); }
+
+    .h-scroll__card-body {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 24px 20px;
+      background: linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 100%);
+    }
+
+    .h-scroll__card-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .25em;
+      color: rgba(255,255,255,.4);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .h-scroll__card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(20px, 2.2vw, 28px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.01em;
+      color: rgba(255,255,255,.9);
+      margin-bottom: 6px;
+    }
+
+    .h-scroll__card-sub {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: .1em;
+      opacity: .7;
+    }
+
+    .h-scroll__progress {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .h-scroll__pip {
+      width: 24px;
+      height: 1px;
+      background: rgba(255,255,255,.2);
+      transition: background .3s ease, width .3s ease;
+    }
+
+    .h-scroll__pip.active {
+      background: var(--accent);
+      width: 40px;
+    }
+
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -606,7 +713,8 @@
       .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; }
       .section-phase, .section-title, .section-title-jp,
       .section-desc, .photo-card, .quote-line, .quote-text,
-      .quote-attr, .outro__symbol, .outro__title, .outro__desc { opacity: 1 !important; transform: none !important; }
+      .quote-attr, .outro__symbol, .outro__title, .outro__desc,
+      .h-scroll__card { opacity: 1 !important; transform: none !important; }
     }
   </style>
 </head>
@@ -807,6 +915,68 @@
       <p class="quote-attr" aria-hidden="true">日向ぼっこ — La memoria del calore</p>
     </div>
 
+    <!-- ── ORIZZONTALE: IL TRAMONTO ── -->
+    <section class="h-scroll" id="h-scroll-sunset" aria-label="Il tramonto in cinque atti">
+      <p class="h-scroll__label" aria-hidden="true">IL TRAMONTO IN CINQUE ATTI</p>
+      <div class="h-scroll__inner">
+        <div class="h-scroll__track" id="h-scroll-track">
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/hina-h01/880/1120" alt="Atto I — La prima luce d'oro del tramonto" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">ATTO I</span>
+              <p class="h-scroll__card-title">L'Oro<br>Iniziale</p>
+              <span class="h-scroll__card-sub" lang="ja">黄金の始まり</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/hina-h02/880/1120" alt="Atto II — Il calore dell'arancione" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">ATTO II</span>
+              <p class="h-scroll__card-title">Il Calore<br>Profondo</p>
+              <span class="h-scroll__card-sub" lang="ja">深い暖かさ</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/hina-h03/880/1120" alt="Atto III — Il rosso del tramonto" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">ATTO III</span>
+              <p class="h-scroll__card-title">Il Rosso<br>della Resa</p>
+              <span class="h-scroll__card-sub" lang="ja">夕焼けの赤</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/hina-h04/880/1120" alt="Atto IV — Il viola del crepuscolo" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">ATTO IV</span>
+              <p class="h-scroll__card-title">Il Viola<br>del Crepuscolo</p>
+              <span class="h-scroll__card-sub" lang="ja">黄昏の紫</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/hina-h05/880/1120" alt="Atto V — La notte scende" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">ATTO V</span>
+              <p class="h-scroll__card-title">La Notte<br>Scende</p>
+              <span class="h-scroll__card-sub" lang="ja">夜の訪れ</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="h-scroll__progress" aria-hidden="true">
+        <div class="h-scroll__pip active"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+      </div>
+    </section>
+
     <!-- ── SEZIONE V: IL CREPUSCOLO (outro) ── -->
     <section class="outro" id="section-05" aria-labelledby="outro-title">
       <div class="outro__symbol" aria-hidden="true">日</div>
@@ -1005,6 +1175,7 @@
         precision mediump float;
         varying vec2 vUv;
         uniform float uScroll;
+        uniform float uScrollGlobal;
         uniform vec3 uTopA; uniform vec3 uTopB;
         uniform vec3 uBotA; uniform vec3 uBotB;
         uniform vec3 uHorA; uniform vec3 uHorB;
@@ -1026,7 +1197,7 @@
           skyColor += glow * vec3(1.0, 0.6, 0.2) * 0.4;
 
           // Night stars (appearing from t=0.65 onwards)
-          float starT = smoothstep(0.65, 1.0, uScroll);
+          float starT = smoothstep(0.65, 1.0, uScrollGlobal);
           if (starT > 0.0) {
             vec2 st = vUv * vec2(120.0, 80.0);
             vec2 fi = fract(st);
@@ -1055,7 +1226,8 @@
       }
 
       const skyUniforms = {
-        uScroll: { value: 0 },
+        uScroll:       { value: 0 },
+        uScrollGlobal: { value: 0 },
         uTopA:   { value: new THREE.Color(SKY_COLORS[0][0], SKY_COLORS[0][1], SKY_COLORS[0][2]) },
         uTopB:   { value: new THREE.Color(SKY_COLORS[1][0], SKY_COLORS[1][1], SKY_COLORS[1][2]) },
         uBotA:   { value: new THREE.Color(SKY_COLORS[0][3], SKY_COLORS[0][4], SKY_COLORS[0][5]) },
@@ -1096,7 +1268,8 @@
           float halo = exp(-dist * 4.0) * uGlow * 0.6;
           float outer = exp(-dist * 1.8) * uGlow * 0.3;
           float alpha = disc + halo + outer;
-          gl_FragColor = vec4(uColor * (disc + halo * 0.7 + outer * 0.4), alpha);
+          float edgeFade = 1.0 - smoothstep(0.42, 0.65, dist);
+          gl_FragColor = vec4(uColor * (disc + halo * 0.7 + outer * 0.4), alpha * edgeFade);
         }
       `;
 
@@ -1205,7 +1378,8 @@
         const b   = SKY_COLORS[i + 1];
         const segT = (t - steps[i]) / (steps[i + 1] - steps[i]);
 
-        skyUniforms.uScroll.value = t;
+        skyUniforms.uScroll.value = segT;
+        skyUniforms.uScrollGlobal.value = t;
         skyUniforms.uTopA.value.setRGB(a[0], a[1], a[2]);
         skyUniforms.uTopB.value.setRGB(b[0], b[1], b[2]);
         skyUniforms.uBotA.value.setRGB(a[3], a[4], a[5]);
@@ -1418,6 +1592,32 @@
        CLEANUP
     ══════════════════════════════════════════════════════ */
     window.addEventListener('beforeunload', threeCleanup);
+
+    /* ══════════════════════════════════════════════════════
+       HORIZONTAL SCROLL — IL TRAMONTO IN CINQUE ATTI
+    ══════════════════════════════════════════════════════ */
+    const hSection = document.getElementById('h-scroll-sunset');
+    const hTrack   = document.getElementById('h-scroll-track');
+    const hPips    = document.querySelectorAll('#h-scroll-sunset .h-scroll__pip');
+
+    if (hSection && hTrack) {
+      gsap.to(hTrack, {
+        x: () => -(hTrack.scrollWidth - window.innerWidth),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: hSection,
+          start: 'top top',
+          end: () => `+=${hTrack.scrollWidth - window.innerWidth}`,
+          pin: true,
+          scrub: 1.2,
+          invalidateOnRefresh: true,
+          onUpdate: self => {
+            const idx = Math.round(self.progress * (hPips.length - 1));
+            hPips.forEach((p, i) => p.classList.toggle('active', i === idx));
+          },
+        },
+      });
+    }
 
   </script>
 </body>
