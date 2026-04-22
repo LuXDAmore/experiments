@@ -1,0 +1,20 @@
+{
+  "name": "@experiments/landing",
+  "version": "1.0.0",
+  "description": "Landing page — a visual index of all frontend portfolio experiments.",
+  "main": "index.html",
+  "scripts": {
+    "serve": "npx serve . -p 3000 --no-clipboard",
+    "dev": "npx serve . -p 3000 --no-clipboard",
+    "preview": "npx serve . -p 3000 --no-clipboard"
+  },
+  "keywords": [
+    "landing",
+    "portfolio",
+    "index",
+    "threejs",
+    "gsap"
+  ],
+  "author": "LuXDAmore",
+  "license": "MIT"
+}
