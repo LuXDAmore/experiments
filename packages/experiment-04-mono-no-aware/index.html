@@ -677,19 +677,6 @@
       color: rgba(255,255,255,.18);
     }
 
-    /* ── SCROLL REVEAL: clip-path petal-fall style ── */
-    .reveal-clip {
-      clip-path: inset(0 0 100% 0);
-      opacity: 0;
-      will-change: clip-path, opacity;
-    }
-
-    .reveal-fade {
-      opacity: 0;
-      transform: translateY(18px);
-      will-change: opacity, transform;
-    }
-
     /* ── HORIZONTAL SCROLL SECTION ── */
     .h-scroll {
       position: relative;
@@ -1352,7 +1339,7 @@
         petalPositions[i*3]     = (Math.random() - 0.5) * SPREAD_X * 2;
         petalPositions[i*3+1]   = SPREAD_Y * 0.6 + Math.random() * SPREAD_Y;
         petalPositions[i*3+2]   = (Math.random() - 0.5) * 2.5;
-        // Realistic fall: 0.03–0.08 per frame (~2–5 units/s at 60fps)
+        // Realistic fall: 0.03–0.08 per frame (~1.8–4.8 units/s at 60fps)
         petalVelocities[i*3]    = (Math.random() - 0.5) * 0.014;   // horizontal drift
         petalVelocities[i*3+1]  = -(0.030 + Math.random() * 0.050); // fall speed (realistic)
         petalVelocities[i*3+2]  = 0;
@@ -1445,7 +1432,7 @@
       const petalMat = new THREE.ShaderMaterial({
         vertexShader: petalVS,
         fragmentShader: petalFS,
-        uniforms: { uDensity: { value: 0.3 }, uTime: { value: 0 } },
+        uniforms: { uDensity: { value: 0.3 } },
         transparent: true,
         depthWrite: false,
         blending: THREE.NormalBlending,
@@ -1524,7 +1511,6 @@
 
         posAttr.needsUpdate = true;
         rotAttr.needsUpdate = true;
-        petalMat.uniforms.uTime.value = elapsed;
 
         // Render
         renderer.autoClear = true;
