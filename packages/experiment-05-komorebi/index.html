@@ -1141,6 +1141,7 @@
     ══════════════════════════════════════════════════════ */
     let lenis = null;
     const LenisClass = (typeof Lenis !== 'undefined') ? (Lenis.default || Lenis) : null;
+    if (!LenisClass) console.warn('[KOMOREBI] Lenis failed to load; native scroll will be used.');
 
     if (LenisClass) {
       lenis = new LenisClass({
@@ -1397,13 +1398,16 @@
 
       /* ─────────────────────────────────────────────────────
          LEAF PARTICLE SCENE (perspective camera)
-         350 leaves drifting, swaying, slowly rotating
+         Particle count scales down on lower-end devices
+         (DPR ≤ 1 or limited logical CPU cores) for performance.
       ───────────────────────────────────────────────────── */
       const leafScene  = new THREE.Scene();
       const leafCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 20);
       leafCamera.position.z = 5;
 
-      const LEAF_COUNT = 350;
+      const isLowEnd = window.devicePixelRatio <= 1 ||
+        (navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 2);
+      const LEAF_COUNT = isLowEnd ? 180 : 350;
       const leafPositions = new Float32Array(LEAF_COUNT * 3);
       const leafVelocities= new Float32Array(LEAF_COUNT * 3);
       const leafPhases    = new Float32Array(LEAF_COUNT);
