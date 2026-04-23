@@ -33,6 +33,14 @@ jobs:
           cp -r packages/experiment-03-hinatabokko _site/
           cp -r packages/experiment-04-mono-no-aware _site/
           cp -r packages/experiment-05-komorebi _site/
+          cp -r packages/experiment-06-ikigai _site/
+          cp -r packages/experiment-07-wabi-sabi _site/
+          cp -r packages/experiment-08-ichigo-ichie _site/
+          cp -r packages/experiment-09-kintsugi _site/
+          cp -r packages/experiment-10-yugen _site/
+          cp -r packages/experiment-11-natsukashii _site/
+          cp -r packages/experiment-12-kokoro _site/
+          cp -r packages/experiment-13-shoganai _site/
           cp -r packages/landing _site/
           cat > _site/index.html << 'EOF'
           <!DOCTYPE html>
