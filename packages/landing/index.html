@@ -119,11 +119,27 @@
       letter-spacing: -.02em;
       text-transform: uppercase;
       margin-bottom: 28px;
+      white-space: nowrap;
     }
 
     .site-header__title .char {
       display: inline-block;
       transform: translateY(110%);
+      transition: color .15s ease;
+    }
+
+    .site-header__title .char.glitch {
+      color: rgba(232,234,237,.25);
+    }
+
+    /* ── Hero canvas ── */
+    #hero-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.5;
     }
 
     .site-header__sub {
@@ -152,6 +168,7 @@
       gap: 1px;
       background: var(--border);
       border-top: 1px solid var(--border);
+      perspective: 1200px;
     }
 
     /* ── EXPERIMENT CARD ── */
@@ -169,6 +186,8 @@
       transform: translateY(40px);
       transition: background .4s ease;
       min-height: 340px;
+      transform-style: preserve-3d;
+      will-change: transform, opacity;
     }
 
     @media (hover: hover) and (pointer: fine) {
@@ -319,6 +338,7 @@
         transition-duration: .01ms !important;
       }
       .site-header__title .char { transform: none !important; }
+      .site-header__title .char.glitch { color: inherit !important; }
       .site-header__eyebrow, .site-header__sub,
       .exp-card, .header-rule { opacity: 1 !important; transform: none !important; }
     }
@@ -332,10 +352,9 @@
 
   <!-- ── HEADER ── -->
   <header class="site-header">
+    <canvas id="hero-canvas" aria-hidden="true"></canvas>
     <p class="site-header__eyebrow" aria-hidden="true">Portfolio · Interactive Frontend</p>
-    <h1 class="site-header__title" aria-label="Experiments">
-      EXPERI<br>MENTS
-    </h1>
+    <h1 class="site-header__title" aria-label="Experiments">EXPERI<br>MENTS</h1>
     <p class="site-header__sub">
       Cinematic, scroll-driven experiences built with
       Three.js, GSAP, Lenis, and TailwindCSS.
@@ -666,15 +685,25 @@
     /* ── Entrance animations ── */
     const headerTitle = document.querySelector('.site-header__title');
     if (headerTitle) {
-      const text = headerTitle.textContent;
+      // Traverse child nodes so <br> is handled without picking up surrounding whitespace
+      const ELEMENT_NODE = 1;
+      const TEXT_NODE    = 3;
+      const nodes = [...headerTitle.childNodes];
       headerTitle.innerHTML = '';
-      [...text].forEach(ch => {
-        if (ch === '\n') { headerTitle.appendChild(document.createElement('br')); return; }
-        const span = document.createElement('span');
-        span.className = 'char';
-        span.setAttribute('aria-hidden', 'true');
-        span.textContent = ch === ' ' ? '\u00A0' : ch;
-        headerTitle.appendChild(span);
+      nodes.forEach(node => {
+        if (node.nodeType === ELEMENT_NODE && node.tagName === 'BR') {
+          headerTitle.appendChild(document.createElement('br'));
+        } else if (node.nodeType === TEXT_NODE) {
+          const txt = node.textContent.trim();
+          if (!txt) return;
+          [...txt].forEach(ch => {
+            const span = document.createElement('span');
+            span.className = 'char';
+            span.setAttribute('aria-hidden', 'true');
+            span.textContent = ch === ' ' ? '\u00A0' : ch;
+            headerTitle.appendChild(span);
+          });
+        }
       });
       headerTitle.setAttribute('aria-label', 'Experiments');
     }
@@ -686,15 +715,162 @@
       .to('.site-header__sub',    { autoAlpha: 1, duration: .7 }, '-=0.5')
       .to('.header-rule',         { scaleX: 1, duration: 1.0, ease: 'power3.inOut' }, '-=0.6');
 
-    /* Staggered card reveals */
+    /* ── Staggered card reveals + 3-D tilt ── */
     gsap.registerPlugin(ScrollTrigger);
     document.querySelectorAll('.exp-card').forEach((card, i) => {
       gsap.to(card, {
         autoAlpha: 1, y: 0, duration: .8, ease: 'power3.out',
         scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none none' },
         delay: i * 0.08,
+        onComplete() { card._animated = true; },
+      });
+
+      card.addEventListener('mousemove', e => {
+        if (!card._animated) return;
+        const r = card.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width  - 0.5;
+        const y = (e.clientY - r.top)  / r.height - 0.5;
+        gsap.to(card, {
+          rotateY: x * 14, rotateX: -y * 10,
+          transformPerspective: 900,
+          duration: 0.4, ease: 'power2.out', overwrite: 'auto',
+        });
+      });
+
+      card.addEventListener('mouseleave', () => {
+        gsap.to(card, {
+          rotateY: 0, rotateX: 0,
+          duration: 0.7, ease: 'power3.out', overwrite: 'auto',
+        });
       });
     });
+
+    /* ── Hero canvas — particle field ── */
+    (function initCanvas() {
+      const canvas = document.getElementById('hero-canvas');
+      const header = document.querySelector('.site-header');
+      if (!canvas || !header) return;
+      const ctx = canvas.getContext('2d');
+      let W, H;
+      const mouse = { x: -9999, y: -9999 };
+
+      const PARTICLE_COUNT      = 70;
+      const VELOCITY_DAMPING    = 0.985;
+      const REPULSION_RADIUS    = 110;
+      const REPULSION_STRENGTH  = 0.12;
+      const LINE_CONNECT_DIST   = 130;
+
+      function resize() {
+        W = canvas.width  = header.offsetWidth;
+        H = canvas.height = header.offsetHeight;
+      }
+
+      function mkParticle() {
+        return {
+          x: Math.random() * W,
+          y: Math.random() * H,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          r:  Math.random() * 1.4 + 0.4,
+          a:  Math.random() * 0.35 + 0.08,
+        };
+      }
+
+      resize();
+      const particles = Array.from({ length: PARTICLE_COUNT }, mkParticle);
+
+      window.addEventListener('resize', resize);
+      header.addEventListener('mousemove', e => {
+        const rect = header.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+      });
+      header.addEventListener('mouseleave', () => { mouse.x = mouse.y = -9999; });
+
+      function tick() {
+        ctx.clearRect(0, 0, W, H);
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const p = particles[i];
+          // Gentle mouse repulsion
+          const dx = p.x - mouse.x, dy = p.y - mouse.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < REPULSION_RADIUS && dist > 0) {
+            p.vx += (dx / dist) * REPULSION_STRENGTH;
+            p.vy += (dy / dist) * REPULSION_STRENGTH;
+          }
+          // Velocity damping
+          p.vx *= VELOCITY_DAMPING; p.vy *= VELOCITY_DAMPING;
+          p.x  += p.vx;            p.y  += p.vy;
+          // Edge wrapping
+          if (p.x < 0) p.x = W; else if (p.x > W) p.x = 0;
+          if (p.y < 0) p.y = H; else if (p.y > H) p.y = 0;
+
+          // Draw dot
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(232,234,237,${p.a})`;
+          ctx.fill();
+
+          // Draw connecting lines to nearby neighbours
+          for (let j = i + 1; j < PARTICLE_COUNT; j++) {
+            const q = particles[j];
+            const d2 = (p.x - q.x) ** 2 + (p.y - q.y) ** 2;
+            if (d2 < LINE_CONNECT_DIST * LINE_CONNECT_DIST) {
+              const alpha = 0.06 * (1 - Math.sqrt(d2) / LINE_CONNECT_DIST);
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(q.x, q.y);
+              ctx.strokeStyle = `rgba(232,234,237,${alpha})`;
+              ctx.lineWidth = 0.6;
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(tick);
+      }
+      tick();
+    })();
+
+    /* ── Periodic title scramble / glitch ── */
+    (function initGlitch() {
+      const KANA = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほやゆよらりるれろアイウエオカキクケコサシスセソタチツテトナニヌネノ';
+      const MIN_GLITCH_INTERVAL   = 2200;
+      const GLITCH_INTERVAL_RANGE = 3000;
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) return;
+
+      function getChars() {
+        return [...document.querySelectorAll('.site-header__title .char')];
+      }
+
+      function scramble() {
+        const chars = getChars();
+        if (!chars.length) return;
+        const count = Math.floor(Math.random() * 3) + 1;
+        const picked = [];
+        while (picked.length < count) {
+          const idx = Math.floor(Math.random() * chars.length);
+          if (!picked.includes(idx)) picked.push(idx);
+        }
+        picked.forEach(idx => {
+          const el = chars[idx];
+          const orig = el.textContent;
+          el.classList.add('glitch');
+          el.textContent = KANA[Math.floor(Math.random() * KANA.length)];
+          setTimeout(() => {
+            el.textContent = KANA[Math.floor(Math.random() * KANA.length)];
+            setTimeout(() => {
+              el.textContent = orig;
+              el.classList.remove('glitch');
+            }, 90);
+          }, 90);
+        });
+        setTimeout(scramble, MIN_GLITCH_INTERVAL + Math.random() * GLITCH_INTERVAL_RANGE);
+      }
+
+      // Start after entrance animation finishes (~2.8 s) + a pause
+      setTimeout(scramble, 4000);
+    })();
   </script>
 </body>
 </html>
