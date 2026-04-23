@@ -786,17 +786,19 @@
         );
       });
 
+      const REPULSE_DURATION = 600; // ms
+
       // Right-click / long-press → repulse
       canvas.addEventListener('contextmenu', e => {
         e.preventDefault();
         repulse = true;
         clearTimeout(repulseTimer);
-        repulseTimer = setTimeout(() => { repulse = false; }, 600);
+        repulseTimer = setTimeout(() => { repulse = false; }, REPULSE_DURATION);
       });
 
       let touchTimer = null;
       canvas.addEventListener('touchstart', () => {
-        touchTimer = setTimeout(() => { repulse = true; setTimeout(() => { repulse = false; }, 600); }, 500);
+        touchTimer = setTimeout(() => { repulse = true; setTimeout(() => { repulse = false; }, REPULSE_DURATION); }, 500);
       }, { passive: true });
       canvas.addEventListener('touchend', () => clearTimeout(touchTimer), { passive: true });
 
@@ -835,12 +837,14 @@
         camera.position.y += (mousePara.y * 1.5 - camera.position.y) * 0.04;
         camera.lookAt(0, 0, camera.position.z - 10);
 
-        // Unproject mouse to world plane at camera.position.z - 8
+        // Unproject mouse to world plane 8 units in front of camera
         mouseNDC.set(mouse2D.x, mouse2D.y, 0.5);
         mouseNDC.unproject(camera);
         const dir = mouseNDC.sub(camera.position).normalize();
-        const t1  = ((camera.position.z - 8) - camera.position.z) / dir.z;
-        mouseWorld.copy(camera.position).addScaledVector(dir, Math.abs(t1) < 0.001 ? 5 : Math.abs(t1));
+        if (Math.abs(dir.z) > 0.01) {
+          const t1 = -8 / dir.z; // plane at camera.z - 8
+          mouseWorld.copy(camera.position).addScaledVector(dir, Math.abs(t1));
+        }
 
         // Gravity well strength increases with scroll
         const gravStrength = (0.002 + scrollT * 0.025) * (repulse ? -12 : 1);

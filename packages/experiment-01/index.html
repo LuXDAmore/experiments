@@ -54,42 +54,111 @@
       cursor: none;
     }
 
-    /* Hide custom cursor on touch/coarse devices */
+    /* ── RGB Chromatic Aberration Cursor ── */
+    #cursor-wrap {
+      position: fixed;
+      top: 0; left: 0;
+      pointer-events: none;
+      z-index: 9999;
+      mix-blend-mode: screen;
+    }
+
+    .cursor-ch {
+      position: absolute;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+    }
+
+    #cursor-r { background: rgba(255, 0, 60, .9); }
+    #cursor-g { background: rgba(0, 255, 120, .9); }
+    #cursor-b { background: rgba(0, 120, 255, .9); }
+
+    /* ── Glitch animation for gallery cards ── */
+    @keyframes glitch-shift {
+      0%   { clip-path: inset(20% 0 60% 0); transform: translate(-4px, 0); filter: hue-rotate(90deg); }
+      20%  { clip-path: inset(60% 0 10% 0); transform: translate( 4px, 0); filter: hue-rotate(180deg); }
+      40%  { clip-path: inset(40% 0 30% 0); transform: translate(-2px, 0); filter: hue-rotate(270deg); }
+      60%  { clip-path: inset(10% 0 70% 0); transform: translate( 3px, 0); filter: hue-rotate(0deg); }
+      80%  { clip-path: inset(70% 0 5%  0); transform: translate(-3px, 0); filter: hue-rotate(45deg); }
+      100% { clip-path: inset(0 0 0 0);      transform: translate(0,    0); filter: none; }
+    }
+
+    .photo-card.is-glitching::before,
+    .photo-card.is-glitching::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: inherit;
+      background-image: inherit;
+      z-index: 3;
+      pointer-events: none;
+      animation: glitch-shift 0.18s steps(1) forwards;
+    }
+
+    .photo-card.is-glitching::before {
+      mix-blend-mode: screen;
+      filter: hue-rotate(120deg) saturate(3);
+    }
+
+    .photo-card.is-glitching::after {
+      mix-blend-mode: multiply;
+      animation-delay: 0.04s;
+      filter: hue-rotate(240deg) saturate(3);
+    }
+
+    /* ── Color Scanner Tool ── */
+    #color-scanner {
+      position: fixed;
+      bottom: 32px;
+      left: 32px;
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color .3s ease, transform .3s ease;
+    }
+
+    #color-scanner:hover { border-color: rgba(255,255,255,.5); transform: scale(1.1); }
+    #color-scanner.active { border-color: var(--cyan); box-shadow: 0 0 16px rgba(0,245,255,.4); }
+
+    #color-scanner svg {
+      width: 20px; height: 20px;
+      stroke: rgba(255,255,255,.55);
+      fill: none;
+      stroke-width: 1.5;
+      transition: stroke .3s ease;
+    }
+
+    #color-scanner.active svg { stroke: var(--cyan); }
+
+    #scanner-swatch {
+      position: fixed;
+      bottom: 90px;
+      left: 24px;
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.15);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease, background .1s ease;
+      z-index: 8999;
+    }
+
+    body.scanning #scanner-swatch { opacity: 1; }
+    body.scanning { cursor: crosshair !important; }
+    body.scanning #cursor-wrap { display: none; }
+
     @media (pointer: coarse) {
       body { cursor: auto; }
-      #cursor-dot, #cursor-ring { display: none !important; }
-    }
-
-    /* ── Custom cursor ── */
-    #cursor-dot {
-      position: fixed;
-      top: 0; left: 0;
-      width: 8px; height: 8px;
-      background: var(--pink);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 9999;
-      transform: translate(-50%, -50%);
-      will-change: transform;
-      transition: width .2s, height .2s, background .2s;
-    }
-
-    #cursor-ring {
-      position: fixed;
-      top: 0; left: 0;
-      width: 44px; height: 44px;
-      border: 1.5px solid rgba(255,255,255,.35);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 9999;
-      transform: translate(-50%, -50%);
-      will-change: transform;
-      transition: width .25s ease, height .25s ease, border-color .25s ease;
-    }
-
-    body.is-hovering #cursor-ring {
-      width: 64px; height: 64px;
-      border-color: var(--pink);
+      #cursor-wrap { display: none !important; }
     }
 
     /* ── ThreeJS canvas ── */
@@ -98,7 +167,7 @@
       inset: 0;
       width: 100%; height: 100%;
       z-index: 0;
-      pointer-events: none;
+      pointer-events: auto;
     }
 
     /* ── Content wrapper ── */
@@ -431,9 +500,14 @@
 </head>
 
 <body>
-  <!-- Custom cursor (hidden on touch screens via CSS) -->
-  <div id="cursor-dot"  aria-hidden="true"></div>
-  <div id="cursor-ring" aria-hidden="true"></div>
+  <!-- RGB Chromatic Aberration Cursor -->
+  <div id="cursor-wrap" aria-hidden="true">
+    <div class="cursor-ch" id="cursor-r"></div>
+    <div class="cursor-ch" id="cursor-g"></div>
+    <div class="cursor-ch" id="cursor-b"></div>
+  </div>
+  <!-- Color Scanner swatch preview -->
+  <div id="scanner-swatch" aria-hidden="true"></div>
 
   <!-- ThreeJS background canvas -->
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
@@ -584,32 +658,137 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       CUSTOM CURSOR
+       RGB CHROMATIC ABERRATION CURSOR
     ══════════════════════════════════════════════════════ */
-    const cursorDot  = document.getElementById('cursor-dot');
-    const cursorRing = document.getElementById('cursor-ring');
+    const cursorWrap = document.getElementById('cursor-wrap');
+    const cursorR    = document.getElementById('cursor-r');
+    const cursorG    = document.getElementById('cursor-g');
+    const cursorB    = document.getElementById('cursor-b');
 
-    if (cursorDot && cursorRing) {
-      let ringX = 0, ringY = 0;
-      let targetX = 0, targetY = 0;
+    if (cursorWrap && window.matchMedia('(pointer: fine)').matches) {
+      let mx = 0, my = 0;          // current mouse position
+      let pmx = 0, pmy = 0;        // previous position
+      let vx = 0, vy = 0;          // velocity
+      let rX = 0, rY = 0, gX = 0, gY = 0, bX = 0, bY = 0; // per-channel positions
 
       window.addEventListener('mousemove', e => {
-        targetX = e.clientX;
-        targetY = e.clientY;
-        gsap.set(cursorDot, { x: e.clientX, y: e.clientY });
+        vx = e.clientX - mx;
+        vy = e.clientY - my;
+        pmx = mx; pmy = my;
+        mx = e.clientX;
+        my = e.clientY;
       });
 
-      // Smooth ring follow
-      (function animRing() {
-        ringX += (targetX - ringX) * 0.14;
-        ringY += (targetY - ringY) * 0.14;
-        gsap.set(cursorRing, { x: ringX, y: ringY });
-        requestAnimationFrame(animRing);
+      const SPREAD = 0.22; // velocity → offset scale
+      const LERP_R = 0.18, LERP_G = 0.14, LERP_B = 0.10; // lag per channel
+
+      (function animCursor() {
+        const speed = Math.sqrt(vx * vx + vy * vy);
+        const ox = vx * SPREAD;
+        const oy = vy * SPREAD;
+
+        // R: leads slightly
+        rX += (mx + ox - rX) * LERP_R;
+        rY += (my + oy - rY) * LERP_R;
+
+        // G: center
+        gX += (mx - gX) * LERP_G;
+        gY += (my - gY) * LERP_G;
+
+        // B: lags
+        bX += (mx - ox - bX) * LERP_B;
+        bY += (my - oy - bY) * LERP_B;
+
+        gsap.set(cursorR, { x: rX, y: rY });
+        gsap.set(cursorG, { x: gX, y: gY });
+        gsap.set(cursorB, { x: bX, y: bY });
+
+        // Scale up all channels on hover
+        const s = document.body.classList.contains('is-hovering') ? 2.2 : 1;
+        [cursorR, cursorG, cursorB].forEach(el => {
+          el.style.width  = `${12 * s}px`;
+          el.style.height = `${12 * s}px`;
+        });
+
+        // Decay velocity
+        vx *= 0.82;
+        vy *= 0.82;
+
+        requestAnimationFrame(animCursor);
       })();
 
       document.querySelectorAll('a, button, .photo-card, .feat-img').forEach(el => {
         el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
         el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GALLERY CARD GLITCH ON HOVER
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-card').forEach(card => {
+      let glitchTimer = null;
+      card.addEventListener('mouseenter', () => {
+        clearTimeout(glitchTimer);
+        card.classList.add('is-glitching');
+        glitchTimer = setTimeout(() => card.classList.remove('is-glitching'), 200);
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════
+       COLOR SCANNER TOOL
+    ══════════════════════════════════════════════════════ */
+    const scannerBtn    = document.getElementById('color-scanner');
+    const scannerSwatch = document.getElementById('scanner-swatch');
+    const bgCanvas      = document.getElementById('bg-canvas');
+
+    if (scannerBtn) {
+      let scanning = false;
+
+      const toggleScanner = () => {
+        scanning = !scanning;
+        document.body.classList.toggle('scanning', scanning);
+        scannerBtn.classList.toggle('active', scanning);
+      };
+
+      scannerBtn.addEventListener('click', e => { e.stopPropagation(); toggleScanner(); });
+      scannerBtn.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggleScanner(); });
+
+      document.addEventListener('mousemove', e => {
+        if (!scanning || !bgCanvas) return;
+        // Use CSS to show a preview swatch near cursor position
+        const hex = getComputedStyle(document.documentElement).getPropertyValue('--pink').trim();
+        scannerSwatch.style.left = `${e.clientX - 30}px`;
+        scannerSwatch.style.top  = `${e.clientY - 80}px`;
+      });
+
+      document.addEventListener('click', e => {
+        if (!scanning) return;
+        if (e.target === scannerBtn) return;
+
+        // Read color from canvas pixel
+        try {
+          const rect   = bgCanvas.getBoundingClientRect();
+          const scaleX = bgCanvas.width  / rect.width;
+          const scaleY = bgCanvas.height / rect.height;
+          const gl     = bgCanvas.getContext('webgl') || bgCanvas.getContext('experimental-webgl');
+          if (!gl) return;
+
+          const px = Math.floor((e.clientX - rect.left) * scaleX);
+          const py = Math.floor(bgCanvas.height - (e.clientY - rect.top) * scaleY);
+          const pixel = new Uint8Array(4);
+          gl.readPixels(px, py, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+          const r = pixel[0], g = pixel[1], b = pixel[2];
+          if (r + g + b < 10) return; // ignore near-black
+
+          const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+          document.documentElement.style.setProperty('--pink', hex);
+          document.documentElement.style.setProperty('--accent', hex);
+          scannerSwatch.style.background = hex;
+        } catch (_) { /* cross-origin guard */ }
+
+        toggleScanner();
       });
     }
 
@@ -713,6 +892,79 @@
       };
       window.addEventListener('resize', onResize);
 
+      /* ── Shockwave burst on click ── */
+      const BURST_COUNT = 200;
+      const burstPositions = new Float32Array(BURST_COUNT * 3);
+      const burstVelocities = [];
+      const burstGeo = new THREE.BufferGeometry();
+      const burstAttr = new THREE.BufferAttribute(burstPositions, 3);
+      burstGeo.setAttribute('position', burstAttr);
+      const burstMat = new THREE.PointsMaterial({
+        size: 0.06,
+        sizeAttenuation: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        vertexColors: false,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+      });
+      const burstPoints = new THREE.Points(burstGeo, burstMat);
+      scene.add(burstPoints);
+
+      let burstActive = false;
+      let burstAge = 0;
+
+      for (let i = 0; i < BURST_COUNT; i++) {
+        burstVelocities.push(new THREE.Vector3(
+          (Math.random() - 0.5) * 0.3,
+          (Math.random() - 0.5) * 0.3,
+          (Math.random() - 0.5) * 0.1
+        ));
+      }
+
+      const BURST_COLORS = ['#FF006E','#00F5FF','#FFE600','#39FF14'];
+      let burstColorIdx = 0;
+
+      canvas.addEventListener('click', e => {
+        const rect = canvas.getBoundingClientRect();
+        const nx   = ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
+        const ny  = -((e.clientY - rect.top)   / rect.height) * 2 + 1;
+
+        // Unproject click to 3D at z=0
+        const vec = new THREE.Vector3(nx, ny, 0.5);
+        vec.unproject(camera);
+        const dir = vec.sub(camera.position).normalize();
+        const dist = -camera.position.z / dir.z;
+        const pos  = camera.position.clone().add(dir.multiplyScalar(dist));
+
+        for (let i = 0; i < BURST_COUNT; i++) {
+          burstPositions[i * 3]     = pos.x;
+          burstPositions[i * 3 + 1] = pos.y;
+          burstPositions[i * 3 + 2] = pos.z;
+
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 0.08 + Math.random() * 0.18;
+          burstVelocities[i].set(
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            (Math.random() - 0.5) * 0.05
+          );
+        }
+        burstAttr.needsUpdate = true;
+        burstActive = true;
+        burstAge    = 0;
+
+        const col = BURST_COLORS[burstColorIdx % BURST_COLORS.length];
+        burstMat.color.set(col);
+        burstMat.opacity = 1;
+        burstColorIdx++;
+
+        // Also flash the --pink CSS var briefly
+        document.documentElement.style.setProperty('--pink', col);
+        setTimeout(() => document.documentElement.style.setProperty('--pink', '#FF006E'), 600);
+      });
+
       /* ── Render loop ── */
       let rafId;
       const clock = new THREE.Clock();
@@ -727,6 +979,21 @@
 
         // Pull galaxy slightly forward as user scrolls
         camera.position.z = 7 - scrollProgress * 3;
+
+        // Animate shockwave burst
+        if (burstActive) {
+          burstAge += 0.016;
+          for (let i = 0; i < BURST_COUNT; i++) {
+            burstPositions[i * 3]     += burstVelocities[i].x;
+            burstPositions[i * 3 + 1] += burstVelocities[i].y;
+            burstPositions[i * 3 + 2] += burstVelocities[i].z;
+            // Gravity pull back toward origin over time
+            burstVelocities[i].multiplyScalar(0.97);
+          }
+          burstAttr.needsUpdate = true;
+          burstMat.opacity = Math.max(0, 1 - burstAge / 1.5);
+          if (burstAge > 1.5) { burstActive = false; burstMat.opacity = 0; }
+        }
 
         renderer.render(scene, camera);
       };
@@ -886,5 +1153,12 @@
     window.addEventListener('beforeunload', threeCleanup);
 
   </script>
+  <!-- Color Scanner Tool -->
+  <div id="color-scanner" role="button" aria-label="Color scanner — samples canvas accent color" tabindex="0" title="Color Scanner">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M16.9 16.9l2.1 2.1M4.9 19.1l2.1-2.1M16.9 7.1l2.1-2.1"/>
+    </svg>
+  </div>
 </body>
 </html>
