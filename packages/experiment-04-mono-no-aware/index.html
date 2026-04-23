@@ -1309,13 +1309,8 @@
       });
 
       /* ── Render loop ── */
-      let lastTime = 0;
-
       (function animPetals(ts) {
         requestAnimationFrame(animPetals);
-
-        lastTime = ts;
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         windX  += (0.012 - windX) * 0.04;
@@ -1349,9 +1344,15 @@
     const heroTitle = document.querySelector('.hero__title');
     if (heroTitle) {
       const text = heroTitle.textContent.trim();
-      heroTitle.innerHTML = text.split('').map(ch =>
-        `<span class="char" aria-hidden="true">${ch === ' ' ? '&nbsp;' : ch === '\n' ? '<br>' : ch}</span>`
-      ).join('');
+      heroTitle.innerHTML = '';
+      [...text].forEach(ch => {
+        if (ch === '\n') { heroTitle.appendChild(document.createElement('br')); return; }
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        heroTitle.appendChild(span);
+      });
       heroTitle.setAttribute('aria-label', text.replace(/\n/g, ' '));
 
       const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
