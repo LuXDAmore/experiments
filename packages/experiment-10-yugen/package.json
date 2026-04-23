@@ -1,0 +1,11 @@
+{
+  "name": "@experiments/experiment-10-yugen",
+  "version": "1.0.0",
+  "description": "YUGEN — A scroll-driven photographic meditation on the mysterious grace and profound sense of the universe that cannot be expressed in words.",
+  "main": "index.html",
+  "scripts": {"serve":"npx serve . -p 3010 --no-clipboard","dev":"npx serve . -p 3010 --no-clipboard","preview":"npx serve . -p 3010 --no-clipboard"},
+  "keywords": ["threejs","gsap","lenis","photography","scroll","animation","portfolio","webgl","tailwindcss","japanese","yugen","fog","mountains","shaders"],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {"three":"^0.169.0","gsap":"^3.12.5","lenis":"^1.1.14"}
+}

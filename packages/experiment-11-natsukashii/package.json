@@ -1,0 +1,11 @@
+{
+  "name": "@experiments/experiment-11-natsukashii",
+  "version": "1.0.0",
+  "description": "NATSUKASHII — A scroll-driven photographic meditation on the Japanese concept of happy nostalgia — a wistful longing for the past with joy.",
+  "main": "index.html",
+  "scripts": {"serve":"npx serve . -p 3011 --no-clipboard","dev":"npx serve . -p 3011 --no-clipboard","preview":"npx serve . -p 3011 --no-clipboard"},
+  "keywords": ["threejs","gsap","lenis","photography","scroll","animation","portfolio","webgl","tailwindcss","japanese","natsukashii","nostalgia","film-grain","sepia"],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {"three":"^0.169.0","gsap":"^3.12.5","lenis":"^1.1.14"}
+}

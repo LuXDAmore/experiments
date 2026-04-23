@@ -1,0 +1,11 @@
+{
+  "name": "@experiments/experiment-13-shoganai",
+  "version": "1.0.0",
+  "description": "SHOGANAI — A scroll-driven photographic meditation on the Japanese philosophy of graceful acceptance of things beyond one's control.",
+  "main": "index.html",
+  "scripts": {"serve":"npx serve . -p 3013 --no-clipboard","dev":"npx serve . -p 3013 --no-clipboard","preview":"npx serve . -p 3013 --no-clipboard"},
+  "keywords": ["threejs","gsap","lenis","photography","scroll","animation","portfolio","webgl","tailwindcss","japanese","shoganai","acceptance","flow","curl-noise"],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {"three":"^0.169.0","gsap":"^3.12.5","lenis":"^1.1.14"}
+}

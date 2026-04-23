@@ -1,0 +1,11 @@
+{
+  "name": "@experiments/experiment-12-kokoro",
+  "version": "1.0.0",
+  "description": "KOKORO — A scroll-driven photographic meditation on the Japanese concept of heart, mind and spirit as a unified essence.",
+  "main": "index.html",
+  "scripts": {"serve":"npx serve . -p 3012 --no-clipboard","dev":"npx serve . -p 3012 --no-clipboard","preview":"npx serve . -p 3012 --no-clipboard"},
+  "keywords": ["threejs","gsap","lenis","photography","scroll","animation","portfolio","webgl","tailwindcss","japanese","kokoro","heart","ink","shaders"],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {"three":"^0.169.0","gsap":"^3.12.5","lenis":"^1.1.14"}
+}
