@@ -1,0 +1,15 @@
+{
+  "name": "@experiments/experiment-08-ichigo-ichie",
+  "version": "1.0.0",
+  "description": "ICHIGO ICHIE — A scroll-driven photographic meditation on the Japanese concept of one encounter, one opportunity: each moment is unique and unrepeatable.",
+  "main": "index.html",
+  "scripts": {
+    "serve": "npx serve . -p 3008 --no-clipboard",
+    "dev": "npx serve . -p 3008 --no-clipboard",
+    "preview": "npx serve . -p 3008 --no-clipboard"
+  },
+  "keywords": ["threejs","gsap","lenis","photography","scroll","animation","portfolio","webgl","tailwindcss","japanese","ichigo-ichie","particles","freeze","shaders"],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {"three": "^0.169.0","gsap": "^3.12.5","lenis": "^1.1.14"}
+}

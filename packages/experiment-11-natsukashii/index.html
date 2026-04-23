@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NATSUKASHII — Un viaggio fotografico scroll-driven attraverso la nostalgia felice e il calore dei ricordi del passato.">
+  <meta name="theme-color" content="#100d08">
+  <title>NATSUKASHII 懐かしい — Experiment 11</title>
+
+  <!-- THREE.js ImportMap — must appear before any type="module" script -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Noto+Serif+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- TailwindCSS Play CDN v4 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-serif: "Cormorant Garamond", Georgia, serif;
+      --font-jp:    "Noto Serif JP", serif;
+      --font-mono:  "Space Mono", monospace;
+    }
+  </style>
+
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --night:  #060402;
+      --accent: #c8956c;
+      --gold:   #c8956c;
+      --amber:  #a0704a;
+      --fg:     #f0e8d8;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { overflow-x: hidden; scroll-behavior: auto; }
+
+    body {
+      background: var(--night);
+      color: var(--fg);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── Ring Cursor ── */
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(200,149,108,.5);
+      background: rgba(200,149,108,.08);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .3s ease, height .3s ease, border-color .3s ease;
+    }
+
+    body.is-hovering #cursor-ring {
+      width: 60px; height: 60px;
+      border-color: rgba(200,149,108,.9);
+    }
+
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-ring { display: none !important; }
+    }
+
+    /* ── ThreeJS fullscreen canvas ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(to right, #c8956c, #a0704a);
+      z-index: 9000;
+    }
+
+    /* ── Nav ── */
+    .back-link {
+      position: fixed;
+      top: 28px;
+      left: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(240,232,216,.4);
+      text-decoration: none;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .25s;
+    }
+    .back-link:hover { color: var(--gold); }
+    .back-link::before { content: '←'; }
+
+    .exp-label {
+      position: fixed;
+      top: 28px;
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(240,232,216,.2);
+      z-index: 9000;
+    }
+
+    /* ── Content wrapper ── */
+    .content { position: relative; z-index: 1; }
+
+    /* ── HERO ── */
+    .hero {
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 clamp(24px, 6vw, 80px);
+      position: relative;
+    }
+
+    .hero__label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .4em;
+      color: rgba(200,149,108,.7);
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      opacity: 0;
+    }
+
+    .hero__kanji {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(48px, 10vw, 130px);
+      font-weight: 300;
+      line-height: 1;
+      color: rgba(240,232,216,.05);
+      letter-spacing: .05em;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) translateY(-60px);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .hero__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(56px, 12vw, 160px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.02em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      overflow: hidden;
+      display: block;
+    }
+
+    .hero__title .char {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .hero__sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 2vw, 22px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(240,232,216,.5);
+      max-width: 440px;
+      line-height: 1.8;
+      opacity: 0;
+      margin-bottom: 12px;
+    }
+
+    .hero__jp-subtitle {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(11px, 1.2vw, 14px);
+      font-weight: 300;
+      color: rgba(200,149,108,.45);
+      letter-spacing: .12em;
+      opacity: 0;
+    }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(240,232,216,.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+    }
+
+    .hero__scroll-line {
+      width: 1px;
+      height: 52px;
+      background: linear-gradient(to bottom, rgba(200,149,108,.5), transparent);
+      animation: scrollPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      65%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
+    }
+
+    /* ── SECTION COMMON ── */
+    .photo-section {
+      min-height: 100svh;
+      padding: 100px clamp(24px, 8vw, 120px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .section-header { margin-bottom: 60px; }
+
+    .section-phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateX(-20px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: color .6s ease;
+    }
+
+    .section-phase::before {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+      transition: background .6s ease;
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(42px, 7vw, 100px);
+      font-weight: 700;
+      line-height: .95;
+      letter-spacing: -.02em;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .section-title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(13px, 1.4vw, 17px);
+      font-weight: 300;
+      color: rgba(240,232,216,.35);
+      letter-spacing: .12em;
+      margin-bottom: 24px;
+      opacity: 0;
+    }
+
+    .section-desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-style: italic;
+      color: rgba(240,232,216,.5);
+      line-height: 1.85;
+      max-width: 520px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    /* ── PHOTO GRID ── */
+    .photo-grid { display: grid; gap: 16px; }
+    .photo-grid--2col    { grid-template-columns: 1fr 1fr; }
+    .photo-grid--3col    { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-grid--asymm   { grid-template-columns: 2fr 1fr; }
+    .photo-grid--asymm-r { grid-template-columns: 1fr 2fr; }
+
+    @media (max-width: 640px) {
+      .photo-grid--2col,
+      .photo-grid--3col,
+      .photo-grid--asymm,
+      .photo-grid--asymm-r { grid-template-columns: 1fr; }
+    }
+
+    /* ── PHOTO CARD ── */
+    .photo-card {
+      position: relative;
+      overflow: hidden;
+      background: rgba(0,0,0,.4);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .photo-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      will-change: transform;
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94), filter .5s ease;
+      filter: saturate(0.85);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover img {
+        transform: scale(1);
+        filter: saturate(1.1);
+      }
+    }
+
+    .photo-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(200,149,108,0);
+      transition: border-color .4s ease, box-shadow .4s ease;
+      pointer-events: none;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover::after {
+        border-color: rgba(200,149,108,.2);
+        box-shadow: inset 0 0 40px rgba(200,149,108,.07);
+      }
+    }
+
+    .photo-card__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(6,4,2,.88) 0%, transparent 65%);
+      opacity: 0;
+      transition: opacity .4s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 20px 18px;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover .photo-card__overlay { opacity: 1; }
+    }
+
+    .photo-card__poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      font-style: italic;
+      color: rgba(240,232,216,.85);
+      line-height: 1.65;
+      margin-bottom: 6px;
+    }
+
+    .photo-card__poem-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 10px;
+      font-weight: 300;
+      color: rgba(200,149,108,.65);
+      letter-spacing: .1em;
+    }
+
+    .photo-card__num {
+      position: absolute;
+      top: 14px; left: 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .2em;
+      color: rgba(240,232,216,.35);
+    }
+
+    /* Card aspect ratios */
+    .photo-card--wide { aspect-ratio: 16/10; }
+    .photo-card--tall { aspect-ratio: 2/3; }
+    .photo-card--port { aspect-ratio: 3/4; }
+    .photo-card--sq   { aspect-ratio: 1/1; }
+    .photo-card--land { aspect-ratio: 4/3; }
+
+    /* ── QUOTE SECTION ── */
+    .quote-section {
+      padding: 100px clamp(24px, 8vw, 120px);
+      text-align: center;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .quote-line {
+      width: 60px; height: 1px;
+      background: var(--accent);
+      margin: 0 auto 32px;
+      opacity: 0;
+      transition: background .6s ease;
+    }
+
+    .quote-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(20px, 3vw, 32px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(240,232,216,.75);
+      line-height: 1.7;
+      letter-spacing: .01em;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .quote-attr {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(200,149,108,.45);
+      text-transform: uppercase;
+      margin-top: 28px;
+      opacity: 0;
+    }
+
+    /* ── NATSUKASHII interlude (shinrin-equivalent) ── */
+    .shinrin {
+      min-height: 90svh;
+      padding: 100px clamp(24px, 8vw, 120px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .shinrin__phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: color .6s ease;
+    }
+
+    .shinrin__phase::before,
+    .shinrin__phase::after {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+      transition: background .6s ease;
+    }
+
+    .shinrin__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(48px, 9vw, 120px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.02em;
+      margin-bottom: 20px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .shinrin__title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(14px, 1.6vw, 20px);
+      font-weight: 300;
+      color: rgba(200,149,108,.5);
+      letter-spacing: .14em;
+      margin-bottom: 28px;
+      opacity: 0;
+    }
+
+    .shinrin__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(16px, 1.8vw, 22px);
+      font-style: italic;
+      color: rgba(240,232,216,.5);
+      line-height: 1.85;
+      max-width: 560px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    /* ── HORIZONTAL SCROLL ── */
+    .h-scroll { position: relative; overflow: hidden; }
+
+    .h-scroll__label {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .4em;
+      color: rgba(200,149,108,.4);
+      text-transform: uppercase;
+      z-index: 2;
+      white-space: nowrap;
+    }
+
+    .h-scroll__inner {
+      display: flex;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .h-scroll__track {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: 28px;
+      padding: 0 clamp(24px, 6vw, 80px);
+      will-change: transform;
+    }
+
+    .h-scroll__card {
+      flex-shrink: 0;
+      width: clamp(260px, 30vw, 400px);
+      height: clamp(340px, 52vh, 540px);
+      position: relative;
+      overflow: hidden;
+      background: rgba(6,4,2,.4);
+    }
+
+    .h-scroll__card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94), filter .5s ease;
+      filter: saturate(0.85);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .h-scroll__card:hover img {
+        transform: scale(1);
+        filter: saturate(1.1);
+      }
+    }
+
+    .h-scroll__card-body {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 22px 18px;
+      background: linear-gradient(to top, rgba(6,4,2,.88) 0%, transparent 100%);
+    }
+
+    .h-scroll__card-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .25em;
+      color: rgba(240,232,216,.35);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .h-scroll__card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.01em;
+      color: rgba(240,232,216,.9);
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 12px;
+      font-style: italic;
+      color: rgba(240,232,216,.5);
+      line-height: 1.5;
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-sub {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: .1em;
+      opacity: .65;
+    }
+
+    .h-scroll__progress {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .h-scroll__pip {
+      width: 20px;
+      height: 1px;
+      background: rgba(200,149,108,.2);
+      transition: background .3s ease, width .3s ease;
+    }
+
+    .h-scroll__pip.active {
+      background: var(--gold);
+      width: 36px;
+    }
+
+    /* ── OUTRO ── */
+    .outro {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 100px clamp(24px, 8vw, 120px);
+    }
+
+    .outro__symbol {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(60px, 12vw, 140px);
+      font-weight: 300;
+      color: rgba(200,149,108,.1);
+      line-height: 1;
+      margin-bottom: 40px;
+      opacity: 0;
+      transform: scale(.8);
+    }
+
+    .outro__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 4vw, 52px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(240,232,216,.8);
+      line-height: 1.55;
+      margin-bottom: 28px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .outro__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-style: italic;
+      color: rgba(240,232,216,.45);
+      line-height: 1.9;
+      max-width: 520px;
+      opacity: 0;
+    }
+
+    /* ── LIGHTBOX ── */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(6,4,2,.93);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .4s ease;
+      padding: 20px;
+    }
+
+    #lightbox.active { opacity: 1; pointer-events: all; }
+
+    #lightbox-close {
+      position: absolute;
+      top: 28px; right: 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(200,149,108,.6);
+      background: none;
+      border: 1px solid rgba(200,149,108,.2);
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: color .25s, border-color .25s;
+    }
+
+    #lightbox-close:hover { color: var(--gold); border-color: var(--gold); }
+
+    #lightbox-img {
+      max-width: 90vw;
+      max-height: 72vh;
+      object-fit: contain;
+      display: block;
+    }
+
+    #lightbox-poem { margin-top: 20px; text-align: center; }
+
+    #lightbox-poem-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 15px;
+      font-style: italic;
+      color: rgba(240,232,216,.7);
+      margin-bottom: 6px;
+    }
+
+    #lightbox-poem-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: rgba(200,149,108,.55);
+      letter-spacing: .1em;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 60px clamp(24px, 8vw, 120px);
+      border-top: 1px solid rgba(200,149,108,.1);
+      text-align: center;
+    }
+
+    .footer-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 3vw, 38px);
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(240,232,216,.2);
+      margin-bottom: 12px;
+    }
+
+    .footer-brand em { font-style: normal; color: rgba(200,149,108,.3); }
+
+    .footer-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(240,232,216,.18);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+      .hero__title .char { transform: none !important; }
+      .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; visibility: visible !important; }
+      .section-phase, .section-title, .section-title-jp,
+      .section-desc, .photo-card, .quote-line, .quote-text,
+      .quote-attr, .shinrin__phase, .shinrin__title, .shinrin__title-jp,
+      .shinrin__desc, .outro__symbol, .outro__title, .outro__desc,
+      .h-scroll__card { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Progress bar -->
+  <div id="progress-bar" aria-hidden="true"></div>
+
+  <!-- Ring Cursor -->
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Navigation -->
+  <a href="../experiment-10-yugen/index.html" class="back-link" aria-label="Back to experiment 10">EXP 10</a>
+  <span class="exp-label" aria-hidden="true">EXP 11 / NATSUKASHII</span>
+
+  <!-- Lightbox -->
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo lightbox">
+    <button id="lightbox-close" aria-label="Close lightbox">ESC · CLOSE</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-poem">
+      <p id="lightbox-poem-text"></p>
+      <span id="lightbox-poem-jp"></span>
+    </div>
+  </div>
+
+  <!-- WebGL shader canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <!-- Particle overlay canvas -->
+  <canvas id="particle-canvas" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════════════ -->
+  <div class="content">
+
+    <!-- ── HERO ── -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero__kanji" aria-hidden="true">懐かしい</div>
+      <span class="hero__label" aria-hidden="true">Esperimento No. 11</span>
+      <h1 class="hero__title" id="hero-heading">NATSU<br>KASHII</h1>
+      <p class="hero__sub">La dolcezza di un ricordo lontano.</p>
+      <p class="hero__jp-subtitle" lang="ja">なつかしい — 懐かしい</p>
+      <div class="hero__scroll" aria-hidden="true">
+        <span>SCROLL</span>
+        <div class="hero__scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE I: L'INFANZIA ── -->
+    <section class="photo-section" id="section-01" aria-labelledby="s1-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">I — L'Infanzia 🌸</div>
+        <h2 class="section-title" id="s1-title">I Giorni<br>Felici</h2>
+        <p class="section-title-jp" lang="ja">幼少期の思い出</p>
+        <p class="section-desc">
+          Da bambini, il tempo scorreva diversamente. Le estati erano infinite, ogni piccola cosa era un'avventura.
+          Natsukashii è ritrovare quella luce nella memoria.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm" role="list">
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="Ogni ricordo è un sole che non tramonta mai" data-poem-jp="思い出は沈まない太陽">
+          <span class="photo-card__num" aria-hidden="true">001</span>
+          <img src="https://picsum.photos/seed/natsu-01/1200/750" alt="Giornata luminosa dell'infanzia, luce calda dorata" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Ogni ricordo è un sole che non tramonta mai</p>
+            <span class="photo-card__poem-jp">思い出は沈まない太陽</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="L'infanzia è il paese a cui non torniamo mai" data-poem-jp="幼少期は帰れない国">
+          <span class="photo-card__num" aria-hidden="true">002</span>
+          <img src="https://picsum.photos/seed/natsu-02/600/900" alt="Figura bambina immersa nel gioco, innocenza" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">L'infanzia è il paese a cui non torniamo mai</p>
+            <span class="photo-card__poem-jp">幼少期は帰れない国</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE I ── -->
+    <div class="quote-section" aria-label="Citazione">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Natsukashii è la gioia di ricordare — non la tristezza di aver perso."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">懐かしい — La nostalgia che sorride</p>
+    </div>
+
+    <!-- ── SEZIONE II: LE FOTOGRAFIE ── -->
+    <section class="photo-section" id="section-02" aria-labelledby="s2-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">II — Le Fotografie 📷</div>
+        <h2 class="section-title" id="s2-title">Istanti<br>Eterni</h2>
+        <p class="section-title-jp" lang="ja">色あせた写真</p>
+        <p class="section-desc">
+          Una fotografia sbiadita vale più di mille parole fresche. Custodisce la texture del tempo —
+          il colore che era, la luce che fu.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--3col" role="list">
+        <div class="photo-card photo-card--port" role="listitem" data-poem="La foto sbiadisce, ma il cuore ricorda a colori" data-poem-jp="写真は色あせるが、心はカラーで覚えている">
+          <span class="photo-card__num" aria-hidden="true">003</span>
+          <img src="https://picsum.photos/seed/natsu-03/600/800" alt="Fotografia vintage sbiadita dal tempo" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">La foto sbiadisce, ma il cuore ricorda a colori</p>
+            <span class="photo-card__poem-jp">写真は色あせるが、心はカラーで覚えている</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="Ogni scatto è un atto di amore verso il futuro" data-poem-jp="すべての写真は未来への愛の行為">
+          <span class="photo-card__num" aria-hidden="true">004</span>
+          <img src="https://picsum.photos/seed/natsu-04/600/800" alt="Mano che regge una vecchia fotografia" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Ogni scatto è un atto di amore verso il futuro</p>
+            <span class="photo-card__poem-jp">すべての写真は未来への愛の行為</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="La pellicola custodisce ciò che la memoria rischia di perdere" data-poem-jp="フィルムは記憶が失いかねるものを守る">
+          <span class="photo-card__num" aria-hidden="true">005</span>
+          <img src="https://picsum.photos/seed/natsu-05/600/800" alt="Pellicola fotografica con fotogrammi del passato" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">La pellicola custodisce ciò che la memoria rischia di perdere</p>
+            <span class="photo-card__poem-jp">フィルムは記憶が失いかねるものを守る</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE III: I LUOGHI ── -->
+    <section class="photo-section" id="section-03" aria-labelledby="s3-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">III — I Luoghi 🏡</div>
+        <h2 class="section-title" id="s3-title">Dove<br>Eravamo</h2>
+        <p class="section-title-jp" lang="ja">心の場所</p>
+        <p class="section-desc">
+          Certi luoghi esistono in noi anche dopo che non esistono più nella realtà.
+          Una strada, un giardino, una finestra — conservati intatti nel cuore.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm-r" role="list">
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="Il luogo è già diventato ricordo prima ancora di andarsene" data-poem-jp="場所はまだ去る前から思い出になる">
+          <span class="photo-card__num" aria-hidden="true">006</span>
+          <img src="https://picsum.photos/seed/natsu-06/600/900" alt="Vecchia casa dell'infanzia con giardino" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Il luogo è già diventato ricordo prima ancora di andarsene</p>
+            <span class="photo-card__poem-jp">場所はまだ去る前から思い出になる</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="Torno a quei luoghi nella memoria ogni volta che ne ho bisogno" data-poem-jp="必要な時にいつでも記憶の中でその場所に戻る">
+          <span class="photo-card__num" aria-hidden="true">007</span>
+          <img src="https://picsum.photos/seed/natsu-07/1200/750" alt="Strada del quartiere natale immersa nella luce" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Torno a quei luoghi nella memoria ogni volta che ne ho bisogno</p>
+            <span class="photo-card__poem-jp">必要な時にいつでも記憶の中でその場所に戻る</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PELLICOLA interlude ── -->
+    <section class="shinrin" id="section-pellicola" aria-labelledby="pellicola-title">
+      <p class="shinrin__phase" aria-hidden="true">IV — Il Tempo 🎞</p>
+      <h2 class="shinrin__title" id="pellicola-title">La Pellicola<br>del Tempo</h2>
+      <p class="shinrin__title-jp" lang="ja">時間のフィルム — Jikan no Firumu</p>
+      <p class="shinrin__desc">
+        Come la pellicola fotografica cattura la luce in un singolo istante, così la memoria cattura le emozioni.
+        I ricordi non sbiadiscono — cambiano colore, diventano più caldi, più veri.
+      </p>
+    </section>
+
+    <!-- ── SEZIONE IV: IL PASSATO ── -->
+    <section class="photo-section" id="section-04" aria-labelledby="s4-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">V — Il Passato ☀</div>
+        <h2 class="section-title" id="s4-title">Quel<br>Calore</h2>
+        <p class="section-title-jp" lang="ja">過去のぬくもり</p>
+        <p class="section-desc">
+          Il passato ha un calore tutto suo. Non la bruciatura del rimpianto, ma il tepore di ciò che è stato
+          vissuto intensamente e ha lasciato un segno buono.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--2col" role="list">
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="Il calore del passato è il fuoco che scalda il presente" data-poem-jp="過去の温かさは現在を温める火">
+          <span class="photo-card__num" aria-hidden="true">008</span>
+          <img src="https://picsum.photos/seed/natsu-08/800/800" alt="Luce calda del tramonto che evoca il passato" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Il calore del passato è il fuoco che scalda il presente</p>
+            <span class="photo-card__poem-jp">過去の温かさは現在を温める火</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="Ricordare è il modo in cui il tempo si fa eterno" data-poem-jp="思い出すことで時間は永遠になる">
+          <span class="photo-card__num" aria-hidden="true">009</span>
+          <img src="https://picsum.photos/seed/natsu-09/800/800" alt="Momento di contemplazione e nostalgia felice" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Ricordare è il modo in cui il tempo si fa eterno</p>
+            <span class="photo-card__poem-jp">思い出すことで時間は永遠になる</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE II ── -->
+    <div class="quote-section" aria-label="Citazione finale">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Ogni vecchia fotografia è una finestra su chi eravamo — e su chi siamo ancora."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">懐かしい — Natsukashii, il ricordo felice</p>
+    </div>
+
+    <!-- ── HORIZONTAL SCROLL ── -->
+    <section class="h-scroll" id="h-scroll-natsukashii" aria-label="I cinque sentieri del ricordo">
+      <p class="h-scroll__label" aria-hidden="true">I CINQUE SENTIERI DEL RICORDO</p>
+      <div class="h-scroll__inner">
+        <div class="h-scroll__track" id="h-scroll-track">
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/natsu-h01/880/1120" alt="Infanzia — luce speciale dei giorni passati" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">幼少期 INFANZIA</span>
+              <p class="h-scroll__card-title">L'Alba dei Giorni</p>
+              <p class="h-scroll__card-poem">I giorni dell'infanzia brillano di una luce speciale.</p>
+              <span class="h-scroll__card-sub" lang="ja">幼い日々は特別な光で輝く</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/natsu-h02/880/1120" alt="Estate — calore infinito dei giorni d'infanzia" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">夏 ESTATE</span>
+              <p class="h-scroll__card-title">Il Caldo Infinito</p>
+              <p class="h-scroll__card-poem">Le estati da bambini non finivano mai.</p>
+              <span class="h-scroll__card-sub" lang="ja">子供の夏は終わらなかった</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/natsu-h03/880/1120" alt="Amici — compagni di giochi e avventure" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">友達 AMICI</span>
+              <p class="h-scroll__card-title">I Compagni</p>
+              <p class="h-scroll__card-poem">Gli amici dell'infanzia vivono per sempre.</p>
+              <span class="h-scroll__card-sub" lang="ja">幼なじみは永遠に生きる</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/natsu-h04/880/1120" alt="Colori — i colori sbiaditi del passato" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">色 COLORI</span>
+              <p class="h-scroll__card-title">I Colori Sbiaditi</p>
+              <p class="h-scroll__card-poem">I colori del passato sono più intensi del presente.</p>
+              <span class="h-scroll__card-sub" lang="ja">過去の色は現在より鮮やか</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/natsu-h05/880/1120" alt="Nostalgia — il sorriso del ricordo felice" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">懐 NOSTALGIA</span>
+              <p class="h-scroll__card-title">Natsukashii</p>
+              <p class="h-scroll__card-poem">Ricordare con un sorriso — questo è natsukashii.</p>
+              <span class="h-scroll__card-sub" lang="ja">笑顔で思い出す、それが懐かしい</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="h-scroll__progress" aria-hidden="true">
+        <div class="h-scroll__pip active"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+      </div>
+    </section>
+
+    <!-- ── OUTRO ── -->
+    <section class="outro" id="section-outro" aria-labelledby="outro-title">
+      <div class="outro__symbol" aria-hidden="true">懐</div>
+      <h2 class="outro__title" id="outro-title">
+        Il passato non è perduto. Vive nei ricordi felici.
+      </h2>
+      <p class="outro__desc">
+        Natsukashii è la prova che il tempo non distrugge — trasforma. Ogni momento vissuto pienamente
+        diventa un tesoro che la memoria conserva con cura infinita. Non è tristezza.
+        È gratitudine per ciò che è stato.
+      </p>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer aria-label="Footer">
+      <div class="footer-brand">NATSU<em>KASHII</em></div>
+      <p class="footer-meta">EXPERIMENT 11 · PORTFOLIO 2024 · 懐かしい</p>
+    </footer>
+
+  </div><!-- /content -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.umd.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* ══════════════════════════════════════════════════════
+       GUARD
+    ══════════════════════════════════════════════════════ */
+    if (typeof gsap === 'undefined')          console.error('[NATSUKASHII] GSAP failed to load.');
+    if (typeof ScrollTrigger === 'undefined') console.error('[NATSUKASHII] ScrollTrigger failed to load.');
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ══════════════════════════════════════════════════════
+       LENIS SMOOTH SCROLL
+    ══════════════════════════════════════════════════════ */
+    let lenis = null;
+    const LenisClass = (typeof Lenis !== 'undefined') ? (Lenis.default || Lenis) : null;
+
+    if (LenisClass) {
+      lenis = new LenisClass({
+        duration: 1.8,
+        easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 0.85,
+        touchMultiplier: 2,
+      });
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add(time => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCROLL PROGRESS BAR
+    ══════════════════════════════════════════════════════ */
+    const progressBar = document.getElementById('progress-bar');
+    window.addEventListener('scroll', () => {
+      const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+    }, { passive: true });
+
+    /* ══════════════════════════════════════════════════════
+       DYNAMIC COLOR PALETTE — updates CSS vars on scroll
+    ══════════════════════════════════════════════════════ */
+    const PALETTE = [
+      { t: 0,    accent: [0.70, 0.50, 0.32] },
+      { t: 0.25, accent: [0.78, 0.58, 0.38] },
+      { t: 0.5,  accent: [0.83, 0.63, 0.42] },
+      { t: 0.75, accent: [0.75, 0.55, 0.35] },
+      { t: 1,    accent: [0.65, 0.45, 0.28] },
+    ];
+
+    function lerpPalette(t) {
+      let i = 0;
+      for (let k = PALETTE.length - 2; k >= 0; k--) {
+        if (t >= PALETTE[k].t) { i = k; break; }
+      }
+      const a = PALETTE[i], b = PALETTE[i + 1];
+      const f = (t - a.t) / (b.t - a.t);
+      const lerp = (x, y) => x + (y - x) * f;
+      const hex = arr => '#' + arr.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+      return { accent: hex(a.accent.map((v, j) => lerp(v, b.accent[j]))) };
+    }
+
+    function updateDynamicColors(t) {
+      const { accent } = lerpPalette(t);
+      document.documentElement.style.setProperty('--accent', accent);
+      if (progressBar) progressBar.style.background =
+        `linear-gradient(to right, ${accent}, #a0704a)`;
+    }
+
+    let scrollT = 0;
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 2,
+      onUpdate: self => {
+        scrollT = self.progress;
+        updateDynamicColors(scrollT);
+      },
+    });
+
+    /* ══════════════════════════════════════════════════════
+       CURSOR RING — requestAnimationFrame loop
+    ══════════════════════════════════════════════════════ */
+    const cursorRing = document.getElementById('cursor-ring');
+    let cursorSX = -999, cursorSY = -999;
+    let cursorTX = 0,   cursorTY = 0;
+
+    if (cursorRing && window.matchMedia('(pointer: fine)').matches) {
+      window.addEventListener('mousemove', e => {
+        cursorTX = e.clientX;
+        cursorTY = e.clientY;
+      });
+
+      (function animCursor() {
+        cursorSX += (cursorTX - cursorSX) * 0.10;
+        cursorSY += (cursorTY - cursorSY) * 0.10;
+        gsap.set(cursorRing, { x: cursorSX, y: cursorSY });
+        requestAnimationFrame(animCursor);
+      })();
+
+      document.querySelectorAll('a, button, .photo-card').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       WEBGL — NATSUKASHII FILM GRAIN + VINTAGE WARMTH SHADER (Three.js)
+    ══════════════════════════════════════════════════════ */
+    const bgCanvas = document.getElementById('bg-canvas');
+
+    const webglAvailable = (() => {
+      try {
+        const c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch { return false; }
+    })();
+
+    let threeCleanup = () => {};
+
+    if (webglAvailable && bgCanvas) {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+
+      const scene    = new THREE.Scene();
+      const camera   = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      const renderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: false, alpha: false });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      const vertexShader = /* glsl */`
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+      `;
+
+      const fragmentShader = /* glsl */`
+        precision mediump float;
+        uniform float uTime;
+        uniform vec2  uResolution;
+        uniform vec2  uMouse;
+        uniform float uScrollT;
+        varying vec2 vUv;
+
+        float hash(vec2 p){p=fract(p*vec2(234.34,435.345));p+=dot(p,p+34.23);return fract(p.x*p.y);}
+        float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+
+        void main(){
+          vec2 uv=vUv;
+          vec3 warm1=vec3(0.06,0.04,0.02);
+          vec3 warm2=mix(vec3(0.10,0.07,0.03),vec3(0.16,0.10,0.05),uScrollT);
+          vec3 bg=mix(warm1,warm2,uv.y);
+          vec2 grainUV=uv*uResolution*0.5;
+          float grain=hash(grainUV+vec2(fract(uTime*24.),fract(uTime*17.)));
+          grain=(grain-0.5)*0.08;
+          bg+=vec3(grain*0.6,grain*0.45,grain*0.3);
+          float scratchX=hash(vec2(floor(uTime*3.),0.))*0.8+0.1;
+          float scratch=smoothstep(0.002,0.,abs(uv.x-scratchX));
+          scratch*=noise(vec2(uv.y*8.,uTime*2.))*0.3*step(0.7,hash(vec2(floor(uTime*3.),1.)));
+          bg+=vec3(scratch*0.8,scratch*0.6,scratch*0.4);
+          float leak=exp(-length(uv-vec2(1.,1.))*3.)*uScrollT*0.5;
+          bg+=vec3(leak*0.8,leak*0.4,leak*0.1);
+          float vig=1.-smoothstep(0.25,1.2,length((uv-0.5)*1.7));
+          bg*=vig;
+          float lum=dot(bg,vec3(0.299,0.587,0.114));
+          bg=mix(bg,vec3(lum*1.2,lum*0.9,lum*0.65),0.4);
+          gl_FragColor=vec4(bg,1.);
+        }
+      `;
+
+      const geo = new THREE.PlaneGeometry(2, 2);
+      const mat = new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        uniforms: {
+          uTime:       { value: 0 },
+          uResolution: { value: new THREE.Vector2(W, H) },
+          uMouse:      { value: new THREE.Vector2(0.5, 0.5) },
+          uScrollT:    { value: 0 },
+        },
+      });
+      scene.add(new THREE.Mesh(geo, mat));
+
+      window.addEventListener('mousemove', e => {
+        mat.uniforms.uMouse.value.set(
+          e.clientX / window.innerWidth,
+          e.clientY / window.innerHeight
+        );
+      });
+
+      ScrollTrigger.create({
+        trigger: document.body,
+        start: 'top top',
+        end: 'bottom bottom',
+        onUpdate: self => { mat.uniforms.uScrollT.value = self.progress; },
+      });
+
+      const onResize = () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        mat.uniforms.uResolution.value.set(w, h);
+      };
+      window.addEventListener('resize', onResize);
+
+      let rafId;
+      const tick = () => {
+        rafId = requestAnimationFrame(tick);
+        mat.uniforms.uTime.value = performance.now() * 0.001;
+        renderer.render(scene, camera);
+      };
+      tick();
+
+      threeCleanup = () => {
+        cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', onResize);
+        geo.dispose();
+        mat.dispose();
+        renderer.dispose();
+      };
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CANVAS2D PARTICLE OVERLAY — dust motes floating up
+    ══════════════════════════════════════════════════════ */
+    const pCanvas = document.getElementById('particle-canvas');
+
+    if (pCanvas) {
+      const pCtx = pCanvas.getContext('2d');
+
+      function resizePC() {
+        pCanvas.width  = window.innerWidth;
+        pCanvas.height = window.innerHeight;
+      }
+      resizePC();
+      window.addEventListener('resize', resizePC, { passive: true });
+
+      class DustMote {
+        constructor() { this.reset(true); }
+        reset(randomY = false) {
+          this.x     = Math.random() * pCanvas.width;
+          this.y     = randomY ? Math.random() * pCanvas.height : pCanvas.height + 10;
+          this.vy    = -(0.15 + Math.random() * 0.4);
+          this.vx    = (Math.random() - 0.5) * 0.25;
+          this.r     = 1 + Math.random() * 3;
+          this.alpha = 0;
+          this.targetAlpha = 0.3 + Math.random() * 0.5;
+          this.phase = Math.random() * Math.PI * 2;
+        }
+
+        update() {
+          this.phase += 0.018;
+          this.x += this.vx + Math.sin(this.phase) * 0.3;
+          this.y += this.vy;
+          this.alpha += (this.targetAlpha - this.alpha) * 0.04;
+          if (this.y < -20 || this.x < -20 || this.x > pCanvas.width + 20) this.reset();
+        }
+
+        draw(ctx) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, this.alpha);
+          const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 3.5);
+          grad.addColorStop(0,   'rgba(200,149,108,0.9)');
+          grad.addColorStop(0.4, 'rgba(160,112,74,0.45)');
+          grad.addColorStop(1,   'rgba(160,112,74,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r * 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      const particles = [];
+      for (let i = 0; i < 45; i++) particles.push(new DustMote());
+
+      (function animParticles() {
+        requestAnimationFrame(animParticles);
+        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+        particles.forEach(p => { p.update(); p.draw(pCtx); });
+      })();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — HERO ENTRANCE (letter by letter)
+    ══════════════════════════════════════════════════════ */
+    const heroTitle = document.querySelector('.hero__title');
+    if (heroTitle) {
+      const text = heroTitle.textContent;
+      heroTitle.innerHTML = '';
+      [...text].forEach(ch => {
+        if (ch === '\n') { heroTitle.appendChild(document.createElement('br')); return; }
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        heroTitle.appendChild(span);
+      });
+      heroTitle.setAttribute('aria-label', text.replace('\n', ' '));
+
+      const heroTl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+      heroTl
+        .to('.hero__label',       { autoAlpha: 1, duration: .8 })
+        .to('.hero__title .char', { y: 0, duration: 1.1, stagger: 0.035 }, '-=0.5')
+        .to('.hero__sub',         { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__jp-subtitle', { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__scroll',      { autoAlpha: 1, duration: .8 }, '-=0.3');
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — SCROLL REVEALS
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-section').forEach(section => {
+      const phase   = section.querySelector('.section-phase');
+      const title   = section.querySelector('.section-title');
+      const titleJp = section.querySelector('.section-title-jp');
+      const desc    = section.querySelector('.section-desc');
+
+      if (phase)   gsap.to(phase,   { autoAlpha: 1, x: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%', toggleActions: 'play none none none' } });
+      if (title)   gsap.to(title,   { autoAlpha: 1, y: 0,  duration: 1,  ease: 'power4.out', scrollTrigger: { trigger: section, start: 'top 70%', toggleActions: 'play none none none' }, delay: .1 });
+      if (titleJp) gsap.to(titleJp, { autoAlpha: 1,        duration: .7, ease: 'power2.out', scrollTrigger: { trigger: section, start: 'top 65%', toggleActions: 'play none none none' }, delay: .2 });
+      if (desc)    gsap.to(desc,    { autoAlpha: 1, y: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 62%', toggleActions: 'play none none none' }, delay: .3 });
+    });
+
+    document.querySelectorAll('.photo-card').forEach((card, i) => {
+      gsap.to(card, {
+        autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out',
+        scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none none' },
+        delay: (i % 3) * 0.12,
+      });
+    });
+
+    document.querySelectorAll('.quote-section').forEach(q => {
+      const ql = q.querySelector('.quote-line');
+      const qt = q.querySelector('.quote-text');
+      const qa = q.querySelector('.quote-attr');
+      if (ql) gsap.to(ql, { autoAlpha: 1, duration: .8, scrollTrigger: { trigger: q, start: 'top 75%', toggleActions: 'play none none none' } });
+      if (qt) gsap.to(qt, { autoAlpha: 1, y: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 70%', toggleActions: 'play none none none' }, delay: .2 });
+      if (qa) gsap.to(qa, { autoAlpha: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
+    });
+
+    /* Pellicola interlude section reveals */
+    const pellicola = document.getElementById('section-pellicola');
+    if (pellicola) {
+      gsap.to(pellicola.querySelector('.shinrin__phase'),    { autoAlpha: 1, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: pellicola, start: 'top 70%', toggleActions: 'play none none none' } });
+      gsap.to(pellicola.querySelector('.shinrin__title'),    { autoAlpha: 1, y: 0, duration: 1.2, ease: 'power4.out', scrollTrigger: { trigger: pellicola, start: 'top 65%', toggleActions: 'play none none none' }, delay: .1 });
+      gsap.to(pellicola.querySelector('.shinrin__title-jp'), { autoAlpha: 1, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: pellicola, start: 'top 60%', toggleActions: 'play none none none' }, delay: .2 });
+      gsap.to(pellicola.querySelector('.shinrin__desc'),     { autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out', scrollTrigger: { trigger: pellicola, start: 'top 55%', toggleActions: 'play none none none' }, delay: .3 });
+    }
+
+    /* Outro reveals */
+    const outro = document.getElementById('section-outro');
+    if (outro) {
+      gsap.to(outro.querySelector('.outro__symbol'), { autoAlpha: 1, scale: 1, duration: 1.5, ease: 'power3.out', scrollTrigger: { trigger: outro, start: 'top 70%', toggleActions: 'play none none none' } });
+      gsap.to(outro.querySelector('.outro__title'),  { autoAlpha: 1, y: 0, duration: 1.1, ease: 'power4.out', scrollTrigger: { trigger: outro, start: 'top 65%', toggleActions: 'play none none none' }, delay: .2 });
+      gsap.to(outro.querySelector('.outro__desc'),   { autoAlpha: 1, duration: .9, ease: 'power2.out', scrollTrigger: { trigger: outro, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       PARALLAX — subtle zoom on photos while scrolling
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-card img').forEach(img => {
+      gsap.to(img, {
+        scale: 1.12,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: img.closest('.photo-card'),
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 1.5,
+        },
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════
+       LIGHTBOX
+    ══════════════════════════════════════════════════════ */
+    const lightbox   = document.getElementById('lightbox');
+    const lbImg      = document.getElementById('lightbox-img');
+    const lbPoemText = document.getElementById('lightbox-poem-text');
+    const lbPoemJp   = document.getElementById('lightbox-poem-jp');
+    const lbClose    = document.getElementById('lightbox-close');
+
+    function openLightbox(card) {
+      const img    = card.querySelector('img');
+      const poem   = card.dataset.poem   || '';
+      const poemJp = card.dataset.poemJp || '';
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbPoemText.textContent = poem;
+      lbPoemJp.textContent   = poemJp;
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(() => { lbImg.src = ''; }, 400);
+    }
+
+    document.querySelectorAll('.photo-card').forEach(card => {
+      card.addEventListener('click', () => openLightbox(card));
+      card.setAttribute('tabindex', '0');
+      card.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(card); });
+    });
+
+    if (lbClose)  lbClose.addEventListener('click', closeLightbox);
+    if (lightbox) lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ══════════════════════════════════════════════════════
+       HORIZONTAL SCROLL PIN
+    ══════════════════════════════════════════════════════ */
+    const hSection = document.getElementById('h-scroll-natsukashii');
+    const hTrack   = document.getElementById('h-scroll-track');
+    const hPips    = document.querySelectorAll('#h-scroll-natsukashii .h-scroll__pip');
+
+    if (hSection && hTrack) {
+      gsap.to(hTrack, {
+        x: () => -(hTrack.scrollWidth - window.innerWidth),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: hSection,
+          start: 'top top',
+          end: () => `+=${hTrack.scrollWidth - window.innerWidth}`,
+          pin: true,
+          scrub: 1.2,
+          invalidateOnRefresh: true,
+          onUpdate: self => {
+            const idx = Math.round(self.progress * (hPips.length - 1));
+            hPips.forEach((p, i) => p.classList.toggle('active', i === idx));
+          },
+        },
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CLEANUP
+    ══════════════════════════════════════════════════════ */
+    window.addEventListener('beforeunload', threeCleanup);
+
+  </script>
+</body>
+</html>
