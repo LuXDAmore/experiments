@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ICHIGO ICHIE — Un viaggio fotografico scroll-driven attraverso la filosofia di un incontro, una sola possibilità.">
+  <meta name="theme-color" content="#05080d">
+  <title>ICHIGO ICHIE 一期一会 — Experiment 08</title>
+
+  <!-- THREE.js ImportMap — must appear before any type="module" script -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Noto+Serif+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- TailwindCSS Play CDN v4 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-serif: "Cormorant Garamond", Georgia, serif;
+      --font-jp:    "Noto Serif JP", serif;
+      --font-mono:  "Space Mono", monospace;
+    }
+  </style>
+
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --night:  #030508;
+      --accent: #7eb8c9;
+      --blue:   #7eb8c9;
+      --deep:   #3a6a80;
+      --ice:    #b8dce8;
+      --fg:     #e0eef5;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { overflow-x: hidden; scroll-behavior: auto; }
+
+    body {
+      background: var(--night);
+      color: var(--fg);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── Ring Cursor ── */
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(126,184,201,.5);
+      background: rgba(126,184,201,.06);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .3s ease, height .3s ease, border-color .3s ease;
+    }
+
+    body.is-hovering #cursor-ring {
+      width: 60px; height: 60px;
+      border-color: rgba(126,184,201,.9);
+    }
+
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-ring { display: none !important; }
+    }
+
+    /* ── ThreeJS fullscreen canvas ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(to right, #7eb8c9, #3a6a80);
+      z-index: 9000;
+    }
+
+    /* ── Nav ── */
+    .back-link {
+      position: fixed;
+      top: 28px;
+      left: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(224,238,245,.4);
+      text-decoration: none;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .25s;
+    }
+    .back-link:hover { color: var(--blue); }
+    .back-link::before { content: '←'; }
+
+    .exp-label {
+      position: fixed;
+      top: 28px;
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(224,238,245,.2);
+      z-index: 9000;
+    }
+
+    /* ── Content wrapper ── */
+    .content { position: relative; z-index: 1; }
+
+    /* ── HERO ── */
+    .hero {
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 clamp(24px, 6vw, 80px);
+      position: relative;
+    }
+
+    .hero__label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .4em;
+      color: rgba(126,184,201,.7);
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      opacity: 0;
+    }
+
+    .hero__kanji {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(48px, 10vw, 130px);
+      font-weight: 300;
+      line-height: 1;
+      color: rgba(224,238,245,.04);
+      letter-spacing: .05em;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) translateY(-60px);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .hero__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(56px, 12vw, 160px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.02em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      overflow: hidden;
+      display: block;
+    }
+
+    .hero__title .char {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .hero__sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 2vw, 22px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(224,238,245,.5);
+      max-width: 440px;
+      line-height: 1.8;
+      opacity: 0;
+      margin-bottom: 12px;
+    }
+
+    .hero__jp-subtitle {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(11px, 1.2vw, 14px);
+      font-weight: 300;
+      color: rgba(126,184,201,.45);
+      letter-spacing: .12em;
+      opacity: 0;
+    }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(224,238,245,.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+    }
+
+    .hero__scroll-line {
+      width: 1px;
+      height: 52px;
+      background: linear-gradient(to bottom, rgba(126,184,201,.5), transparent);
+      animation: scrollPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      65%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
+    }
+
+    /* ── SECTION COMMON ── */
+    .photo-section {
+      min-height: 100svh;
+      padding: 100px clamp(24px, 8vw, 120px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .section-header { margin-bottom: 60px; }
+
+    .section-phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateX(-20px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: color .6s ease;
+    }
+
+    .section-phase::before {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+      transition: background .6s ease;
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(42px, 7vw, 100px);
+      font-weight: 700;
+      line-height: .95;
+      letter-spacing: -.02em;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .section-title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(13px, 1.4vw, 17px);
+      font-weight: 300;
+      color: rgba(224,238,245,.35);
+      letter-spacing: .12em;
+      margin-bottom: 24px;
+      opacity: 0;
+    }
+
+    .section-desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-style: italic;
+      color: rgba(224,238,245,.5);
+      line-height: 1.85;
+      max-width: 520px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    /* ── PHOTO GRID ── */
+    .photo-grid { display: grid; gap: 16px; }
+    .photo-grid--2col    { grid-template-columns: 1fr 1fr; }
+    .photo-grid--3col    { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-grid--asymm   { grid-template-columns: 2fr 1fr; }
+    .photo-grid--asymm-r { grid-template-columns: 1fr 2fr; }
+
+    @media (max-width: 640px) {
+      .photo-grid--2col,
+      .photo-grid--3col,
+      .photo-grid--asymm,
+      .photo-grid--asymm-r { grid-template-columns: 1fr; }
+    }
+
+    /* ── PHOTO CARD ── */
+    .photo-card {
+      position: relative;
+      overflow: hidden;
+      background: rgba(0,0,0,.4);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .photo-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      will-change: transform;
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94), filter .5s ease;
+      filter: saturate(0.82);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover img {
+        transform: scale(1);
+        filter: saturate(1.05);
+      }
+    }
+
+    .photo-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(126,184,201,0);
+      transition: border-color .4s ease, box-shadow .4s ease;
+      pointer-events: none;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover::after {
+        border-color: rgba(126,184,201,.2);
+        box-shadow: inset 0 0 40px rgba(126,184,201,.07);
+      }
+    }
+
+    .photo-card__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(3,5,8,.88) 0%, transparent 65%);
+      opacity: 0;
+      transition: opacity .4s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 20px 18px;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover .photo-card__overlay { opacity: 1; }
+    }
+
+    .photo-card__poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      font-style: italic;
+      color: rgba(224,238,245,.85);
+      line-height: 1.65;
+      margin-bottom: 6px;
+    }
+
+    .photo-card__poem-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 10px;
+      font-weight: 300;
+      color: rgba(126,184,201,.65);
+      letter-spacing: .1em;
+    }
+
+    .photo-card__num {
+      position: absolute;
+      top: 14px; left: 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .2em;
+      color: rgba(224,238,245,.35);
+    }
+
+    /* Card aspect ratios */
+    .photo-card--wide { aspect-ratio: 16/10; }
+    .photo-card--tall { aspect-ratio: 2/3; }
+    .photo-card--port { aspect-ratio: 3/4; }
+    .photo-card--sq   { aspect-ratio: 1/1; }
+    .photo-card--land { aspect-ratio: 4/3; }
+
+    /* ── QUOTE SECTION ── */
+    .quote-section {
+      padding: 100px clamp(24px, 8vw, 120px);
+      text-align: center;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .quote-line {
+      width: 60px; height: 1px;
+      background: var(--accent);
+      margin: 0 auto 32px;
+      opacity: 0;
+      transition: background .6s ease;
+    }
+
+    .quote-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(20px, 3vw, 32px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(224,238,245,.75);
+      line-height: 1.7;
+      letter-spacing: .01em;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .quote-attr {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(126,184,201,.45);
+      text-transform: uppercase;
+      margin-top: 28px;
+      opacity: 0;
+    }
+
+    /* ── ICHIGO ICHIE interlude (shinrin-equivalent) ── */
+    .shinrin {
+      min-height: 90svh;
+      padding: 100px clamp(24px, 8vw, 120px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .shinrin__phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: color .6s ease;
+    }
+
+    .shinrin__phase::before,
+    .shinrin__phase::after {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+      transition: background .6s ease;
+    }
+
+    .shinrin__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(48px, 9vw, 120px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.02em;
+      margin-bottom: 20px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .shinrin__title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(14px, 1.6vw, 20px);
+      font-weight: 300;
+      color: rgba(126,184,201,.5);
+      letter-spacing: .14em;
+      margin-bottom: 28px;
+      opacity: 0;
+    }
+
+    .shinrin__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(16px, 1.8vw, 22px);
+      font-style: italic;
+      color: rgba(224,238,245,.5);
+      line-height: 1.85;
+      max-width: 560px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    /* ── HORIZONTAL SCROLL ── */
+    .h-scroll { position: relative; overflow: hidden; }
+
+    .h-scroll__label {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .4em;
+      color: rgba(126,184,201,.4);
+      text-transform: uppercase;
+      z-index: 2;
+      white-space: nowrap;
+    }
+
+    .h-scroll__inner {
+      display: flex;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .h-scroll__track {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: 28px;
+      padding: 0 clamp(24px, 6vw, 80px);
+      will-change: transform;
+    }
+
+    .h-scroll__card {
+      flex-shrink: 0;
+      width: clamp(260px, 30vw, 400px);
+      height: clamp(340px, 52vh, 540px);
+      position: relative;
+      overflow: hidden;
+      background: rgba(3,5,8,.4);
+    }
+
+    .h-scroll__card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94), filter .5s ease;
+      filter: saturate(0.82);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .h-scroll__card:hover img {
+        transform: scale(1);
+        filter: saturate(1.05);
+      }
+    }
+
+    .h-scroll__card-body {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 22px 18px;
+      background: linear-gradient(to top, rgba(3,5,8,.88) 0%, transparent 100%);
+    }
+
+    .h-scroll__card-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .25em;
+      color: rgba(224,238,245,.35);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .h-scroll__card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.01em;
+      color: rgba(224,238,245,.9);
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 12px;
+      font-style: italic;
+      color: rgba(224,238,245,.5);
+      line-height: 1.5;
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-sub {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: .1em;
+      opacity: .65;
+    }
+
+    .h-scroll__progress {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .h-scroll__pip {
+      width: 20px;
+      height: 1px;
+      background: rgba(126,184,201,.2);
+      transition: background .3s ease, width .3s ease;
+    }
+
+    .h-scroll__pip.active {
+      background: var(--blue);
+      width: 36px;
+    }
+
+    /* ── OUTRO ── */
+    .outro {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 100px clamp(24px, 8vw, 120px);
+    }
+
+    .outro__symbol {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(60px, 12vw, 140px);
+      font-weight: 300;
+      color: rgba(126,184,201,.1);
+      line-height: 1;
+      margin-bottom: 40px;
+      opacity: 0;
+      transform: scale(.8);
+    }
+
+    .outro__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 4vw, 52px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(224,238,245,.8);
+      line-height: 1.55;
+      margin-bottom: 28px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .outro__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-style: italic;
+      color: rgba(224,238,245,.45);
+      line-height: 1.9;
+      max-width: 520px;
+      opacity: 0;
+    }
+
+    /* ── LIGHTBOX ── */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(3,5,8,.93);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .4s ease;
+      padding: 20px;
+    }
+
+    #lightbox.active { opacity: 1; pointer-events: all; }
+
+    #lightbox-close {
+      position: absolute;
+      top: 28px; right: 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(126,184,201,.6);
+      background: none;
+      border: 1px solid rgba(126,184,201,.2);
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: color .25s, border-color .25s;
+    }
+
+    #lightbox-close:hover { color: var(--blue); border-color: var(--blue); }
+
+    #lightbox-img {
+      max-width: 90vw;
+      max-height: 72vh;
+      object-fit: contain;
+      display: block;
+    }
+
+    #lightbox-poem { margin-top: 20px; text-align: center; }
+
+    #lightbox-poem-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 15px;
+      font-style: italic;
+      color: rgba(224,238,245,.7);
+      margin-bottom: 6px;
+    }
+
+    #lightbox-poem-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: rgba(126,184,201,.55);
+      letter-spacing: .1em;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 60px clamp(24px, 8vw, 120px);
+      border-top: 1px solid rgba(126,184,201,.1);
+      text-align: center;
+    }
+
+    .footer-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 3vw, 38px);
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(224,238,245,.2);
+      margin-bottom: 12px;
+    }
+
+    .footer-brand em { font-style: normal; color: rgba(126,184,201,.3); }
+
+    .footer-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(224,238,245,.18);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+      .hero__title .char { transform: none !important; }
+      .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; visibility: visible !important; }
+      .section-phase, .section-title, .section-title-jp,
+      .section-desc, .photo-card, .quote-line, .quote-text,
+      .quote-attr, .shinrin__phase, .shinrin__title, .shinrin__title-jp,
+      .shinrin__desc, .outro__symbol, .outro__title, .outro__desc,
+      .h-scroll__card { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Progress bar -->
+  <div id="progress-bar" aria-hidden="true"></div>
+
+  <!-- Ring Cursor -->
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Navigation -->
+  <a href="../experiment-07-wabi-sabi/index.html" class="back-link" aria-label="Back to experiment 07">EXP 07</a>
+  <span class="exp-label" aria-hidden="true">EXP 08 / ICHIGO ICHIE</span>
+
+  <!-- Lightbox -->
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo lightbox">
+    <button id="lightbox-close" aria-label="Close lightbox">ESC · CLOSE</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-poem">
+      <p id="lightbox-poem-text"></p>
+      <span id="lightbox-poem-jp"></span>
+    </div>
+  </div>
+
+  <!-- WebGL shader canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <!-- Particle overlay canvas -->
+  <canvas id="particle-canvas" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════════════ -->
+  <div class="content">
+
+    <!-- ── HERO ── -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero__kanji" aria-hidden="true">一期一会</div>
+      <span class="hero__label" aria-hidden="true">Esperimento No. 08</span>
+      <h1 class="hero__title" id="hero-heading">ICHIGO<br>ICHIE</h1>
+      <p class="hero__sub">Un momento. Una sola volta.</p>
+      <p class="hero__jp-subtitle" lang="ja">いちごいちえ — 一期一会</p>
+      <div class="hero__scroll" aria-hidden="true">
+        <span>SCROLL</span>
+        <div class="hero__scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE I: IL MOMENTO PRESENTE ── -->
+    <section class="photo-section" id="section-01" aria-labelledby="s1-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">I — Il Momento Presente ◎</div>
+        <h2 class="section-title" id="s1-title">Ora.<br>Adesso.</h2>
+        <p class="section-title-jp" lang="ja">今この瞬間</p>
+        <p class="section-desc">
+          Non c'è passato che possa cambiare questo momento. Non c'è futuro che possa annullarlo.
+          Solo il presente esiste davvero — e questo momento non tornerà mai più.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm" role="list">
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="Il presente è l'unico momento reale" data-poem-jp="現在だけが唯一の現実の瞬間">
+          <span class="photo-card__num" aria-hidden="true">001</span>
+          <img src="https://picsum.photos/seed/ichi-01/1200/750" alt="Momento cristallizzato nella luce, istante irripetibile" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Il presente è l'unico momento reale</p>
+            <span class="photo-card__poem-jp">現在だけが唯一の現実の瞬間</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="Stai già vivendo l'istante che cercavi" data-poem-jp="あなたはすでに求めていた瞬間を生きている">
+          <span class="photo-card__num" aria-hidden="true">002</span>
+          <img src="https://picsum.photos/seed/ichi-02/600/900" alt="Silhouette in un momento di presenza assoluta" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Stai già vivendo l'istante che cercavi</p>
+            <span class="photo-card__poem-jp">あなたはすでに求めていた瞬間を生きている</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE I ── -->
+    <div class="quote-section" aria-label="Citazione">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Ogni conversazione è la prima e l'ultima. Ogni sorriso, unico.
+        Ogni istante, irripetibile."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">一期一会 — Un incontro, una possibilità</p>
+    </div>
+
+    <!-- ── SEZIONE II: L'INCONTRO ── -->
+    <section class="photo-section" id="section-02" aria-labelledby="s2-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">II — L'Incontro ∿</div>
+        <h2 class="section-title" id="s2-title">Due Vite<br>si Sfiorano</h2>
+        <p class="section-title-jp" lang="ja">出会い</p>
+        <p class="section-desc">
+          Ogni incontro è un incidente cosmico. Le orbite di due persone si incrociano per un istante
+          — o per una vita intera. In ogni caso, quell'incontro è unico.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--3col" role="list">
+        <div class="photo-card photo-card--port" role="listitem" data-poem="Due strade che si incrociano una volta sola" data-poem-jp="一度だけ交差する二つの道">
+          <span class="photo-card__num" aria-hidden="true">003</span>
+          <img src="https://picsum.photos/seed/ichi-03/600/800" alt="Due persone in un momento di incontro autentico" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Due strade che si incrociano una volta sola</p>
+            <span class="photo-card__poem-jp">一度だけ交差する二つの道</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="L'incontro lascia sempre un'impronta" data-poem-jp="出会いはいつも痕跡を残す">
+          <span class="photo-card__num" aria-hidden="true">004</span>
+          <img src="https://picsum.photos/seed/ichi-04/600/800" alt="Momento di connessione umana nella vita quotidiana" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">L'incontro lascia sempre un'impronta</p>
+            <span class="photo-card__poem-jp">出会いはいつも痕跡を残す</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="Ogni sguardo contiene un universo intero" data-poem-jp="すべての眼差しに宇宙が宿る">
+          <span class="photo-card__num" aria-hidden="true">005</span>
+          <img src="https://picsum.photos/seed/ichi-05/600/800" alt="Dettaglio di uno sguardo, presenza nel momento" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Ogni sguardo contiene un universo intero</p>
+            <span class="photo-card__poem-jp">すべての眼差しに宇宙が宿る</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE III: L'ADDIO ── -->
+    <section class="photo-section" id="section-03" aria-labelledby="s3-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">III — L'Addio ☽</div>
+        <h2 class="section-title" id="s3-title">Il Tempo<br>si Ferma</h2>
+        <p class="section-title-jp" lang="ja">別れ</p>
+        <p class="section-desc">
+          Ogni addio custodisce in sé l'eco dell'incontro.
+          Non è tristezza — è la riprova che qualcosa di bello è accaduto.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm-r" role="list">
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="L'addio è la prova che l'incontro è avvenuto" data-poem-jp="別れは出会いが起きた証拠">
+          <span class="photo-card__num" aria-hidden="true">006</span>
+          <img src="https://picsum.photos/seed/ichi-06/600/900" alt="Momento di addio, separazione nella luce morbida" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">L'addio è la prova che l'incontro è avvenuto</p>
+            <span class="photo-card__poem-jp">別れは出会いが起きた証拠</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="Partire non significa dimenticare" data-poem-jp="去ることは忘れることではない">
+          <span class="photo-card__num" aria-hidden="true">007</span>
+          <img src="https://picsum.photos/seed/ichi-07/1200/750" alt="Panorama di separazione, distanza e ricordo" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Partire non significa dimenticare</p>
+            <span class="photo-card__poem-jp">去ることは忘れることではない</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── JIKAN — Il Tempo interlude ── -->
+    <section class="shinrin" id="section-jikan" aria-labelledby="jikan-title">
+      <p class="shinrin__phase" aria-hidden="true">IV — Il Tempo ⌛</p>
+      <h2 class="shinrin__title" id="jikan-title">Il Momento<br>Cristallizzato</h2>
+      <p class="shinrin__title-jp" lang="ja">時が止まる — Toki ga Tomaru</p>
+      <p class="shinrin__desc">
+        Come una fotografia cattura la luce in una frazione di secondo, Ichigo Ichie ci chiede
+        di congelare interiormente ogni momento prezioso. Non per fermarlo — ma per riconoscerlo
+        mentre accade.
+      </p>
+    </section>
+
+    <!-- ── SEZIONE IV: IL RICORDO ETERNO ── -->
+    <section class="photo-section" id="section-04" aria-labelledby="s4-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">V — L'Eterno 🌊</div>
+        <h2 class="section-title" id="s4-title">Questo<br>Rimane</h2>
+        <p class="section-title-jp" lang="ja">永遠の記憶</p>
+        <p class="section-desc">
+          Ciò che è vissuto pienamente non scompare con il tempo. Cambia forma — si trasforma
+          in ricordo, in carattere, in saggezza. L'incontro passa. L'impronta resta.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--2col" role="list">
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="I momenti passano. Il loro peso rimane" data-poem-jp="瞬間は過ぎる。その重さは残る">
+          <span class="photo-card__num" aria-hidden="true">008</span>
+          <img src="https://picsum.photos/seed/ichi-08/800/800" alt="Ricordo visivo, traccia di un momento irripetibile" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">I momenti passano. Il loro peso rimane</p>
+            <span class="photo-card__poem-jp">瞬間は過ぎる。その重さは残る</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="Ciò che è stato vissuto è per sempre" data-poem-jp="生きられたことは永遠">
+          <span class="photo-card__num" aria-hidden="true">009</span>
+          <img src="https://picsum.photos/seed/ichi-09/800/800" alt="Residuo di un incontro, tracce nella luce" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Ciò che è stato vissuto è per sempre</p>
+            <span class="photo-card__poem-jp">生きられたことは永遠</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE II ── -->
+    <div class="quote-section" aria-label="Citazione finale">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Ichigo ichie: vivi ogni momento come se fosse l'unico che hai."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">一期一会 — Ichigo Ichie</p>
+    </div>
+
+    <!-- ── HORIZONTAL SCROLL ── -->
+    <section class="h-scroll" id="h-scroll-ichigo" aria-label="I momenti irripetibili">
+      <p class="h-scroll__label" aria-hidden="true">I MOMENTI IRRIPETIBILI</p>
+      <div class="h-scroll__inner">
+        <div class="h-scroll__track" id="h-scroll-track">
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/ichi-h01/880/1120" alt="Alba — primo istante irripetibile del giorno" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">夜明け L'ALBA</span>
+              <p class="h-scroll__card-title">Il Primo Istante</p>
+              <p class="h-scroll__card-poem">Ogni alba è un incontro che non è mai avvenuto prima.</p>
+              <span class="h-scroll__card-sub" lang="ja">夜明けは今まで起きたことのない出会い</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/ichi-h02/880/1120" alt="Incontro — due orbite che si toccano" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">出会い L'INCONTRO</span>
+              <p class="h-scroll__card-title">Il Momento</p>
+              <p class="h-scroll__card-poem">Due persone, un solo istante irripetibile.</p>
+              <span class="h-scroll__card-sub" lang="ja">二人の人、一つの繰り返せない瞬間</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/ichi-h03/880/1120" alt="Presente — il solo momento che esiste davvero" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">今 IL PRESENTE</span>
+              <p class="h-scroll__card-title">Adesso</p>
+              <p class="h-scroll__card-poem">Il presente è l'unica realtà che esiste.</p>
+              <span class="h-scroll__card-sub" lang="ja">現在だけが存在する現実</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/ichi-h04/880/1120" alt="Tramonto — ogni crepuscolo unico come l'incontro" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">夕暮れ IL TRAMONTO</span>
+              <p class="h-scroll__card-title">La Fine</p>
+              <p class="h-scroll__card-poem">Ogni tramonto è unico quanto l'incontro che ha preceduto.</p>
+              <span class="h-scroll__card-sub" lang="ja">夕日は出会いと同じくらい唯一</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/ichi-h05/880/1120" alt="Ricordo — peso permanente dei momenti vissuti" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">記憶 IL RICORDO</span>
+              <p class="h-scroll__card-title">L'Eterno</p>
+              <p class="h-scroll__card-poem">I momenti passano. Il loro peso rimane.</p>
+              <span class="h-scroll__card-sub" lang="ja">瞬間は過ぎる。その重さは残る</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="h-scroll__progress" aria-hidden="true">
+        <div class="h-scroll__pip active"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+      </div>
+    </section>
+
+    <!-- ── OUTRO ── -->
+    <section class="outro" id="section-outro" aria-labelledby="outro-title">
+      <div class="outro__symbol" aria-hidden="true">一</div>
+      <h2 class="outro__title" id="outro-title">
+        Questo momento non tornerà. È già eterno.
+      </h2>
+      <p class="outro__desc">
+        Ichigo ichie è un'arte di vita. Richiede presenza assoluta, gratitudine immediata,
+        la capacità di guardare ogni momento come se fosse una porta che si apre una volta sola.
+        Perché lo è. Sempre. Ogni incontro, ogni sorriso, ogni alba — irripetibile.
+      </p>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer aria-label="Footer">
+      <div class="footer-brand">ICHIGO<em> ICHIE</em></div>
+      <p class="footer-meta">EXPERIMENT 08 · PORTFOLIO 2024 · 一期一会</p>
+    </footer>
+
+  </div><!-- /content -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.umd.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* ══════════════════════════════════════════════════════
+       GUARD
+    ══════════════════════════════════════════════════════ */
+    if (typeof gsap === 'undefined')          console.error('[ICHIGO ICHIE] GSAP failed to load.');
+    if (typeof ScrollTrigger === 'undefined') console.error('[ICHIGO ICHIE] ScrollTrigger failed to load.');
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ══════════════════════════════════════════════════════
+       LENIS SMOOTH SCROLL
+    ══════════════════════════════════════════════════════ */
+    let lenis = null;
+    const LenisClass = (typeof Lenis !== 'undefined') ? (Lenis.default || Lenis) : null;
+
+    if (LenisClass) {
+      lenis = new LenisClass({
+        duration: 1.8,
+        easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 0.85,
+        touchMultiplier: 2,
+      });
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add(time => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCROLL PROGRESS BAR
+    ══════════════════════════════════════════════════════ */
+    const progressBar = document.getElementById('progress-bar');
+    window.addEventListener('scroll', () => {
+      const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+    }, { passive: true });
+
+    /* ══════════════════════════════════════════════════════
+       DYNAMIC COLOR PALETTE
+    ══════════════════════════════════════════════════════ */
+    const PALETTE = [
+      { t: 0,    accent: [0.38, 0.62, 0.72] },
+      { t: 0.25, accent: [0.49, 0.72, 0.79] },
+      { t: 0.5,  accent: [0.49, 0.72, 0.79] },
+      { t: 0.75, accent: [0.38, 0.62, 0.72] },
+      { t: 1,    accent: [0.28, 0.50, 0.62] },
+    ];
+
+    function lerpPalette(t) {
+      let i = 0;
+      for (let k = PALETTE.length - 2; k >= 0; k--) {
+        if (t >= PALETTE[k].t) { i = k; break; }
+      }
+      const a = PALETTE[i], b = PALETTE[i + 1];
+      const f = (t - a.t) / (b.t - a.t);
+      const lerp = (x, y) => x + (y - x) * f;
+      const hex = arr => '#' + arr.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+      return { accent: hex(a.accent.map((v, j) => lerp(v, b.accent[j]))) };
+    }
+
+    function updateDynamicColors(t) {
+      const { accent } = lerpPalette(t);
+      document.documentElement.style.setProperty('--accent', accent);
+      if (progressBar) progressBar.style.background =
+        `linear-gradient(to right, ${accent}, #3a6a80)`;
+    }
+
+    let scrollT = 0;
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 2,
+      onUpdate: self => {
+        scrollT = self.progress;
+        updateDynamicColors(scrollT);
+      },
+    });
+
+    /* ══════════════════════════════════════════════════════
+       CURSOR RING
+    ══════════════════════════════════════════════════════ */
+    const cursorRing = document.getElementById('cursor-ring');
+    let cursorSX = -999, cursorSY = -999;
+    let cursorTX = 0,   cursorTY = 0;
+
+    if (cursorRing && window.matchMedia('(pointer: fine)').matches) {
+      window.addEventListener('mousemove', e => {
+        cursorTX = e.clientX;
+        cursorTY = e.clientY;
+      });
+
+      (function animCursor() {
+        cursorSX += (cursorTX - cursorSX) * 0.10;
+        cursorSY += (cursorTY - cursorSY) * 0.10;
+        gsap.set(cursorRing, { x: cursorSX, y: cursorSY });
+        requestAnimationFrame(animCursor);
+      })();
+
+      document.querySelectorAll('a, button, .photo-card').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       WEBGL — ICHIGO ICHIE FLOW-FIELD / FREEZE SHADER
+    ══════════════════════════════════════════════════════ */
+    const bgCanvas = document.getElementById('bg-canvas');
+
+    const webglAvailable = (() => {
+      try {
+        const c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch { return false; }
+    })();
+
+    let threeCleanup = () => {};
+
+    if (webglAvailable && bgCanvas) {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+
+      const scene    = new THREE.Scene();
+      const camera   = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      const renderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: false, alpha: false });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      const vertexShader = /* glsl */`
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+      `;
+
+      const fragmentShader = /* glsl */`
+        precision mediump float;
+        uniform float uTime;
+        uniform vec2  uResolution;
+        uniform vec2  uMouse;
+        uniform float uScrollT;
+        varying vec2 vUv;
+
+        float hash(vec2 p){p=fract(p*vec2(234.34,435.345));p+=dot(p,p+34.23);return fract(p.x*p.y);}
+        float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+        float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.1+vec2(1.7,9.2);a*=.5;}return v;}
+
+        void main(){
+          vec2 uv=vUv;
+          float speed=1.0-uScrollT*uScrollT;
+          vec2 flowUV=uv+vec2(fbm(uv*3.+uTime*0.3*speed),fbm(uv*3.+vec2(5.2,1.3)+uTime*0.2*speed))*0.15*speed;
+          float pattern=fbm(flowUV*4.);
+          // Dark blue-teal base
+          vec3 deep=vec3(0.02,0.03,0.07);
+          vec3 mid=vec3(0.04,0.09,0.18);
+          vec3 bright=vec3(0.35,0.65,0.80);
+          vec3 bg=mix(deep,mid,pattern);
+          // Crystal highlights frozen over time
+          float crystal=fbm(uv*8.)*smoothstep(0.4,1.0,uScrollT);
+          bg+=bright*crystal*0.3;
+          // Vignette
+          float vig=1.-smoothstep(0.3,1.4,length((uv-.5)*1.6));
+          bg*=vig;
+          gl_FragColor=vec4(bg,1.);
+        }
+      `;
+
+      const geo = new THREE.PlaneGeometry(2, 2);
+      const mat = new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        uniforms: {
+          uTime:       { value: 0 },
+          uResolution: { value: new THREE.Vector2(W, H) },
+          uMouse:      { value: new THREE.Vector2(0.5, 0.5) },
+          uScrollT:    { value: 0 },
+        },
+      });
+      scene.add(new THREE.Mesh(geo, mat));
+
+      window.addEventListener('mousemove', e => {
+        mat.uniforms.uMouse.value.set(
+          e.clientX / window.innerWidth,
+          e.clientY / window.innerHeight
+        );
+      });
+
+      ScrollTrigger.create({
+        trigger: document.body,
+        start: 'top top',
+        end: 'bottom bottom',
+        onUpdate: self => { mat.uniforms.uScrollT.value = self.progress; },
+      });
+
+      const onResize = () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        mat.uniforms.uResolution.value.set(w, h);
+      };
+      window.addEventListener('resize', onResize);
+
+      let rafId;
+      const tick = () => {
+        rafId = requestAnimationFrame(tick);
+        mat.uniforms.uTime.value = performance.now() * 0.001;
+        renderer.render(scene, camera);
+      };
+      tick();
+
+      threeCleanup = () => {
+        cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', onResize);
+        geo.dispose();
+        mat.dispose();
+        renderer.dispose();
+      };
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CANVAS2D — icy-blue particles that slow with scroll
+    ══════════════════════════════════════════════════════ */
+    const pCanvas = document.getElementById('particle-canvas');
+
+    if (pCanvas) {
+      const pCtx = pCanvas.getContext('2d');
+
+      function resizePC() {
+        pCanvas.width  = window.innerWidth;
+        pCanvas.height = window.innerHeight;
+      }
+      resizePC();
+      window.addEventListener('resize', resizePC, { passive: true });
+
+      let scrollProgress = 0;
+      window.addEventListener('scroll', () => {
+        scrollProgress = window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight);
+      }, { passive: true });
+
+      class IceParticle {
+        constructor() { this.reset(true); }
+        reset(randomY = false) {
+          this.x     = Math.random() * pCanvas.width;
+          this.y     = randomY ? Math.random() * pCanvas.height : pCanvas.height + 10;
+          this.baseVy = -(0.25 + Math.random() * 0.7);
+          this.vx    = (Math.random() - 0.5) * 0.3;
+          this.r     = 0.9 + Math.random() * 2.1;
+          this.alpha = 0;
+          this.targetAlpha = 0.25 + Math.random() * 0.5;
+          this.phase = Math.random() * Math.PI * 2;
+        }
+
+        update(speed) {
+          this.phase += 0.016;
+          this.x += this.vx + Math.sin(this.phase) * 0.35;
+          this.y += this.baseVy * speed;
+          this.alpha += (this.targetAlpha - this.alpha) * 0.04;
+          if (this.y < -20 || this.x < -20 || this.x > pCanvas.width + 20) this.reset();
+        }
+
+        draw(ctx) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, this.alpha);
+          const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 3.5);
+          grad.addColorStop(0,   'rgba(126,184,201,0.9)');
+          grad.addColorStop(0.4, 'rgba(58,106,128,0.45)');
+          grad.addColorStop(1,   'rgba(58,106,128,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r * 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      const particles = [];
+      for (let i = 0; i < 55; i++) particles.push(new IceParticle());
+
+      (function animParticles() {
+        requestAnimationFrame(animParticles);
+        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+        const speed = Math.max(0.1, 1 - scrollProgress * 0.85);
+        particles.forEach(p => { p.update(speed); p.draw(pCtx); });
+      })();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — HERO ENTRANCE
+    ══════════════════════════════════════════════════════ */
+    const heroTitle = document.querySelector('.hero__title');
+    if (heroTitle) {
+      const text = heroTitle.textContent;
+      heroTitle.innerHTML = '';
+      [...text].forEach(ch => {
+        if (ch === '\n') { heroTitle.appendChild(document.createElement('br')); return; }
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        heroTitle.appendChild(span);
+      });
+      heroTitle.setAttribute('aria-label', text.replace('\n', ' '));
+
+      const heroTl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+      heroTl
+        .to('.hero__label',       { autoAlpha: 1, duration: .8 })
+        .to('.hero__title .char', { y: 0, duration: 1.1, stagger: 0.035 }, '-=0.5')
+        .to('.hero__sub',         { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__jp-subtitle', { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__scroll',      { autoAlpha: 1, duration: .8 }, '-=0.3');
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — SCROLL REVEALS
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-section').forEach(section => {
+      const phase   = section.querySelector('.section-phase');
+      const title   = section.querySelector('.section-title');
+      const titleJp = section.querySelector('.section-title-jp');
+      const desc    = section.querySelector('.section-desc');
+
+      if (phase)   gsap.to(phase,   { autoAlpha: 1, x: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%', toggleActions: 'play none none none' } });
+      if (title)   gsap.to(title,   { autoAlpha: 1, y: 0,  duration: 1,  ease: 'power4.out', scrollTrigger: { trigger: section, start: 'top 70%', toggleActions: 'play none none none' }, delay: .1 });
+      if (titleJp) gsap.to(titleJp, { autoAlpha: 1,        duration: .7, ease: 'power2.out', scrollTrigger: { trigger: section, start: 'top 65%', toggleActions: 'play none none none' }, delay: .2 });
+      if (desc)    gsap.to(desc,    { autoAlpha: 1, y: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 62%', toggleActions: 'play none none none' }, delay: .3 });
+    });
+
+    document.querySelectorAll('.photo-card').forEach((card, i) => {
+      gsap.to(card, {
+        autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out',
+        scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none none' },
+        delay: (i % 3) * 0.12,
+      });
+    });
+
+    document.querySelectorAll('.quote-section').forEach(q => {
+      const ql = q.querySelector('.quote-line');
+      const qt = q.querySelector('.quote-text');
+      const qa = q.querySelector('.quote-attr');
+      if (ql) gsap.to(ql, { autoAlpha: 1, duration: .8, scrollTrigger: { trigger: q, start: 'top 75%', toggleActions: 'play none none none' } });
+      if (qt) gsap.to(qt, { autoAlpha: 1, y: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 70%', toggleActions: 'play none none none' }, delay: .2 });
+      if (qa) gsap.to(qa, { autoAlpha: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
+    });
+
+    const jikan = document.getElementById('section-jikan');
+    if (jikan) {
+      gsap.to(jikan.querySelector('.shinrin__phase'),    { autoAlpha: 1, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: jikan, start: 'top 70%', toggleActions: 'play none none none' } });
+      gsap.to(jikan.querySelector('.shinrin__title'),    { autoAlpha: 1, y: 0, duration: 1.2, ease: 'power4.out', scrollTrigger: { trigger: jikan, start: 'top 65%', toggleActions: 'play none none none' }, delay: .1 });
+      gsap.to(jikan.querySelector('.shinrin__title-jp'), { autoAlpha: 1, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: jikan, start: 'top 60%', toggleActions: 'play none none none' }, delay: .2 });
+      gsap.to(jikan.querySelector('.shinrin__desc'),     { autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out', scrollTrigger: { trigger: jikan, start: 'top 55%', toggleActions: 'play none none none' }, delay: .3 });
+    }
+
+    const outro = document.getElementById('section-outro');
+    if (outro) {
+      gsap.to(outro.querySelector('.outro__symbol'), { autoAlpha: 1, scale: 1, duration: 1.5, ease: 'power3.out', scrollTrigger: { trigger: outro, start: 'top 70%', toggleActions: 'play none none none' } });
+      gsap.to(outro.querySelector('.outro__title'),  { autoAlpha: 1, y: 0, duration: 1.1, ease: 'power4.out', scrollTrigger: { trigger: outro, start: 'top 65%', toggleActions: 'play none none none' }, delay: .2 });
+      gsap.to(outro.querySelector('.outro__desc'),   { autoAlpha: 1, duration: .9, ease: 'power2.out', scrollTrigger: { trigger: outro, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       PARALLAX
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-card img').forEach(img => {
+      gsap.to(img, {
+        scale: 1.12,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: img.closest('.photo-card'),
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 1.5,
+        },
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════
+       LIGHTBOX
+    ══════════════════════════════════════════════════════ */
+    const lightbox   = document.getElementById('lightbox');
+    const lbImg      = document.getElementById('lightbox-img');
+    const lbPoemText = document.getElementById('lightbox-poem-text');
+    const lbPoemJp   = document.getElementById('lightbox-poem-jp');
+    const lbClose    = document.getElementById('lightbox-close');
+
+    function openLightbox(card) {
+      const img    = card.querySelector('img');
+      const poem   = card.dataset.poem   || '';
+      const poemJp = card.dataset.poemJp || '';
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbPoemText.textContent = poem;
+      lbPoemJp.textContent   = poemJp;
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(() => { lbImg.src = ''; }, 400);
+    }
+
+    document.querySelectorAll('.photo-card').forEach(card => {
+      card.addEventListener('click', () => openLightbox(card));
+      card.setAttribute('tabindex', '0');
+      card.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(card); });
+    });
+
+    if (lbClose)  lbClose.addEventListener('click', closeLightbox);
+    if (lightbox) lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ══════════════════════════════════════════════════════
+       HORIZONTAL SCROLL PIN
+    ══════════════════════════════════════════════════════ */
+    const hSection = document.getElementById('h-scroll-ichigo');
+    const hTrack   = document.getElementById('h-scroll-track');
+    const hPips    = document.querySelectorAll('#h-scroll-ichigo .h-scroll__pip');
+
+    if (hSection && hTrack) {
+      gsap.to(hTrack, {
+        x: () => -(hTrack.scrollWidth - window.innerWidth),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: hSection,
+          start: 'top top',
+          end: () => `+=${hTrack.scrollWidth - window.innerWidth}`,
+          pin: true,
+          scrub: 1.2,
+          invalidateOnRefresh: true,
+          onUpdate: self => {
+            const idx = Math.round(self.progress * (hPips.length - 1));
+            hPips.forEach((p, i) => p.classList.toggle('active', i === idx));
+          },
+        },
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CLEANUP
+    ══════════════════════════════════════════════════════ */
+    window.addEventListener('beforeunload', threeCleanup);
+
+  </script>
+</body>
+</html>

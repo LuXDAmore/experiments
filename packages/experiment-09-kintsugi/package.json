@@ -1,0 +1,15 @@
+{
+  "name": "@experiments/experiment-09-kintsugi",
+  "version": "1.0.0",
+  "description": "KINTSUGI — A scroll-driven photographic meditation on the Japanese art of repairing broken pottery with gold — making the cracks the most beautiful part.",
+  "main": "index.html",
+  "scripts": {
+    "serve": "npx serve . -p 3009 --no-clipboard",
+    "dev": "npx serve . -p 3009 --no-clipboard",
+    "preview": "npx serve . -p 3009 --no-clipboard"
+  },
+  "keywords": ["threejs","gsap","lenis","photography","scroll","animation","portfolio","webgl","tailwindcss","japanese","kintsugi","gold","shaders","cracks"],
+  "author": "LuXDAmore",
+  "license": "MIT",
+  "dependencies": {"three": "^0.169.0","gsap": "^3.12.5","lenis": "^1.1.14"}
+}
