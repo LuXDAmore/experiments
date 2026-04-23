@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SHOGANAI — Un viaggio fotografico scroll-driven attraverso la serena accettazione delle cose che non possiamo controllare.">
+  <meta name="theme-color" content="#060c09">
+  <title>SHOGANAI しょうがない — Experiment 13</title>
+
+  <!-- THREE.js ImportMap — must appear before any type="module" script -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Noto+Serif+JP:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- TailwindCSS Play CDN v4 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-serif: "Cormorant Garamond", Georgia, serif;
+      --font-jp:    "Noto Serif JP", serif;
+      --font-mono:  "Space Mono", monospace;
+    }
+  </style>
+
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --night:  #030604;
+      --accent: #91b8a8;
+      --gold:   #91b8a8;
+      --amber:  #507060;
+      --fg:     #e0ece6;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { overflow-x: hidden; scroll-behavior: auto; }
+
+    body {
+      background: var(--night);
+      color: var(--fg);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* ── Ring Cursor ── */
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(145,184,168,.5);
+      background: rgba(145,184,168,.08);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .3s ease, height .3s ease, border-color .3s ease;
+    }
+
+    body.is-hovering #cursor-ring {
+      width: 60px; height: 60px;
+      border-color: rgba(145,184,168,.9);
+    }
+
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-ring { display: none !important; }
+    }
+
+    /* ── ThreeJS fullscreen canvas ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(to right, #91b8a8, #507060);
+      z-index: 9000;
+    }
+
+    /* ── Nav ── */
+    .back-link {
+      position: fixed;
+      top: 28px;
+      left: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(224,236,230,.4);
+      text-decoration: none;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .25s;
+    }
+    .back-link:hover { color: var(--gold); }
+    .back-link::before { content: '←'; }
+
+    .exp-label {
+      position: fixed;
+      top: 28px;
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(224,236,230,.2);
+      z-index: 9000;
+    }
+
+    /* ── Content wrapper ── */
+    .content { position: relative; z-index: 1; }
+
+    /* ── HERO ── */
+    .hero {
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 clamp(24px, 6vw, 80px);
+      position: relative;
+    }
+
+    .hero__label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .4em;
+      color: rgba(145,184,168,.7);
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      opacity: 0;
+    }
+
+    .hero__kanji {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(48px, 10vw, 130px);
+      font-weight: 300;
+      line-height: 1;
+      color: rgba(224,236,230,.05);
+      letter-spacing: .05em;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) translateY(-60px);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .hero__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(56px, 12vw, 160px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.02em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      overflow: hidden;
+      display: block;
+    }
+
+    .hero__title .char {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .hero__sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 2vw, 22px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(224,236,230,.5);
+      max-width: 440px;
+      line-height: 1.8;
+      opacity: 0;
+      margin-bottom: 12px;
+    }
+
+    .hero__jp-subtitle {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(11px, 1.2vw, 14px);
+      font-weight: 300;
+      color: rgba(145,184,168,.45);
+      letter-spacing: .12em;
+      opacity: 0;
+    }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(224,236,230,.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+    }
+
+    .hero__scroll-line {
+      width: 1px;
+      height: 52px;
+      background: linear-gradient(to bottom, rgba(145,184,168,.5), transparent);
+      animation: scrollPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      65%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
+    }
+
+    /* ── SECTION COMMON ── */
+    .photo-section {
+      min-height: 100svh;
+      padding: 100px clamp(24px, 8vw, 120px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .section-header { margin-bottom: 60px; }
+
+    .section-phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateX(-20px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: color .6s ease;
+    }
+
+    .section-phase::before {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+      transition: background .6s ease;
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(42px, 7vw, 100px);
+      font-weight: 700;
+      line-height: .95;
+      letter-spacing: -.02em;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .section-title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(13px, 1.4vw, 17px);
+      font-weight: 300;
+      color: rgba(224,236,230,.35);
+      letter-spacing: .12em;
+      margin-bottom: 24px;
+      opacity: 0;
+    }
+
+    .section-desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-style: italic;
+      color: rgba(224,236,230,.5);
+      line-height: 1.85;
+      max-width: 520px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    /* ── PHOTO GRID ── */
+    .photo-grid { display: grid; gap: 16px; }
+    .photo-grid--2col    { grid-template-columns: 1fr 1fr; }
+    .photo-grid--3col    { grid-template-columns: 1fr 1fr 1fr; }
+    .photo-grid--asymm   { grid-template-columns: 2fr 1fr; }
+    .photo-grid--asymm-r { grid-template-columns: 1fr 2fr; }
+
+    @media (max-width: 640px) {
+      .photo-grid--2col,
+      .photo-grid--3col,
+      .photo-grid--asymm,
+      .photo-grid--asymm-r { grid-template-columns: 1fr; }
+    }
+
+    /* ── PHOTO CARD ── */
+    .photo-card {
+      position: relative;
+      overflow: hidden;
+      background: rgba(0,0,0,.4);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .photo-card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      will-change: transform;
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94), filter .5s ease;
+      filter: saturate(0.85);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover img {
+        transform: scale(1);
+        filter: saturate(1.1);
+      }
+    }
+
+    .photo-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(145,184,168,0);
+      transition: border-color .4s ease, box-shadow .4s ease;
+      pointer-events: none;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover::after {
+        border-color: rgba(145,184,168,.2);
+        box-shadow: inset 0 0 40px rgba(145,184,168,.07);
+      }
+    }
+
+    .photo-card__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(3,6,4,.88) 0%, transparent 65%);
+      opacity: 0;
+      transition: opacity .4s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 20px 18px;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .photo-card:hover .photo-card__overlay { opacity: 1; }
+    }
+
+    .photo-card__poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 13px;
+      font-style: italic;
+      color: rgba(224,236,230,.85);
+      line-height: 1.65;
+      margin-bottom: 6px;
+    }
+
+    .photo-card__poem-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 10px;
+      font-weight: 300;
+      color: rgba(145,184,168,.65);
+      letter-spacing: .1em;
+    }
+
+    .photo-card__num {
+      position: absolute;
+      top: 14px; left: 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .2em;
+      color: rgba(224,236,230,.35);
+    }
+
+    /* Card aspect ratios */
+    .photo-card--wide { aspect-ratio: 16/10; }
+    .photo-card--tall { aspect-ratio: 2/3; }
+    .photo-card--port { aspect-ratio: 3/4; }
+    .photo-card--sq   { aspect-ratio: 1/1; }
+    .photo-card--land { aspect-ratio: 4/3; }
+
+    /* ── QUOTE SECTION ── */
+    .quote-section {
+      padding: 100px clamp(24px, 8vw, 120px);
+      text-align: center;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .quote-line {
+      width: 60px; height: 1px;
+      background: var(--accent);
+      margin: 0 auto 32px;
+      opacity: 0;
+      transition: background .6s ease;
+    }
+
+    .quote-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(20px, 3vw, 32px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(224,236,230,.75);
+      line-height: 1.7;
+      letter-spacing: .01em;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .quote-attr {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(145,184,168,.45);
+      text-transform: uppercase;
+      margin-top: 28px;
+      opacity: 0;
+    }
+
+    /* ── SHOGANAI interlude (shinrin-equivalent) ── */
+    .shinrin {
+      min-height: 90svh;
+      padding: 100px clamp(24px, 8vw, 120px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .shinrin__phase {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .35em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      transition: color .6s ease;
+    }
+
+    .shinrin__phase::before,
+    .shinrin__phase::after {
+      content: '';
+      display: block;
+      width: 32px; height: 1px;
+      background: var(--accent);
+      flex-shrink: 0;
+      transition: background .6s ease;
+    }
+
+    .shinrin__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(48px, 9vw, 120px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.02em;
+      margin-bottom: 20px;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    .shinrin__title-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(14px, 1.6vw, 20px);
+      font-weight: 300;
+      color: rgba(145,184,168,.5);
+      letter-spacing: .14em;
+      margin-bottom: 28px;
+      opacity: 0;
+    }
+
+    .shinrin__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(16px, 1.8vw, 22px);
+      font-style: italic;
+      color: rgba(224,236,230,.5);
+      line-height: 1.85;
+      max-width: 560px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    /* ── HORIZONTAL SCROLL ── */
+    .h-scroll { position: relative; overflow: hidden; }
+
+    .h-scroll__label {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .4em;
+      color: rgba(145,184,168,.4);
+      text-transform: uppercase;
+      z-index: 2;
+      white-space: nowrap;
+    }
+
+    .h-scroll__inner {
+      display: flex;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .h-scroll__track {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: 28px;
+      padding: 0 clamp(24px, 6vw, 80px);
+      will-change: transform;
+    }
+
+    .h-scroll__card {
+      flex-shrink: 0;
+      width: clamp(260px, 30vw, 400px);
+      height: clamp(340px, 52vh, 540px);
+      position: relative;
+      overflow: hidden;
+      background: rgba(3,6,4,.4);
+    }
+
+    .h-scroll__card img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scale(1.06);
+      transition: transform .9s cubic-bezier(.25,.46,.45,.94), filter .5s ease;
+      filter: saturate(0.85);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .h-scroll__card:hover img {
+        transform: scale(1);
+        filter: saturate(1.1);
+      }
+    }
+
+    .h-scroll__card-body {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 22px 18px;
+      background: linear-gradient(to top, rgba(3,6,4,.88) 0%, transparent 100%);
+    }
+
+    .h-scroll__card-num {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .25em;
+      color: rgba(224,236,230,.35);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .h-scroll__card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(18px, 2vw, 26px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -.01em;
+      color: rgba(224,236,230,.9);
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 12px;
+      font-style: italic;
+      color: rgba(224,236,230,.5);
+      line-height: 1.5;
+      margin-bottom: 5px;
+    }
+
+    .h-scroll__card-sub {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: .1em;
+      opacity: .65;
+    }
+
+    .h-scroll__progress {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 2;
+    }
+
+    .h-scroll__pip {
+      width: 20px;
+      height: 1px;
+      background: rgba(145,184,168,.2);
+      transition: background .3s ease, width .3s ease;
+    }
+
+    .h-scroll__pip.active {
+      background: var(--gold);
+      width: 36px;
+    }
+
+    /* ── OUTRO ── */
+    .outro {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 100px clamp(24px, 8vw, 120px);
+    }
+
+    .outro__symbol {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(60px, 12vw, 140px);
+      font-weight: 300;
+      color: rgba(145,184,168,.1);
+      line-height: 1;
+      margin-bottom: 40px;
+      opacity: 0;
+      transform: scale(.8);
+    }
+
+    .outro__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 4vw, 52px);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(224,236,230,.8);
+      line-height: 1.55;
+      margin-bottom: 28px;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    .outro__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.6vw, 20px);
+      font-style: italic;
+      color: rgba(224,236,230,.45);
+      line-height: 1.9;
+      max-width: 520px;
+      opacity: 0;
+    }
+
+    /* ── LIGHTBOX ── */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(3,6,4,.93);
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .4s ease;
+      padding: 20px;
+    }
+
+    #lightbox.active { opacity: 1; pointer-events: all; }
+
+    #lightbox-close {
+      position: absolute;
+      top: 28px; right: 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(145,184,168,.6);
+      background: none;
+      border: 1px solid rgba(145,184,168,.2);
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: color .25s, border-color .25s;
+    }
+
+    #lightbox-close:hover { color: var(--gold); border-color: var(--gold); }
+
+    #lightbox-img {
+      max-width: 90vw;
+      max-height: 72vh;
+      object-fit: contain;
+      display: block;
+    }
+
+    #lightbox-poem { margin-top: 20px; text-align: center; }
+
+    #lightbox-poem-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 15px;
+      font-style: italic;
+      color: rgba(224,236,230,.7);
+      margin-bottom: 6px;
+    }
+
+    #lightbox-poem-jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 11px;
+      color: rgba(145,184,168,.55);
+      letter-spacing: .1em;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 60px clamp(24px, 8vw, 120px);
+      border-top: 1px solid rgba(145,184,168,.1);
+      text-align: center;
+    }
+
+    .footer-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(22px, 3vw, 38px);
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(224,236,230,.2);
+      margin-bottom: 12px;
+    }
+
+    .footer-brand em { font-style: normal; color: rgba(145,184,168,.3); }
+
+    .footer-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(224,236,230,.18);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+      .hero__title .char { transform: none !important; }
+      .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; visibility: visible !important; }
+      .section-phase, .section-title, .section-title-jp,
+      .section-desc, .photo-card, .quote-line, .quote-text,
+      .quote-attr, .shinrin__phase, .shinrin__title, .shinrin__title-jp,
+      .shinrin__desc, .outro__symbol, .outro__title, .outro__desc,
+      .h-scroll__card { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Progress bar -->
+  <div id="progress-bar" aria-hidden="true"></div>
+
+  <!-- Ring Cursor -->
+  <div id="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Navigation -->
+  <a href="../experiment-12-kokoro/index.html" class="back-link" aria-label="Back to experiment 12">EXP 12</a>
+  <span class="exp-label" aria-hidden="true">EXP 13 / SHOGANAI</span>
+
+  <!-- Lightbox -->
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="Photo lightbox">
+    <button id="lightbox-close" aria-label="Close lightbox">ESC · CLOSE</button>
+    <img id="lightbox-img" src="" alt="">
+    <div id="lightbox-poem">
+      <p id="lightbox-poem-text"></p>
+      <span id="lightbox-poem-jp"></span>
+    </div>
+  </div>
+
+  <!-- WebGL shader canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <!-- Particle overlay canvas -->
+  <canvas id="particle-canvas" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════════════════════ -->
+  <div class="content">
+
+    <!-- ── HERO ── -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero__kanji" aria-hidden="true">しょうがない</div>
+      <span class="hero__label" aria-hidden="true">Esperimento No. 13</span>
+      <h1 class="hero__title" id="hero-heading">SHOGA<br>NAI</h1>
+      <p class="hero__sub">Non si può farci nulla. Ed è abbastanza.</p>
+      <p class="hero__jp-subtitle" lang="ja">しょうがない — 諦観</p>
+      <div class="hero__scroll" aria-hidden="true">
+        <span>SCROLL</span>
+        <div class="hero__scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE I: L'ACCETTAZIONE ── -->
+    <section class="photo-section" id="section-01" aria-labelledby="s1-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">I — L'Accettazione ≈</div>
+        <h2 class="section-title" id="s1-title">Lasciare<br>Andare</h2>
+        <p class="section-title-jp" lang="ja">受け入れること</p>
+        <p class="section-desc">
+          Shoganai non è rassegnazione passiva — è la saggezza attiva di riconoscere dove finisce il tuo controllo e dove inizia il flusso naturale delle cose.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm" role="list">
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="Ciò che non possiamo cambiare possiamo imparare ad abbracciare" data-poem-jp="変えられないものを抱きしめることを学べる">
+          <span class="photo-card__num" aria-hidden="true">001</span>
+          <img src="https://picsum.photos/seed/shoga-01/1200/750" alt="Serena accettazione, luce naturale diffusa" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Ciò che non possiamo cambiare possiamo imparare ad abbracciare</p>
+            <span class="photo-card__poem-jp">変えられないものを抱きしめることを学べる</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="Il vento non chiede permesso alle foglie" data-poem-jp="風は葉に許可を求めない">
+          <span class="photo-card__num" aria-hidden="true">002</span>
+          <img src="https://picsum.photos/seed/shoga-02/600/900" alt="Foglie mosse dal vento, movimento naturale" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Il vento non chiede permesso alle foglie</p>
+            <span class="photo-card__poem-jp">風は葉に許可を求めない</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE I ── -->
+    <div class="quote-section" aria-label="Citazione">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Shoganai non è rassegnazione — è la saggezza di riconoscere dove finisce il tuo controllo."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">しょうがない — La serena accettazione</p>
+    </div>
+
+    <!-- ── SEZIONE II: IL FLUSSO ── -->
+    <section class="photo-section" id="section-02" aria-labelledby="s2-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">II — Il Flusso 〜</div>
+        <h2 class="section-title" id="s2-title">Come<br>l'Acqua</h2>
+        <p class="section-title-jp" lang="ja">人生の流れ</p>
+        <p class="section-desc">
+          L'acqua non combatte la montagna — la aggira, la erode lentamente, trova sempre la sua strada. Shoganai è imparare dalla saggezza dell'acqua.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--3col" role="list">
+        <div class="photo-card photo-card--port" role="listitem" data-poem="L'acqua non resiste — scorre e trova la sua forma" data-poem-jp="水は抵抗しない、流れて形を見つける">
+          <span class="photo-card__num" aria-hidden="true">003</span>
+          <img src="https://picsum.photos/seed/shoga-03/600/800" alt="Acqua che scorre intorno agli ostacoli" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">L'acqua non resiste — scorre e trova la sua forma</p>
+            <span class="photo-card__poem-jp">水は抵抗しない、流れて形を見つける</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="Ogni ostacolo è un'indicazione verso un nuovo percorso" data-poem-jp="すべての障害は新しい道への指示">
+          <span class="photo-card__num" aria-hidden="true">004</span>
+          <img src="https://picsum.photos/seed/shoga-04/600/800" alt="Percorso che si apre tra gli ostacoli naturali" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Ogni ostacolo è un'indicazione verso un nuovo percorso</p>
+            <span class="photo-card__poem-jp">すべての障害は新しい道への指示</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--port" role="listitem" data-poem="La corrente sa dove va anche quando non lo sappiamo noi" data-poem-jp="流れは私たちが知らなくても行き先を知っている">
+          <span class="photo-card__num" aria-hidden="true">005</span>
+          <img src="https://picsum.photos/seed/shoga-05/600/800" alt="Corrente d'acqua che segue il suo corso naturale" loading="lazy" width="600" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">La corrente sa dove va anche quando non lo sappiamo noi</p>
+            <span class="photo-card__poem-jp">流れは私たちが知らなくても行き先を知っている</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SEZIONE III: IL RILASCIO ── -->
+    <section class="photo-section" id="section-03" aria-labelledby="s3-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">III — Il Rilascio ∿</div>
+        <h2 class="section-title" id="s3-title">Le Mani<br>Aperte</h2>
+        <p class="section-title-jp" lang="ja">手放すこと</p>
+        <p class="section-desc">
+          Tenere troppo forte ciò che non possiamo controllare è una fonte di sofferenza. Aprire le mani — non per perdere, ma per liberare — è shoganai.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--asymm-r" role="list">
+        <div class="photo-card photo-card--tall" role="listitem" data-poem="Aprire le mani non è perdere — è fare spazio" data-poem-jp="手を開くことは失うことではなく、空間を作ること">
+          <span class="photo-card__num" aria-hidden="true">006</span>
+          <img src="https://picsum.photos/seed/shoga-06/600/900" alt="Mani aperte che lasciano andare, gesto di liberazione" loading="lazy" width="600" height="900">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Aprire le mani non è perdere — è fare spazio</p>
+            <span class="photo-card__poem-jp">手を開くことは失うことではなく、空間を作ること</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--wide" role="listitem" data-poem="La libertà vera nasce quando smetti di lottare con ciò che è" data-poem-jp="真の自由はあるがままと戦うのをやめた時に生まれる">
+          <span class="photo-card__num" aria-hidden="true">007</span>
+          <img src="https://picsum.photos/seed/shoga-07/1200/750" alt="Paesaggio aperto che evoca libertà e serenità" loading="lazy" width="1200" height="750">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">La libertà vera nasce quando smetti di lottare con ciò che è</p>
+            <span class="photo-card__poem-jp">真の自由はあるがままと戦うのをやめた時に生まれる</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── NAGARE interlude ── -->
+    <section class="shinrin" id="section-nagare" aria-labelledby="nagare-title">
+      <p class="shinrin__phase" aria-hidden="true">IV — Nagare 流れ</p>
+      <h2 class="shinrin__title" id="nagare-title">Il Flusso<br>Naturale</h2>
+      <p class="shinrin__title-jp" lang="ja">流れ — Il Corso Inevitabile delle Cose</p>
+      <p class="shinrin__desc">
+        Nagare: il flusso. Come un fiume che non si preoccupa delle rocce sul suo cammino ma le usa per trovare nuove direzioni, il flusso della vita ha una saggezza propria. Shoganai è fidarsi di quel flusso.
+      </p>
+    </section>
+
+    <!-- ── SEZIONE IV: LA PACE ── -->
+    <section class="photo-section" id="section-04" aria-labelledby="s4-title">
+      <div class="section-header">
+        <div class="section-phase" aria-hidden="true">V — La Pace 🌊</div>
+        <h2 class="section-title" id="s4-title">Il Vento<br>Sereno</h2>
+        <p class="section-title-jp" lang="ja">穏やかな平和</p>
+        <p class="section-desc">
+          Dopo aver lasciato andare, dopo aver accettato, arriva qualcosa di inaspettato — una pace silenziosa. Non l'assenza di problemi, ma la presenza di serenità nonostante essi.
+        </p>
+      </div>
+      <div class="photo-grid photo-grid--2col" role="list">
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="La pace non è l'assenza di difficoltà — è la loro accettazione" data-poem-jp="平和は困難の不在ではなく、その受け入れ">
+          <span class="photo-card__num" aria-hidden="true">008</span>
+          <img src="https://picsum.photos/seed/shoga-08/800/800" alt="Momento di quiete serena, luce morbida" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">La pace non è l'assenza di difficoltà — è la loro accettazione</p>
+            <span class="photo-card__poem-jp">平和は困難の不在ではなく、その受け入れ</span>
+          </div>
+        </div>
+        <div class="photo-card photo-card--sq" role="listitem" data-poem="Shoganai: la serenità che nasce dal lasciare andare" data-poem-jp="しょうがない：手放すことから生まれる平静">
+          <span class="photo-card__num" aria-hidden="true">009</span>
+          <img src="https://picsum.photos/seed/shoga-09/800/800" alt="Serenità contemplativa, spazio aperto e calmo" loading="lazy" width="800" height="800">
+          <div class="photo-card__overlay" aria-hidden="true">
+            <p class="photo-card__poem">Shoganai: la serenità che nasce dal lasciare andare</p>
+            <span class="photo-card__poem-jp">しょうがない：手放すことから生まれる平静</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── QUOTE II ── -->
+    <div class="quote-section" aria-label="Citazione finale">
+      <div class="quote-line" aria-hidden="true"></div>
+      <blockquote class="quote-text">
+        "Come il fiume non combatte le rocce ma le aggira — così Shoganai."
+      </blockquote>
+      <p class="quote-attr" aria-hidden="true">しょうがない — Shoganai</p>
+    </div>
+
+    <!-- ── HORIZONTAL SCROLL ── -->
+    <section class="h-scroll" id="h-scroll-shoganai" aria-label="I cinque elementi di shoganai">
+      <p class="h-scroll__label" aria-hidden="true">I CINQUE ELEMENTI DI SHOGANAI</p>
+      <div class="h-scroll__inner">
+        <div class="h-scroll__track" id="h-scroll-track">
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/shoga-h01/880/1120" alt="Il vento — passaggio libero e inevitabile" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">風 IL VENTO</span>
+              <p class="h-scroll__card-title">Il Passaggio</p>
+              <p class="h-scroll__card-poem">Il vento va dove vuole — e questo va bene.</p>
+              <span class="h-scroll__card-sub" lang="ja">風は行きたいところへ行く</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/shoga-h02/880/1120" alt="L'acqua — flusso che trova sempre la via" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">水 L'ACQUA</span>
+              <p class="h-scroll__card-title">Il Flusso</p>
+              <p class="h-scroll__card-poem">L'acqua trova sempre la sua strada.</p>
+              <span class="h-scroll__card-sub" lang="ja">水は必ず道を見つける</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/shoga-h03/880/1120" alt="Il tempo — scorrere inarrestabile dei momenti" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">時 IL TEMPO</span>
+              <p class="h-scroll__card-title">Il Trascorrere</p>
+              <p class="h-scroll__card-poem">Il tempo non si ferma — e non dovrebbe.</p>
+              <span class="h-scroll__card-sub" lang="ja">時間は止まらない、止まるべきでもない</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/shoga-h04/880/1120" alt="Il fiume — corrente che porta dove deve portare" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">川 IL FIUME</span>
+              <p class="h-scroll__card-title">La Corrente</p>
+              <p class="h-scroll__card-poem">La corrente porta dove deve portare.</p>
+              <span class="h-scroll__card-sub" lang="ja">流れは連れて行くべき所へ連れて行く</span>
+            </div>
+          </div>
+
+          <div class="h-scroll__card">
+            <img src="https://picsum.photos/seed/shoga-h05/880/1120" alt="Shoganai — la serena accettazione di ciò che è" loading="lazy" width="880" height="1120">
+            <div class="h-scroll__card-body">
+              <span class="h-scroll__card-num" aria-hidden="true">しょ SHOGANAI</span>
+              <p class="h-scroll__card-title">L'Accettazione</p>
+              <p class="h-scroll__card-poem">Shoganai: non si può farci nulla, ed è abbastanza.</p>
+              <span class="h-scroll__card-sub" lang="ja">しょうがない、それで十分</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="h-scroll__progress" aria-hidden="true">
+        <div class="h-scroll__pip active"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+        <div class="h-scroll__pip"></div>
+      </div>
+    </section>
+
+    <!-- ── OUTRO ── -->
+    <section class="outro" id="section-outro" aria-labelledby="outro-title">
+      <div class="outro__symbol" aria-hidden="true">流</div>
+      <h2 class="outro__title" id="outro-title">
+        Lascia andare ciò che non puoi controllare. Abbraccia ciò che è.
+      </h2>
+      <p class="outro__desc">
+        Shoganai è forse il dono più pratico della filosofia giapponese. Non ci chiede di essere forti, ma di essere saggi. Non ci chiede di combattere, ma di fluire. Non ci chiede di cambiare il mondo, ma di trovare pace in esso così com'è.
+      </p>
+    </section>
+
+    <!-- ── FOOTER ── -->
+    <footer aria-label="Footer">
+      <div class="footer-brand">SHOGA<em>NAI</em></div>
+      <p class="footer-meta">EXPERIMENT 13 · PORTFOLIO 2024 · しょうがない</p>
+    </footer>
+
+  </div><!-- /content -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       SCRIPTS
+  ════════════════════════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.umd.js"></script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* ══════════════════════════════════════════════════════
+       GUARD
+    ══════════════════════════════════════════════════════ */
+    if (typeof gsap === 'undefined')          console.error('[SHOGANAI] GSAP failed to load.');
+    if (typeof ScrollTrigger === 'undefined') console.error('[SHOGANAI] ScrollTrigger failed to load.');
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ══════════════════════════════════════════════════════
+       LENIS SMOOTH SCROLL
+    ══════════════════════════════════════════════════════ */
+    let lenis = null;
+    const LenisClass = (typeof Lenis !== 'undefined') ? (Lenis.default || Lenis) : null;
+
+    if (LenisClass) {
+      lenis = new LenisClass({
+        duration: 1.8,
+        easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        wheelMultiplier: 0.85,
+        touchMultiplier: 2,
+      });
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add(time => lenis.raf(time * 1000));
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SCROLL PROGRESS BAR
+    ══════════════════════════════════════════════════════ */
+    const progressBar = document.getElementById('progress-bar');
+    window.addEventListener('scroll', () => {
+      const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+    }, { passive: true });
+
+    /* ══════════════════════════════════════════════════════
+       DYNAMIC COLOR PALETTE — updates CSS vars on scroll
+    ══════════════════════════════════════════════════════ */
+    const PALETTE = [
+      { t: 0,    accent: [0.42, 0.62, 0.55] },
+      { t: 0.25, accent: [0.57, 0.72, 0.66] },
+      { t: 0.5,  accent: [0.57, 0.72, 0.66] },
+      { t: 0.75, accent: [0.42, 0.62, 0.55] },
+      { t: 1,    accent: [0.32, 0.52, 0.45] },
+    ];
+
+    function lerpPalette(t) {
+      let i = 0;
+      for (let k = PALETTE.length - 2; k >= 0; k--) {
+        if (t >= PALETTE[k].t) { i = k; break; }
+      }
+      const a = PALETTE[i], b = PALETTE[i + 1];
+      const f = (t - a.t) / (b.t - a.t);
+      const lerp = (x, y) => x + (y - x) * f;
+      const hex = arr => '#' + arr.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+      return { accent: hex(a.accent.map((v, j) => lerp(v, b.accent[j]))) };
+    }
+
+    function updateDynamicColors(t) {
+      const { accent } = lerpPalette(t);
+      document.documentElement.style.setProperty('--accent', accent);
+      if (progressBar) progressBar.style.background =
+        `linear-gradient(to right, ${accent}, #507060)`;
+    }
+
+    let scrollT = 0;
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 2,
+      onUpdate: self => {
+        scrollT = self.progress;
+        particleScrollT = scrollT;
+        updateDynamicColors(scrollT);
+      },
+    });
+
+    /* ══════════════════════════════════════════════════════
+       CURSOR RING — requestAnimationFrame loop
+    ══════════════════════════════════════════════════════ */
+    const cursorRing = document.getElementById('cursor-ring');
+    let cursorSX = -999, cursorSY = -999;
+    let cursorTX = 0,   cursorTY = 0;
+
+    if (cursorRing && window.matchMedia('(pointer: fine)').matches) {
+      window.addEventListener('mousemove', e => {
+        cursorTX = e.clientX;
+        cursorTY = e.clientY;
+      });
+
+      (function animCursor() {
+        cursorSX += (cursorTX - cursorSX) * 0.10;
+        cursorSY += (cursorTY - cursorSY) * 0.10;
+        gsap.set(cursorRing, { x: cursorSX, y: cursorSY });
+        requestAnimationFrame(animCursor);
+      })();
+
+      document.querySelectorAll('a, button, .photo-card').forEach(el => {
+        el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
+        el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       WEBGL — SHOGANAI FLOW FIELD SHADER (Three.js)
+    ══════════════════════════════════════════════════════ */
+    const bgCanvas = document.getElementById('bg-canvas');
+
+    const webglAvailable = (() => {
+      try {
+        const c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+          (c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch { return false; }
+    })();
+
+    let threeCleanup = () => {};
+
+    if (webglAvailable && bgCanvas) {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+
+      const scene    = new THREE.Scene();
+      const camera   = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      const renderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: false, alpha: false });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+      const vertexShader = /* glsl */`
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+      `;
+
+      const fragmentShader = /* glsl */`
+        precision mediump float;
+        uniform float uTime;
+        uniform vec2  uResolution;
+        uniform vec2  uMouse;
+        uniform float uScrollT;
+        varying vec2 vUv;
+
+        float hash(vec2 p){p=fract(p*vec2(234.34,435.345));p+=dot(p,p+34.23);return fract(p.x*p.y);}
+        float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
+        float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.1+vec2(1.7,9.2);a*=.5;}return v;}
+
+        void main(){
+          vec2 uv=vUv;
+          float turbulence=mix(1.0,0.1,uScrollT);
+          float timeScale=mix(0.5,0.08,uScrollT);
+          float fx=fbm(uv*vec2(3.,2.)+vec2(uTime*timeScale,0.));
+          float fy=fbm(uv*vec2(3.,2.)+vec2(0.,uTime*timeScale)+vec2(5.2,1.3));
+          vec2 flow=vec2(fx,fy)*turbulence;
+          float pattern=fbm(uv*3.+flow);
+          vec3 deep=vec3(0.02,0.05,0.03);
+          vec3 mid=vec3(0.04,0.09,0.06);
+          vec3 sage=vec3(0.28,0.45,0.35);
+          vec3 bg=mix(deep,mid,pattern);
+          float flowHighlight=fbm(uv*4.+flow*2.)*smoothstep(0.3,1.0,uScrollT);
+          bg+=sage*flowHighlight*0.25;
+          float vig=1.-smoothstep(0.3,1.4,length((uv-.5)*1.6));
+          bg*=vig;
+          gl_FragColor=vec4(bg,1.);
+        }
+      `;
+
+      const geo = new THREE.PlaneGeometry(2, 2);
+      const mat = new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        uniforms: {
+          uTime:       { value: 0 },
+          uResolution: { value: new THREE.Vector2(W, H) },
+          uMouse:      { value: new THREE.Vector2(0.5, 0.5) },
+          uScrollT:    { value: 0 },
+        },
+      });
+      scene.add(new THREE.Mesh(geo, mat));
+
+      window.addEventListener('mousemove', e => {
+        mat.uniforms.uMouse.value.set(
+          e.clientX / window.innerWidth,
+          e.clientY / window.innerHeight
+        );
+      });
+
+      ScrollTrigger.create({
+        trigger: document.body,
+        start: 'top top',
+        end: 'bottom bottom',
+        onUpdate: self => { mat.uniforms.uScrollT.value = self.progress; },
+      });
+
+      const onResize = () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        mat.uniforms.uResolution.value.set(w, h);
+      };
+      window.addEventListener('resize', onResize);
+
+      let rafId;
+      const tick = () => {
+        rafId = requestAnimationFrame(tick);
+        mat.uniforms.uTime.value = performance.now() * 0.001;
+        renderer.render(scene, camera);
+      };
+      tick();
+
+      threeCleanup = () => {
+        cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', onResize);
+        geo.dispose();
+        mat.dispose();
+        renderer.dispose();
+      };
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CANVAS2D PARTICLE OVERLAY — wind particles flowing left-to-right
+    ══════════════════════════════════════════════════════ */
+    const pCanvas = document.getElementById('particle-canvas');
+    let particleScrollT = 0;
+
+    if (pCanvas) {
+      const pCtx = pCanvas.getContext('2d');
+
+      function resizePC() {
+        pCanvas.width  = window.innerWidth;
+        pCanvas.height = window.innerHeight;
+      }
+      resizePC();
+      window.addEventListener('resize', resizePC, { passive: true });
+
+      class WindParticle {
+        constructor() { this.reset(true); }
+        reset(randomY = false) {
+          if (randomY) {
+            this.x     = Math.random() * pCanvas.width;
+            this.baseY = Math.random() * pCanvas.height;
+          } else {
+            this.x     = -10;
+            this.baseY = Math.random() * pCanvas.height;
+          }
+          this.y         = this.baseY;
+          this.vx        = 0.4 + Math.random() * 0.8;
+          this.vy        = (Math.random() - 0.5) * 0.3;
+          this.r         = 1 + Math.random() * 2;
+          this.phase     = Math.random() * Math.PI * 2;
+          this.amplitude = 20 + Math.random() * 40;
+        }
+
+        update() {
+          this.x += this.vx;
+          this.y = this.baseY + Math.sin(this.phase) * this.amplitude;
+          this.phase += 0.015 * (1 - particleScrollT * 0.7);
+          if (this.x > pCanvas.width + 20) this.reset(false);
+        }
+
+        draw(ctx) {
+          ctx.save();
+          const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 3.5);
+          grad.addColorStop(0,   'rgba(145,184,168,0.8)');
+          grad.addColorStop(0.4, 'rgba(80,112,96,0.4)');
+          grad.addColorStop(1,   'rgba(80,112,96,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r * 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      const particles = [];
+      for (let i = 0; i < 60; i++) particles.push(new WindParticle());
+
+      (function animParticles() {
+        requestAnimationFrame(animParticles);
+        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+        particles.forEach(p => { p.update(); p.draw(pCtx); });
+      })();
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — HERO ENTRANCE (letter by letter)
+    ══════════════════════════════════════════════════════ */
+    const heroTitle = document.querySelector('.hero__title');
+    if (heroTitle) {
+      const text = heroTitle.textContent;
+      heroTitle.innerHTML = '';
+      [...text].forEach(ch => {
+        if (ch === '\n') { heroTitle.appendChild(document.createElement('br')); return; }
+        const span = document.createElement('span');
+        span.className = 'char';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        heroTitle.appendChild(span);
+      });
+      heroTitle.setAttribute('aria-label', text.replace('\n', ' '));
+
+      const heroTl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+      heroTl
+        .to('.hero__label',       { autoAlpha: 1, duration: .8 })
+        .to('.hero__title .char', { y: 0, duration: 1.1, stagger: 0.035 }, '-=0.5')
+        .to('.hero__sub',         { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__jp-subtitle', { autoAlpha: 1, duration: .8 }, '-=0.4')
+        .to('.hero__scroll',      { autoAlpha: 1, duration: .8 }, '-=0.3');
+    }
+
+    /* ══════════════════════════════════════════════════════
+       GSAP — SCROLL REVEALS
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-section').forEach(section => {
+      const phase   = section.querySelector('.section-phase');
+      const title   = section.querySelector('.section-title');
+      const titleJp = section.querySelector('.section-title-jp');
+      const desc    = section.querySelector('.section-desc');
+
+      if (phase)   gsap.to(phase,   { autoAlpha: 1, x: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%', toggleActions: 'play none none none' } });
+      if (title)   gsap.to(title,   { autoAlpha: 1, y: 0,  duration: 1,  ease: 'power4.out', scrollTrigger: { trigger: section, start: 'top 70%', toggleActions: 'play none none none' }, delay: .1 });
+      if (titleJp) gsap.to(titleJp, { autoAlpha: 1,        duration: .7, ease: 'power2.out', scrollTrigger: { trigger: section, start: 'top 65%', toggleActions: 'play none none none' }, delay: .2 });
+      if (desc)    gsap.to(desc,    { autoAlpha: 1, y: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 62%', toggleActions: 'play none none none' }, delay: .3 });
+    });
+
+    document.querySelectorAll('.photo-card').forEach((card, i) => {
+      gsap.to(card, {
+        autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out',
+        scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none none' },
+        delay: (i % 3) * 0.12,
+      });
+    });
+
+    document.querySelectorAll('.quote-section').forEach(q => {
+      const ql = q.querySelector('.quote-line');
+      const qt = q.querySelector('.quote-text');
+      const qa = q.querySelector('.quote-attr');
+      if (ql) gsap.to(ql, { autoAlpha: 1, duration: .8, scrollTrigger: { trigger: q, start: 'top 75%', toggleActions: 'play none none none' } });
+      if (qt) gsap.to(qt, { autoAlpha: 1, y: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 70%', toggleActions: 'play none none none' }, delay: .2 });
+      if (qa) gsap.to(qa, { autoAlpha: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
+    });
+
+    /* Nagare interlude section reveals */
+    const nagare = document.getElementById('section-nagare');
+    if (nagare) {
+      gsap.to(nagare.querySelector('.shinrin__phase'),    { autoAlpha: 1, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: nagare, start: 'top 70%', toggleActions: 'play none none none' } });
+      gsap.to(nagare.querySelector('.shinrin__title'),    { autoAlpha: 1, y: 0, duration: 1.2, ease: 'power4.out', scrollTrigger: { trigger: nagare, start: 'top 65%', toggleActions: 'play none none none' }, delay: .1 });
+      gsap.to(nagare.querySelector('.shinrin__title-jp'), { autoAlpha: 1, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: nagare, start: 'top 60%', toggleActions: 'play none none none' }, delay: .2 });
+      gsap.to(nagare.querySelector('.shinrin__desc'),     { autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out', scrollTrigger: { trigger: nagare, start: 'top 55%', toggleActions: 'play none none none' }, delay: .3 });
+    }
+
+    /* Outro reveals */
+    const outro = document.getElementById('section-outro');
+    if (outro) {
+      gsap.to(outro.querySelector('.outro__symbol'), { autoAlpha: 1, scale: 1, duration: 1.5, ease: 'power3.out', scrollTrigger: { trigger: outro, start: 'top 70%', toggleActions: 'play none none none' } });
+      gsap.to(outro.querySelector('.outro__title'),  { autoAlpha: 1, y: 0, duration: 1.1, ease: 'power4.out', scrollTrigger: { trigger: outro, start: 'top 65%', toggleActions: 'play none none none' }, delay: .2 });
+      gsap.to(outro.querySelector('.outro__desc'),   { autoAlpha: 1, duration: .9, ease: 'power2.out', scrollTrigger: { trigger: outro, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       PARALLAX — subtle zoom on photos while scrolling
+    ══════════════════════════════════════════════════════ */
+    document.querySelectorAll('.photo-card img').forEach(img => {
+      gsap.to(img, {
+        scale: 1.12,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: img.closest('.photo-card'),
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: 1.5,
+        },
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════
+       LIGHTBOX
+    ══════════════════════════════════════════════════════ */
+    const lightbox   = document.getElementById('lightbox');
+    const lbImg      = document.getElementById('lightbox-img');
+    const lbPoemText = document.getElementById('lightbox-poem-text');
+    const lbPoemJp   = document.getElementById('lightbox-poem-jp');
+    const lbClose    = document.getElementById('lightbox-close');
+
+    function openLightbox(card) {
+      const img    = card.querySelector('img');
+      const poem   = card.dataset.poem   || '';
+      const poemJp = card.dataset.poemJp || '';
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lbPoemText.textContent = poem;
+      lbPoemJp.textContent   = poemJp;
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(() => { lbImg.src = ''; }, 400);
+    }
+
+    document.querySelectorAll('.photo-card').forEach(card => {
+      card.addEventListener('click', () => openLightbox(card));
+      card.setAttribute('tabindex', '0');
+      card.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(card); });
+    });
+
+    if (lbClose)  lbClose.addEventListener('click', closeLightbox);
+    if (lightbox) lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ══════════════════════════════════════════════════════
+       HORIZONTAL SCROLL PIN
+    ══════════════════════════════════════════════════════ */
+    const hSection = document.getElementById('h-scroll-shoganai');
+    const hTrack   = document.getElementById('h-scroll-track');
+    const hPips    = document.querySelectorAll('#h-scroll-shoganai .h-scroll__pip');
+
+    if (hSection && hTrack) {
+      gsap.to(hTrack, {
+        x: () => -(hTrack.scrollWidth - window.innerWidth),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: hSection,
+          start: 'top top',
+          end: () => `+=${hTrack.scrollWidth - window.innerWidth}`,
+          pin: true,
+          scrub: 1.2,
+          invalidateOnRefresh: true,
+          onUpdate: self => {
+            const idx = Math.round(self.progress * (hPips.length - 1));
+            hPips.forEach((p, i) => p.classList.toggle('active', i === idx));
+          },
+        },
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
+       CLEANUP
+    ══════════════════════════════════════════════════════ */
+    window.addEventListener('beforeunload', threeCleanup);
+
+  </script>
+</body>
+</html>
