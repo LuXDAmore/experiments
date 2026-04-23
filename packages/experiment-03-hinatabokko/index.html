@@ -60,42 +60,60 @@
       cursor: none;
     }
 
-    @media (pointer: coarse) {
-      body { cursor: auto; }
-      #cursor-dot, #cursor-ring { display: none !important; }
-    }
-
-    /* ── Custom cursor ── */
+    /* ── Ripple Cursor ── */
     #cursor-dot {
       position: fixed;
       top: 0; left: 0;
-      width: 7px; height: 7px;
-      background: var(--gold);
+      width: 8px; height: 8px;
+      background: rgba(255, 215, 0, .9);
       border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-50%, -50%);
       will-change: transform;
-      transition: background .4s ease;
     }
 
-    #cursor-ring {
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-dot { display: none !important; }
+    }
+
+    /* ── Real-time clock overlay ── */
+    #clock-overlay {
       position: fixed;
-      top: 0; left: 0;
-      width: 42px; height: 42px;
-      border: 1px solid rgba(255, 215, 0, .35);
-      border-radius: 50%;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.25);
+      z-index: 9000;
+      white-space: nowrap;
       pointer-events: none;
-      z-index: 9999;
-      transform: translate(-50%, -50%);
-      will-change: transform;
-      transition: width .25s ease, height .25s ease, border-color .35s ease;
     }
 
-    body.is-hovering #cursor-ring {
-      width: 62px; height: 62px;
-      border-color: var(--accent);
+    /* ── Audio Toggle ── */
+    #audio-toggle {
+      position: fixed;
+      bottom: 32px;
+      right: 32px;
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.15);
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(8px);
+      cursor: pointer;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color .3s, transform .3s;
     }
+    #audio-toggle:hover { border-color: rgba(255,215,0,.5); transform: scale(1.1); }
+    #audio-toggle.active { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,215,0,.35); }
+    #audio-toggle svg { width: 18px; height: 18px; fill: rgba(255,255,255,.55); transition: fill .3s; }
+    #audio-toggle.active svg { fill: var(--gold); }
 
     /* ── ThreeJS fullscreen canvas ── */
     #bg-canvas {
@@ -717,9 +735,8 @@
   <!-- Progress bar -->
   <div id="progress-bar" aria-hidden="true"></div>
 
-  <!-- Custom cursor -->
-  <div id="cursor-dot"  aria-hidden="true"></div>
-  <div id="cursor-ring" aria-hidden="true"></div>
+  <!-- Ripple Cursor dot -->
+  <div id="cursor-dot" aria-hidden="true"></div>
 
   <!-- Navigation -->
   <a href="../experiment-02/index.html" class="back-link" aria-label="Back to experiment 02">EXP 02</a>
@@ -734,6 +751,9 @@
       <span id="lightbox-poem-jp"></span>
     </div>
   </div>
+
+  <!-- Real-time clock -->
+  <div id="clock-overlay" aria-hidden="true"></div>
 
   <!-- ThreeJS background canvas -->
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
@@ -1090,31 +1110,62 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       CUSTOM CURSOR
+       RIPPLE CURSOR + CANVAS RIPPLES
     ══════════════════════════════════════════════════════ */
     const cursorDot  = document.getElementById('cursor-dot');
-    const cursorRing = document.getElementById('cursor-ring');
+    let dotX = 0, dotY = 0;
 
-    if (cursorDot && cursorRing) {
-      let rx = 0, ry = 0, tx = 0, ty = 0;
-
+    if (cursorDot && window.matchMedia('(pointer: fine)').matches) {
       window.addEventListener('mousemove', e => {
-        tx = e.clientX; ty = e.clientY;
+        dotX = e.clientX; dotY = e.clientY;
         gsap.set(cursorDot, { x: e.clientX, y: e.clientY });
       });
-
-      (function animRing() {
-        rx += (tx - rx) * 0.11;
-        ry += (ty - ry) * 0.11;
-        gsap.set(cursorRing, { x: rx, y: ry });
-        requestAnimationFrame(animRing);
-      })();
 
       document.querySelectorAll('a, button, .photo-card').forEach(el => {
         el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
         el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
       });
     }
+
+    /* ══════════════════════════════════════════════════════
+       CANVAS WATER RIPPLES on click
+    ══════════════════════════════════════════════════════ */
+    // We'll overlay a transparent 2D canvas for ripple rings
+    const rippleCanvas = document.createElement('canvas');
+    rippleCanvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1';
+    rippleCanvas.width  = window.innerWidth;
+    rippleCanvas.height = window.innerHeight;
+    document.body.appendChild(rippleCanvas);
+    const rCtx = rippleCanvas.getContext('2d');
+
+    window.addEventListener('resize', () => {
+      rippleCanvas.width  = window.innerWidth;
+      rippleCanvas.height = window.innerHeight;
+    });
+
+    const ripples = [];
+
+    document.addEventListener('click', e => {
+      ripples.push({ x: e.clientX, y: e.clientY, r: 0, maxR: 120, alpha: 1 });
+    });
+
+    (function animRipples() {
+      rCtx.clearRect(0, 0, rippleCanvas.width, rippleCanvas.height);
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const rip = ripples[i];
+        rip.r     += 3.2;
+        rip.alpha  = Math.max(0, 1 - rip.r / rip.maxR);
+
+        rCtx.beginPath();
+        rCtx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
+        rCtx.strokeStyle = `rgba(255, 215, 0, ${rip.alpha * 0.6})`;
+        rCtx.lineWidth   = 1.5 * (1 - rip.r / rip.maxR);
+        rCtx.stroke();
+
+        if (rip.r >= rip.maxR) ripples.splice(i, 1);
+      }
+      requestAnimationFrame(animRipples);
+    })();
 
     /* ══════════════════════════════════════════════════════
        THREE.JS — SUNSET SKY + SUN + CLOUDS
@@ -1462,6 +1513,134 @@
     }
 
     /* ══════════════════════════════════════════════════════
+       REAL-TIME CLOCK + SKY COLOR SYNC
+    ══════════════════════════════════════════════════════ */
+    const clockEl = document.getElementById('clock-overlay');
+
+    function getTimeColor() {
+      const now = new Date();
+      const h   = now.getHours() + now.getMinutes() / 60;
+
+      // Map hour → gradient stops
+      // 0–5: deep night   (violet/dark blue)
+      // 5–8: dawn        (orange/purple)
+      // 8–12: morning    (warm gold/yellow)
+      // 12–15: midday    (white/pale yellow)
+      // 15–18: afternoon (deep gold)
+      // 18–20: golden hour (red-orange)
+      // 20–22: dusk      (violet)
+      // 22–24: night     (deep violet/dark)
+      const stops = [
+        { h: 0,  top: '#0d0015', bot: '#1a0030', acc: '#4B0082' },
+        { h: 5,  top: '#FF8C00', bot: '#C0392B', acc: '#FF8C00' },
+        { h: 8,  top: '#FFD700', bot: '#FF8C00', acc: '#FFD700' },
+        { h: 12, top: '#ffe9a0', bot: '#FFD700', acc: '#FFE600' },
+        { h: 15, top: '#FFD700', bot: '#FF6600', acc: '#FFD700' },
+        { h: 18, top: '#FF4500', bot: '#8B0057', acc: '#FF8C00' },
+        { h: 20, top: '#4B0082', bot: '#1a0030', acc: '#9B59B6' },
+        { h: 22, top: '#0d0015', bot: '#090010', acc: '#4B0082' },
+        { h: 24, top: '#0d0015', bot: '#1a0030', acc: '#4B0082' },
+      ];
+
+      let idx = 0;
+      for (let i = stops.length - 1; i >= 0; i--) {
+        if (h >= stops[i].h) { idx = i; break; }
+      }
+
+      const a   = stops[idx];
+      const b   = stops[Math.min(idx + 1, stops.length - 1)];
+      const frac = (h - a.h) / ((b.h || 24) - a.h + 0.001);
+
+      return { top: a.top, bot: a.bot, acc: a.acc, frac, label: now.toLocaleTimeString() };
+    }
+
+    function applyTimeColors() {
+      const { top, bot, acc, label } = getTimeColor();
+      document.documentElement.style.setProperty('--sky-top',    top);
+      document.documentElement.style.setProperty('--sky-bottom', bot);
+      document.documentElement.style.setProperty('--accent',     acc);
+      if (clockEl) clockEl.textContent = `LOCAL TIME · ${label}`;
+    }
+
+    applyTimeColors();
+    setInterval(applyTimeColors, 30000); // update every 30s
+
+    /* ══════════════════════════════════════════════════════
+       AMBIENT AUDIO (Web Audio API — synthetic tones)
+    ══════════════════════════════════════════════════════ */
+    const audioToggleBtn = document.getElementById('audio-toggle');
+
+    if (audioToggleBtn) {
+      let audioCtx = null;
+      let masterGain = null;
+      let audioActive = false;
+      const oscillators = [];
+
+      function startAmbient() {
+        audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        masterGain.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime + 2);
+        masterGain.connect(audioCtx.destination);
+
+        const { acc } = getTimeColor();
+
+        // Drone tones based on time-of-day
+        const now = new Date().getHours();
+        const freqs = now >= 20 || now < 5
+          ? [110, 165, 220]       // night: low drones
+          : now < 10
+          ? [220, 330, 440]       // morning: bright birds
+          : [174, 261, 349];      // day: warm tones
+
+        freqs.forEach((f, i) => {
+          const osc  = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = i === 0 ? 'sine' : 'triangle';
+          osc.frequency.value = f;
+          gain.gain.value = 0.3 / (i + 1);
+
+          // Gentle tremolo
+          const lfo  = audioCtx.createOscillator();
+          const lfoG = audioCtx.createGain();
+          lfo.frequency.value = 0.3 + i * 0.15;
+          lfoG.gain.value = 0.015;
+          lfo.connect(lfoG);
+          lfoG.connect(gain.gain);
+          lfo.start();
+
+          osc.connect(gain);
+          gain.connect(masterGain);
+          osc.start();
+          oscillators.push(osc, lfo);
+        });
+      }
+
+      function stopAmbient() {
+        if (!audioCtx) return;
+        masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
+        setTimeout(() => {
+          oscillators.forEach(o => { try { o.stop(); } catch(err) { /* already stopped */ } });
+          oscillators.length = 0;
+          audioCtx.close();
+          audioCtx = null;
+        }, 1600);
+      }
+
+      const toggleAudio = () => {
+        audioActive = !audioActive;
+        audioToggleBtn.classList.toggle('active', audioActive);
+        if (audioActive) startAmbient();
+        else stopAmbient();
+      };
+
+      audioToggleBtn.addEventListener('click', toggleAudio);
+      audioToggleBtn.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAudio(); }
+      });
+    }
+
+    /* ══════════════════════════════════════════════════════
        GSAP — HERO ENTRANCE
     ══════════════════════════════════════════════════════ */
     const heroTitle = document.querySelector('.hero__title');
@@ -1610,5 +1789,11 @@
     }
 
   </script>
+  <!-- Ambient audio toggle -->
+  <div id="audio-toggle" role="button" aria-label="Toggle ambient audio" tabindex="0" title="Ambient Sound">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+    </svg>
+  </div>
 </body>
 </html>

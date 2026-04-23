@@ -7,16 +7,6 @@
   <meta name="theme-color" content="#1a1025">
   <title>MONO NO AWARE 物の哀れ — Experiment 04</title>
 
-  <!-- THREE.js ImportMap — must appear before any type="module" script -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
-    }
-  }
-  </script>
-
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,11 +57,12 @@
     #cursor-petal {
       position: fixed;
       top: 0; left: 0;
-      width: 18px; height: 18px;
+      width: 22px; height: 22px;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-50%, -50%);
       will-change: transform;
+      transition: width .2s, height .2s;
     }
 
     #cursor-petal svg {
@@ -99,13 +90,13 @@
       border-color: var(--blush);
     }
 
-    /* ── ThreeJS fullscreen canvas ── */
+    /* ── Petal Physics Canvas ── */
     #bg-canvas {
       position: fixed;
       inset: 0;
       width: 100%; height: 100%;
       z-index: 0;
-      pointer-events: none;
+      pointer-events: auto;
     }
 
     /* ── Progress bar ── */
@@ -1104,9 +1095,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.umd.js"></script>
 
-  <script type="module">
-    import * as THREE from 'three';
-
+  <script>
     /* ══════════════════════════════════════════════════════
        GUARD
     ══════════════════════════════════════════════════════ */
@@ -1123,11 +1112,11 @@
 
     if (LenisClass) {
       lenis = new LenisClass({
-        duration: 1.6,
+        duration: 1.8,
         easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
-        wheelMultiplier: 0.85,
-        touchMultiplier: 1.8,
+        wheelMultiplier: 0.9,
+        touchMultiplier: 2,
       });
       lenis.on('scroll', ScrollTrigger.update);
       gsap.ticker.add(time => lenis.raf(time * 1000));
@@ -1135,82 +1124,41 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       SCROLL PROGRESS (0 → 1)
+       SCROLL PROGRESS BAR
     ══════════════════════════════════════════════════════ */
     const progressBar = document.getElementById('progress-bar');
-    let scrollT = 0;
-
-    ScrollTrigger.create({
-      trigger: document.body,
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 2,
-      onUpdate: self => {
-        scrollT = self.progress;
-        if (progressBar) progressBar.style.width = `${scrollT * 100}%`;
-        updateDynamicColors(scrollT);
-      },
-    });
+    window.addEventListener('scroll', () => {
+      const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+    }, { passive: true });
 
     /* ══════════════════════════════════════════════════════
-       DYNAMIC COLOR PALETTE — updates CSS vars on scroll
-       Keyframes: 0 → dark violet, .2 → pale pink, .5 → bright rose,
-                  .75 → deep rose, 1 → moss green/dark
-    ══════════════════════════════════════════════════════ */
-    const PALETTE = [
-      { t: 0,    accent: [1.00, 0.718, 0.773], text: [0.8,  0.7,  0.85] },  // blush on dark
-      { t: 0.2,  accent: [1.00, 0.855, 0.867], text: [0.25, 0.10, 0.35] },  // petal — text goes dark
-      { t: 0.5,  accent: [0.957, 0.627, 0.690], text: [0.2, 0.06, 0.28] },  // rose — text dark
-      { t: 0.75, accent: [0.769, 0.463, 0.533], text: [0.9,  0.85, 0.9] },  // lilac — back to light
-      { t: 1,    accent: [0.7,   0.5,   0.7],   text: [0.9,  0.9,  0.95] }, // night — light text
-    ];
-
-    function lerpPalette(t) {
-      let i = 0;
-      for (let k = PALETTE.length - 2; k >= 0; k--) {
-        if (t >= PALETTE[k].t) { i = k; break; }
-      }
-      const a = PALETTE[i], b = PALETTE[i + 1];
-      const f = (t - a.t) / (b.t - a.t);
-      const lerp = (x, y) => x + (y - x) * f;
-      const hex = arr => '#' + arr.map(v => Math.round(v * 255).toString(16).padStart(2,'0')).join('');
-      return {
-        accent: hex(a.accent.map((v, j) => lerp(v, b.accent[j]))),
-        text: `rgba(${a.text.map((v, j) => Math.round(lerp(v, b.text[j]) * 255)).join(',')}, .75)`,
-      };
-    }
-
-    function updateDynamicColors(t) {
-      const { accent, text } = lerpPalette(t);
-      document.documentElement.style.setProperty('--accent', accent);
-      document.documentElement.style.setProperty('--text-color', text);
-
-      const petalSvg = document.querySelector('#cursor-petal svg');
-      if (petalSvg) petalSvg.style.fill = accent;
-    }
-
-    /* ══════════════════════════════════════════════════════
-       CUSTOM PETAL CURSOR
+       PETAL CURSOR
     ══════════════════════════════════════════════════════ */
     const cursorPetal = document.getElementById('cursor-petal');
     const cursorRing  = document.getElementById('cursor-ring');
 
-    if (cursorPetal && cursorRing) {
-      let rx = 0, ry = 0, tx = 0, ty = 0;
-      let rot = 0;
+    if (cursorPetal && window.matchMedia('(pointer: fine)').matches) {
+      let rx = 0, ry = 0, tx = 0, ty = 0, angle = 0;
 
       window.addEventListener('mousemove', e => {
+        const dx = e.clientX - tx;
+        const dy = e.clientY - ty;
+        if (Math.abs(dx) + Math.abs(dy) > 0.5) {
+          angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+        }
         tx = e.clientX; ty = e.clientY;
-        rot += 1.5;
-        gsap.set(cursorPetal, { x: e.clientX, y: e.clientY, rotation: rot });
+        gsap.set(cursorPetal, { x: e.clientX, y: e.clientY, rotate: angle });
       });
 
-      (function animRing() {
-        rx += (tx - rx) * 0.11;
-        ry += (ty - ry) * 0.11;
-        gsap.set(cursorRing, { x: rx, y: ry });
-        requestAnimationFrame(animRing);
-      })();
+      if (cursorRing) {
+        (function animRing() {
+          rx += (tx - rx) * 0.12;
+          ry += (ty - ry) * 0.12;
+          gsap.set(cursorRing, { x: rx, y: ry });
+          requestAnimationFrame(animRing);
+        })();
+      }
 
       document.querySelectorAll('a, button, .photo-card').forEach(el => {
         el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
@@ -1219,310 +1167,175 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       THREE.JS — BACKGROUND GRADIENT + FALLING PETALS
+       2D WIND-PHYSICS PETAL SIMULATION
     ══════════════════════════════════════════════════════ */
     const canvas = document.getElementById('bg-canvas');
 
-    const webglAvailable = (() => {
-      try {
-        const c = document.createElement('canvas');
-        return !!(window.WebGLRenderingContext &&
-          (c.getContext('webgl') || c.getContext('experimental-webgl')));
-      } catch { return false; }
-    })();
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
 
-    let threeCleanup = () => {};
-
-    if (webglAvailable && canvas) {
-
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-      /* ── Background Sky Gradient ── */
-      const bgScene  = new THREE.Scene();
-      const bgCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-      // Palette keyframes: [topR,topG,topB, botR,botG,botB]
-      const BG_STOPS = [
-        [0.102, 0.063, 0.145, 0.051, 0.00, 0.082],   // 0.00: dark violet night
-        [0.984, 0.855, 0.867, 0.902, 0.780, 0.867],   // 0.20: pale pink spring dawn
-        [1.000, 0.941, 0.961, 0.957, 0.800, 0.855],   // 0.50: bright white-pink noon
-        [0.957, 0.627, 0.690, 0.769, 0.463, 0.533],   // 0.75: deep rose, petals falling
-        [0.176, 0.235, 0.176, 0.102, 0.063, 0.145],   // 1.00: moss green fading to night
-      ];
-      const BG_T = [0, 0.2, 0.5, 0.75, 1.0];
-
-      const bgVS = `
-        varying vec2 vUv;
-        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
-      `;
-      const bgFS = `
-        precision mediump float;
-        varying vec2 vUv;
-        uniform float uScroll;
-        uniform vec3 uTopA; uniform vec3 uTopB;
-        uniform vec3 uBotA; uniform vec3 uBotB;
-
-        void main() {
-          vec3 top = mix(uTopA, uTopB, uScroll);
-          vec3 bot = mix(uBotA, uBotB, uScroll);
-          vec3 col = mix(bot, top, vUv.y);
-
-          // Soft vignette
-          vec2 vig = vUv * 2.0 - 1.0;
-          float v = 1.0 - dot(vig * vec2(0.5, 0.5), vig * vec2(0.5, 0.5));
-          col *= 0.85 + 0.15 * v;
-
-          gl_FragColor = vec4(col, 1.0);
-        }
-      `;
-
-      const bgUniforms = {
-        uScroll: { value: 0 },
-        uTopA:   { value: new THREE.Color(BG_STOPS[0][0], BG_STOPS[0][1], BG_STOPS[0][2]) },
-        uTopB:   { value: new THREE.Color(BG_STOPS[1][0], BG_STOPS[1][1], BG_STOPS[1][2]) },
-        uBotA:   { value: new THREE.Color(BG_STOPS[0][3], BG_STOPS[0][4], BG_STOPS[0][5]) },
-        uBotB:   { value: new THREE.Color(BG_STOPS[1][3], BG_STOPS[1][4], BG_STOPS[1][5]) },
-      };
-
-      const bgGeo = new THREE.PlaneGeometry(2, 2);
-      const bgMat = new THREE.ShaderMaterial({ vertexShader: bgVS, fragmentShader: bgFS, uniforms: bgUniforms, depthWrite: false });
-      bgScene.add(new THREE.Mesh(bgGeo, bgMat));
-
-      function updateBgUniforms(t) {
-        let i = 0;
-        for (let k = BG_T.length - 2; k >= 0; k--) { if (t >= BG_T[k]) { i = k; break; } }
-        const a = BG_STOPS[i], b = BG_STOPS[i + 1];
-        const segT = (t - BG_T[i]) / (BG_T[i + 1] - BG_T[i]);
-
-        bgUniforms.uScroll.value = segT;
-        bgUniforms.uTopA.value.setRGB(a[0], a[1], a[2]);
-        bgUniforms.uTopB.value.setRGB(b[0], b[1], b[2]);
-        bgUniforms.uBotA.value.setRGB(a[3], a[4], a[5]);
-        bgUniforms.uBotB.value.setRGB(b[3], b[4], b[5]);
+      function resizeCanvas() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
       }
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas, { passive: true });
 
-      /* ── Falling Petals particle system ── */
-      const petalScene  = new THREE.Scene();
-      const petalCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 20);
-      petalCamera.position.z = 5;
-
-      const PETAL_COUNT  = 500;
-      const petalPositions  = new Float32Array(PETAL_COUNT * 3);
-      const petalVelocities = new Float32Array(PETAL_COUNT * 3); // x-drift, y-fall, z-depth
-      const petalPhases     = new Float32Array(PETAL_COUNT);     // random phase offset
-      const petalSizes      = new Float32Array(PETAL_COUNT);
-      const petalRotations  = new Float32Array(PETAL_COUNT);    // per-petal initial rotation
-      const petalRotSpeeds  = new Float32Array(PETAL_COUNT);    // rotation speed
-      const petalColors     = new Float32Array(PETAL_COUNT * 3);
-
-      // Spread viewport: use frustum half-widths at z=0
-      const SPREAD_X = 6, SPREAD_Y = 6;
-
-      // Petal color variants
-      const petalColorPalette = [
-        new THREE.Color(1.00, 0.718, 0.773), // blush
-        new THREE.Color(1.00, 0.855, 0.867), // pale pink
-        new THREE.Color(1.00, 1.00,  1.00),  // white
-        new THREE.Color(0.957, 0.627, 0.690), // rose
-        new THREE.Color(0.910, 0.780, 0.843), // lilac-pink
+      /* ── Petal colors ── */
+      const PETAL_COLORS = [
+        'rgba(255,183,197,',   // blush
+        'rgba(250,218,221,',   // petal
+        'rgba(244,160,176,',   // rose
+        'rgba(196,118,136,',   // lilac
+        'rgba(255,200,210,',   // light
       ];
 
-      function resetPetal(i) {
-        petalPositions[i*3]     = (Math.random() - 0.5) * SPREAD_X * 2;
-        petalPositions[i*3+1]   = SPREAD_Y * 0.6 + Math.random() * SPREAD_Y;
-        petalPositions[i*3+2]   = (Math.random() - 0.5) * 2.5;
-        // Realistic fall: 0.03–0.08 per frame (~1.8–4.8 units/s at 60fps)
-        petalVelocities[i*3]    = (Math.random() - 0.5) * 0.014;   // horizontal drift
-        petalVelocities[i*3+1]  = -(0.030 + Math.random() * 0.050); // fall speed (realistic)
-        petalVelocities[i*3+2]  = 0;
-        petalPhases[i]           = Math.random() * Math.PI * 2;
-        petalSizes[i]            = 0.10 + Math.random() * 0.14;     // larger petals
-        petalRotations[i]        = Math.random() * Math.PI * 2;
-        petalRotSpeeds[i]        = (Math.random() - 0.5) * 0.06;
+      /* ── Wind state ── */
+      let windX = 0.012, windY = 0;
+      let mouseVX = 0, mouseVY = 0;
+      let prevMX  = 0, prevMY  = 0;
+      let scrollProgress = 0;
 
-        const col = petalColorPalette[Math.floor(Math.random() * petalColorPalette.length)];
-        petalColors[i*3]     = col.r;
-        petalColors[i*3+1]   = col.g;
-        petalColors[i*3+2]   = col.b;
-      }
-
-      for (let i = 0; i < PETAL_COUNT; i++) {
-        resetPetal(i);
-        // Randomize initial Y so they don't all start at top on load
-        petalPositions[i*3+1] = (Math.random() - 0.5) * SPREAD_Y * 2;
-        petalRotations[i] = Math.random() * Math.PI * 2;
-      }
-
-      const petalGeo = new THREE.BufferGeometry();
-      const posAttr  = new THREE.BufferAttribute(petalPositions, 3);
-      posAttr.setUsage(THREE.DynamicDrawUsage);
-      petalGeo.setAttribute('position', posAttr);
-      petalGeo.setAttribute('color',    new THREE.BufferAttribute(petalColors, 3));
-
-      // Custom petal shader — draws a soft elliptical petal shape
-      // Note: 'attribute vec3 color' is injected automatically by THREE.js
-      // when vertexColors: true is set on the ShaderMaterial — do not redeclare it.
-      const petalVS = `
-        attribute float aSize;
-        attribute float aRotation;
-        varying vec3 vColor;
-        varying float vAlpha;
-        varying float vRot;
-        uniform float uDensity;
-        void main() {
-          vColor = color;
-          vAlpha = uDensity;
-          vRot   = aRotation;
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_Position = projectionMatrix * mv;
-          gl_PointSize = aSize * (600.0 / -mv.z);
-        }
-      `;
-
-      const petalFS = `
-        precision mediump float;
-        varying vec3 vColor;
-        varying float vAlpha;
-        varying float vRot;
-        void main() {
-          vec2 c = gl_PointCoord - 0.5;
-
-          // Rotate the point coordinate by per-petal angle
-          float ca = cos(vRot);
-          float sa = sin(vRot);
-          vec2 r = vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
-
-          // Cherry blossom petal: wide upper lobe, narrow lower tip
-          // Upper ellipse (body of petal)
-          float body = (r.x * r.x) / 0.055 + ((r.y - 0.06) * (r.y - 0.06)) / 0.18;
-          // Lower pointed tip — a smaller ellipse shifted down
-          float tip  = (r.x * r.x) / 0.022 + ((r.y + 0.22) * (r.y + 0.22)) / 0.055;
-          // Combine: inside body OR inside tip
-          float shape = 1.0 - smoothstep(0.75, 1.0, min(body, tip));
-          if (shape < 0.02) discard;
-
-          // Soft shading: lighter at center, slightly darker at edges for translucency
-          float centerGlow = 1.0 - smoothstep(0.0, 0.6, body);
-          vec3 col = mix(vColor * 1.15, vColor * 0.85, 1.0 - centerGlow);
-
-          // Thin central vein
-          float vein = 1.0 - smoothstep(0.0, 0.012, abs(r.x)) * smoothstep(-0.38, 0.3, r.y);
-          col += vein * 0.06;
-
-          float alpha = shape * vAlpha * 0.88;
-          gl_FragColor = vec4(col, alpha);
-        }
-      `;
-
-      // Add per-vertex size and rotation attributes
-      const sizeAttr = new THREE.BufferAttribute(petalSizes, 1);
-      petalGeo.setAttribute('aSize', sizeAttr);
-      const rotAttr  = new THREE.BufferAttribute(petalRotations, 1);
-      rotAttr.setUsage(THREE.DynamicDrawUsage);
-      petalGeo.setAttribute('aRotation', rotAttr);
-
-      const petalMat = new THREE.ShaderMaterial({
-        vertexShader: petalVS,
-        fragmentShader: petalFS,
-        uniforms: { uDensity: { value: 0.3 } },
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.NormalBlending,
-        vertexColors: true,
-      });
-
-      const petalPoints = new THREE.Points(petalGeo, petalMat);
-      petalScene.add(petalPoints);
-
-      // Mouse position in normalised device coords (-1..1)
-      const mouse = { x: 0, y: 0 };
+      // Mouse creates wind
       window.addEventListener('mousemove', e => {
-        mouse.x = (e.clientX / window.innerWidth  - 0.5) * 2;
-        mouse.y = -(e.clientY / window.innerHeight - 0.5) * 2;
+        mouseVX = (e.clientX - prevMX) * 0.002;
+        mouseVY = (e.clientY - prevMY) * 0.002;
+        prevMX = e.clientX;
+        prevMY = e.clientY;
+        windX += mouseVX * 0.3;
+        windY += mouseVY * 0.15;
       }, { passive: true });
 
-      /* ── Resize ── */
-      const onResize = () => {
-        const w = window.innerWidth, h = window.innerHeight;
-        renderer.setSize(w, h);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        petalCamera.aspect = w / h;
-        petalCamera.updateProjectionMatrix();
-      };
-      window.addEventListener('resize', onResize);
+      // Gyroscope wind
+      window.addEventListener('deviceorientation', e => {
+        if (e.gamma !== null) windX += e.gamma * 0.00015;
+        if (e.beta  !== null) windY += e.beta  * 0.00008;
+      }, { passive: true });
 
-      /* ── Render loop ── */
-      let rafId;
-      const clock = new THREE.Clock();
+      // Scroll → more petals + stronger gravity
+      window.addEventListener('scroll', () => {
+        scrollProgress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+      }, { passive: true });
 
-      const tick = () => {
-        rafId = requestAnimationFrame(tick);
-        const elapsed = clock.getElapsedTime();
+      /* ── Petal class ── */
+      class Petal {
+        constructor(x, y) {
+          this.x   = x  !== undefined ? x : Math.random() * canvas.width;
+          this.y   = y  !== undefined ? y : -20;
+          this.vx  = (Math.random() - 0.5) * 0.8;
+          this.vy  = 0.4 + Math.random() * 0.6;
+          this.r   = 4 + Math.random() * 6;
+          this.rx  = 1 + Math.random();
+          this.ry  = 0.4 + Math.random() * 0.5;
+          this.rot = Math.random() * Math.PI * 2;
+          this.dRot= (Math.random() - 0.5) * 0.04;
+          this.color = PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)];
+          this.alpha = 0.5 + Math.random() * 0.45;
+          this.grounded = false;
+          this.groundY  = 0;
+          this.mass     = 0.6 + Math.random() * 0.8;
+        }
 
-        // Update background gradient
-        updateBgUniforms(scrollT);
+        update(gravity, floor) {
+          if (this.grounded) {
+            this.x  += windX * 0.3 * this.mass;
+            this.rot += this.dRot * 0.1;
+            return;
+          }
 
-        // Petal density follows scroll: sparse → dense (0.5) → sparse again
-        const rawDensity = Math.sin(scrollT * Math.PI) * 0.85 + 0.15;
-        petalMat.uniforms.uDensity.value += (rawDensity - petalMat.uniforms.uDensity.value) * 0.03;
+          this.vx += windX / this.mass;
+          this.vy += (gravity + 0.012) / this.mass;
 
-        // Mouse repulsion radius in world units
-        const repelX = mouse.x * 3;
-        const repelY = mouse.y * 3;
+          this.vx += Math.sin(this.rot) * 0.003;
 
-        // Wind oscillation: horizontal gust changes direction slowly
-        const windX  = Math.sin(elapsed * 0.18) * 0.008 + Math.cos(elapsed * 0.31) * 0.004;
+          this.vx *= 0.985;
+          this.vy *= 0.988;
 
-        for (let i = 0; i < PETAL_COUNT; i++) {
-          const ix = i*3, iy = i*3+1, iz = i*3+2;
+          this.x   += this.vx;
+          this.y   += this.vy;
+          this.rot += this.dRot;
 
-          // Air resistance damps horizontal velocity over time
-          petalVelocities[ix] *= 0.992;
-
-          // Sinusoidal sway (tumbling oscillation)
-          const sway = Math.sin(elapsed * 1.1 + petalPhases[i]) * 0.009
-                     + Math.cos(elapsed * 0.6 + petalPhases[i] * 1.7) * 0.004;
-
-          // Mouse repulsion
-          const dx = petalPositions[ix] - repelX;
-          const dy = petalPositions[iy] - repelY;
-          const dist2 = dx*dx + dy*dy;
-          const repelForce = dist2 < 1.2 ? (1.2 - dist2) * 0.014 : 0;
-
-          petalPositions[ix]  += petalVelocities[ix] + sway + windX + dx * repelForce;
-          petalPositions[iy]  += petalVelocities[iy] + dy * repelForce * 0.4;
-
-          // Animate rotation: tumbling as petal falls
-          petalRotations[i] += petalRotSpeeds[i] * (1.0 + Math.abs(petalVelocities[iy]) * 4);
-
-          // Reset when below screen
-          if (petalPositions[iy] < -SPREAD_Y) {
-            resetPetal(i);
+          if (this.y >= floor) {
+            this.y        = floor;
+            this.vy       = 0;
+            this.vx      *= 0.3;
+            this.grounded  = true;
+            this.groundY   = floor;
           }
         }
 
-        posAttr.needsUpdate = true;
-        rotAttr.needsUpdate = true;
+        draw(ctx) {
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.rot);
+          ctx.globalAlpha = this.alpha;
+          ctx.fillStyle   = this.color + '0.85)';
 
-        // Render
-        renderer.autoClear = true;
-        renderer.render(bgScene, bgCamera);
-        renderer.autoClear = false;
-        renderer.render(petalScene, petalCamera);
-        renderer.autoClear = true;
-      };
-      tick();
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.r * this.rx, this.r * this.ry * 2, 0, 0, Math.PI * 2);
+          ctx.fill();
 
-      threeCleanup = () => {
-        cancelAnimationFrame(rafId);
-        window.removeEventListener('resize', onResize);
-        bgGeo.dispose(); bgMat.dispose();
-        petalGeo.dispose(); petalMat.dispose();
-        renderer.dispose();
-      };
+          ctx.fillStyle = 'rgba(255,255,255,0.12)';
+          ctx.beginPath();
+          ctx.ellipse(-this.r * 0.15, -this.r * 0.2, this.r * 0.3, this.r * 0.15, -0.4, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      }
+
+      /* ── Initialize petals ── */
+      const MAX_PETALS = 180;
+      const petals = [];
+
+      for (let i = 0; i < 60; i++) {
+        const p = new Petal(Math.random() * canvas.width, Math.random() * canvas.height);
+        p.vy = Math.random() * 0.5;
+        petals.push(p);
+      }
+
+      /* ── Click → petal vortex ── */
+      canvas.addEventListener('click', e => {
+        const cx = e.clientX, cy = e.clientY;
+        for (let i = 0; i < 18; i++) {
+          const p = new Petal(cx, cy);
+          const ang = (i / 18) * Math.PI * 2;
+          const speed = 1.5 + Math.random() * 2;
+          p.vx = Math.cos(ang) * speed;
+          p.vy = Math.sin(ang) * speed - 2;
+          p.grounded = false;
+          petals.push(p);
+        }
+      });
+
+      /* ── Render loop ── */
+      (function animPetals(ts) {
+        requestAnimationFrame(animPetals);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        windX  += (0.012 - windX) * 0.04;
+        windY  += (0    - windY)  * 0.04;
+
+        const floor   = canvas.height * (0.92 + scrollProgress * 0.06);
+        const gravity = 0.012 + scrollProgress * 0.018;
+
+        const targetCount = Math.floor(60 + scrollProgress * 120);
+        if (petals.length < Math.min(targetCount, MAX_PETALS) && Math.random() < 0.15) {
+          petals.push(new Petal());
+        }
+
+        for (let i = petals.length - 1; i >= 0; i--) {
+          const p = petals[i];
+          if (p.x < -60 || p.x > canvas.width + 60) {
+            petals.splice(i, 1);
+          }
+        }
+
+        petals.forEach(p => {
+          p.update(gravity, floor);
+          p.draw(ctx);
+        });
+      })(0);
     }
 
     /* ══════════════════════════════════════════════════════
@@ -1530,7 +1343,7 @@
     ══════════════════════════════════════════════════════ */
     const heroTitle = document.querySelector('.hero__title');
     if (heroTitle) {
-      const text = heroTitle.textContent;
+      const text = heroTitle.textContent.trim();
       heroTitle.innerHTML = '';
       [...text].forEach(ch => {
         if (ch === '\n') { heroTitle.appendChild(document.createElement('br')); return; }
@@ -1540,198 +1353,134 @@
         span.textContent = ch === ' ' ? '\u00A0' : ch;
         heroTitle.appendChild(span);
       });
-      heroTitle.setAttribute('aria-label', text.replace('\n', ' '));
+      heroTitle.setAttribute('aria-label', text.replace(/\n/g, ' '));
 
-      const heroTl = gsap.timeline({ defaults: { ease: 'power4.out' } });
-      heroTl
-        .to('.hero__label',       { autoAlpha: 1, duration: .8 })
-        .to('.hero__title .char', { y: 0, duration: 1.2, stagger: 0.04 }, '-=0.5')
-        .to('.hero__sub',         { autoAlpha: 1, duration: .8 }, '-=0.4')
-        .to('.hero__jp-subtitle', { autoAlpha: 1, duration: .8 }, '-=0.4')
-        .to('.hero__scroll',      { autoAlpha: 1, duration: .8 }, '-=0.3');
+      const tl = gsap.timeline({ defaults: { ease: 'power4.out' } });
+      tl.to('.hero__label',          { autoAlpha: 1, duration: 0.8 })
+        .to('.hero__title .char',    { y: '0%', duration: 1, stagger: 0.04 }, '-=0.4')
+        .to('.hero__sub',            { autoAlpha: 1, duration: 0.8 }, '-=0.4')
+        .to('.hero__jp-subtitle',    { autoAlpha: 1, duration: 0.6 }, '-=0.3')
+        .to('.hero__scroll',         { autoAlpha: 1, duration: 0.5 }, '-=0.2');
     }
 
     /* ══════════════════════════════════════════════════════
-       GSAP — SCROLL REVEALS (petal-fall themed, scrub-linked)
+       GSAP — SECTION REVEALS
     ══════════════════════════════════════════════════════ */
-
-    // Section label: slide in from left
     document.querySelectorAll('.photo-section').forEach(section => {
-      const phase   = section.querySelector('.section-phase');
-      const title   = section.querySelector('.section-title');
-      const titleJp = section.querySelector('.section-title-jp');
-      const desc    = section.querySelector('.section-desc');
+      const phase = section.querySelector('.section-phase');
+      const title = section.querySelector('.section-title');
+      const jp    = section.querySelector('.section-title-jp');
+      const desc  = section.querySelector('.section-desc');
+      const cards = section.querySelectorAll('.photo-card');
 
-      if (phase) {
-        gsap.fromTo(phase,
-          { autoAlpha: 0, x: -24 },
-          { autoAlpha: 1, x: 0, duration: .7, ease: 'power3.out',
-            scrollTrigger: { trigger: section, start: 'top 78%', toggleActions: 'play none none none' } }
-        );
-      }
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: section, start: 'top 75%', toggleActions: 'play none none none' },
+        defaults: { ease: 'power3.out' },
+      });
 
-      // Title: clip-path reveal top→bottom (petals fall away revealing text)
-      if (title) {
-        gsap.fromTo(title,
-          { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 },
-          { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1,
-            duration: 1.1, ease: 'cubic-bezier(0.23, 1, 0.32, 1)',
-            scrollTrigger: {
-              trigger: section, start: 'top 72%', end: 'top 38%',
-              scrub: 1.4,
-            }
-          }
-        );
-      }
+      if (phase) tl.to(phase, { autoAlpha: 1, x: 0, duration: 0.6 });
+      if (title) tl.to(title, { autoAlpha: 1, y: 0, duration: 0.8 }, '-=0.3');
+      if (jp)    tl.to(jp,    { autoAlpha: 1, duration: 0.6 }, '-=0.4');
+      if (desc)  tl.to(desc,  { autoAlpha: 1, y: 0, duration: 0.7 }, '-=0.4');
 
-      if (titleJp) {
-        gsap.fromTo(titleJp,
-          { autoAlpha: 0, y: 8 },
-          { autoAlpha: 1, y: 0, duration: .8, ease: 'power2.out',
-            scrollTrigger: { trigger: section, start: 'top 65%', toggleActions: 'play none none none' } }
-        );
-      }
-
-      // Description: fade + rise, scrub-linked
-      if (desc) {
-        gsap.fromTo(desc,
-          { autoAlpha: 0, y: 22 },
-          { autoAlpha: 1, y: 0,
-            scrollTrigger: {
-              trigger: section, start: 'top 68%', end: 'top 30%',
-              scrub: 1.8,
-            }
-          }
-        );
-      }
-    });
-
-    // Hanafubuki section — petal storm: titles bloom into view
-    const hana = document.getElementById('section-03');
-    if (hana) {
-      const hPhase    = hana.querySelector('.hanafubuki__phase');
-      const hTitle    = hana.querySelector('.hanafubuki__title');
-      const hTitleJp  = hana.querySelector('.hanafubuki__title-jp');
-      const hDesc     = hana.querySelector('.hanafubuki__desc');
-
-      if (hPhase)   gsap.fromTo(hPhase,   { autoAlpha: 0 }, { autoAlpha: 1, duration: .7, scrollTrigger: { trigger: hana, start: 'top 78%', toggleActions: 'play none none none' } });
-      if (hTitle)   gsap.fromTo(hTitle,   { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 }, { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1, scrollTrigger: { trigger: hana, start: 'top 72%', end: 'top 30%', scrub: 1.6 } });
-      if (hTitleJp) gsap.fromTo(hTitleJp, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: .8, scrollTrigger: { trigger: hana, start: 'top 62%', toggleActions: 'play none none none' } });
-      if (hDesc)    gsap.fromTo(hDesc,    { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, scrollTrigger: { trigger: hana, start: 'top 64%', end: 'top 26%', scrub: 1.8 } });
-    }
-
-    document.querySelectorAll('.photo-card').forEach((card, i) => {
-      gsap.fromTo(card,
-        { autoAlpha: 0, y: 36 },
-        { autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out',
-          scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none none' },
-          delay: (i % 3) * 0.10,
-        }
-      );
-    });
-
-    // Quote sections: line drops in, then text clips up (like falling blossom)
-    document.querySelectorAll('.quote-section').forEach(q => {
-      const qLine = q.querySelector('.quote-line');
-      const qText = q.querySelector('.quote-text');
-      const qAttr = q.querySelector('.quote-attr');
-
-      if (qLine) gsap.fromTo(qLine, { autoAlpha: 0, scaleY: 0 }, { autoAlpha: 1, scaleY: 1, duration: .8, transformOrigin: 'top', ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 78%', toggleActions: 'play none none none' } });
-      if (qText) gsap.fromTo(qText, { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 }, { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1, scrollTrigger: { trigger: q, start: 'top 70%', end: 'top 30%', scrub: 1.5 } });
-      if (qAttr) gsap.fromTo(qAttr, { autoAlpha: 0 }, { autoAlpha: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 58%', toggleActions: 'play none none none' } });
-    });
-
-    // Outro: symbol scales in, then title and desc clip-reveal
-    const outro = document.getElementById('section-05');
-    if (outro) {
-      const oSymbol = outro.querySelector('.outro__symbol');
-      const oTitle  = outro.querySelector('.outro__title');
-      const oDesc   = outro.querySelector('.outro__desc');
-
-      if (oSymbol) gsap.fromTo(oSymbol, { autoAlpha: 0, scale: .82 }, { autoAlpha: 1, scale: 1, duration: 1.6, ease: 'power3.out', scrollTrigger: { trigger: outro, start: 'top 72%', toggleActions: 'play none none none' } });
-      if (oTitle)  gsap.fromTo(oTitle,  { clipPath: 'inset(0 0 100% 0)', autoAlpha: 0 }, { clipPath: 'inset(0 0 0% 0)', autoAlpha: 1, scrollTrigger: { trigger: outro, start: 'top 66%', end: 'top 28%', scrub: 1.5 } });
-      if (oDesc)   gsap.fromTo(oDesc,   { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, scrollTrigger: { trigger: outro, start: 'top 62%', end: 'top 20%', scrub: 1.8 } });
-    }
-
-    /* ── Parallax on photos ── */
-    document.querySelectorAll('.photo-card img').forEach(img => {
-      gsap.to(img, {
-        scale: 1.12,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: img.closest('.photo-card'),
-          start: 'top bottom',
-          end:   'bottom top',
-          scrub: 1.5,
-        },
+      cards.forEach((card, ci) => {
+        tl.to(card, { autoAlpha: 1, y: 0, duration: 0.8, ease: 'power2.out' }, ci === 0 ? '-=0.3' : '-=0.5');
       });
     });
 
-    /* ══════════════════════════════════════════════════════
-       HORIZONTAL SCROLL — LE STAGIONI DEL SAKURA
-    ══════════════════════════════════════════════════════ */
-    const hSection = document.getElementById('h-scroll-sakura');
-    const hTrack   = document.getElementById('h-scroll-track');
-    const hPips    = document.querySelectorAll('#h-scroll-sakura .h-scroll__pip');
+    /* Hanafubuki section */
+    const hanafubuki = document.querySelector('.hanafubuki-section');
+    if (hanafubuki) {
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: hanafubuki, start: 'top 70%' },
+        defaults: { ease: 'power3.out' },
+      });
+      tl.to('.hanafubuki__phase',    { autoAlpha: 1, duration: 0.6 })
+        .to('.hanafubuki__title',    { autoAlpha: 1, y: 0, duration: 1 }, '-=0.3')
+        .to('.hanafubuki__title-jp', { autoAlpha: 1, duration: 0.7 }, '-=0.4')
+        .to('.hanafubuki__desc',     { autoAlpha: 1, duration: 0.8 }, '-=0.4');
+    }
 
-    if (hSection && hTrack) {
-      gsap.to(hTrack, {
-        x: () => -(hTrack.scrollWidth - window.innerWidth),
-        ease: 'none',
-        scrollTrigger: {
-          trigger: hSection,
-          start: 'top top',
-          end: () => `+=${hTrack.scrollWidth - window.innerWidth}`,
-          pin: true,
-          scrub: 1.2,
-          invalidateOnRefresh: true,
-          onUpdate: self => {
-            const idx = Math.round(self.progress * (hPips.length - 1));
-            hPips.forEach((p, i) => p.classList.toggle('active', i === idx));
-          },
-        },
+    /* Quote sections */
+    document.querySelectorAll('.quote-section').forEach(qs => {
+      const tl = gsap.timeline({ scrollTrigger: { trigger: qs, start: 'top 75%' } });
+      tl.to(qs.querySelector('.quote-line'),  { autoAlpha: 1, duration: 0.7 })
+        .to(qs.querySelector('.quote-text'),  { autoAlpha: 1, y: 0, duration: 0.9 }, '-=0.3')
+        .to(qs.querySelector('.quote-attr'),  { autoAlpha: 1, duration: 0.6 }, '-=0.3');
+    });
+
+    /* Outro */
+    const outro = document.querySelector('.outro');
+    if (outro) {
+      const tl = gsap.timeline({ scrollTrigger: { trigger: outro, start: 'top 70%' } });
+      tl.to('.outro__symbol', { autoAlpha: 1, scale: 1, duration: 1.2 })
+        .to('.outro__title',  { autoAlpha: 1, y: 0, duration: 0.9 }, '-=0.5')
+        .to('.outro__desc',   { autoAlpha: 1, duration: 0.8 }, '-=0.4');
+    }
+
+    /* ══════════════════════════════════════════════════════
+       HORIZONTAL SCROLL
+    ══════════════════════════════════════════════════════ */
+    const hScroll = document.getElementById('h-scroll-sakura');
+    const hTrack  = document.getElementById('h-scroll-track');
+    const hPips   = document.querySelectorAll('.h-scroll__pip');
+
+    if (hScroll && hTrack) {
+      requestAnimationFrame(() => {
+        const totalScroll = hTrack.scrollWidth - window.innerWidth;
+        if (totalScroll > 0) {
+          gsap.to(hTrack, {
+            x: -totalScroll,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: hScroll,
+              pin: true,
+              scrub: 1.4,
+              end: () => `+=${totalScroll}`,
+              invalidateOnRefresh: true,
+              onUpdate: self => {
+                const idx = Math.round(self.progress * (hPips.length - 1));
+                hPips.forEach((p, i) => p.classList.toggle('active', i === idx));
+              },
+            },
+          });
+        }
       });
     }
 
     /* ══════════════════════════════════════════════════════
        LIGHTBOX
     ══════════════════════════════════════════════════════ */
-    const lightbox   = document.getElementById('lightbox');
-    const lbImg      = document.getElementById('lightbox-img');
-    const lbPoemText = document.getElementById('lightbox-poem-text');
-    const lbPoemJp   = document.getElementById('lightbox-poem-jp');
-    const lbClose    = document.getElementById('lightbox-close');
+    const lightbox      = document.getElementById('lightbox');
+    const lbImg         = document.getElementById('lightbox-img');
+    const lbPoemText    = document.getElementById('lightbox-poem-text');
+    const lbPoemJp      = document.getElementById('lightbox-poem-jp');
+    const lbClose       = document.getElementById('lightbox-close');
 
-    function openLightbox(card) {
-      const img    = card.querySelector('img');
-      lbImg.src    = img.src;
-      lbImg.alt    = img.alt;
-      lbPoemText.textContent = card.dataset.poem  || '';
-      lbPoemJp.textContent   = card.dataset.poemJp || '';
-      lightbox.classList.add('active');
-      document.body.style.overflow = 'hidden';
+    if (lightbox && lbImg && lbClose) {
+      document.querySelectorAll('.photo-card[data-poem]').forEach(card => {
+        card.addEventListener('click', () => {
+          const img = card.querySelector('img');
+          if (!img) return;
+          lbImg.src = img.src;
+          lbImg.alt = img.alt;
+          if (lbPoemText) lbPoemText.textContent = card.dataset.poem    || '';
+          if (lbPoemJp)   lbPoemJp.textContent   = card.dataset.poemJp || '';
+          lightbox.classList.add('active');
+          document.body.style.overflow = 'hidden';
+        });
+      });
+
+      const closeLightbox = () => {
+        lightbox.classList.remove('active');
+        document.body.style.overflow = '';
+        lbImg.src = '';
+      };
+
+      lbClose.addEventListener('click', closeLightbox);
+      lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
     }
-
-    function closeLightbox() {
-      lightbox.classList.remove('active');
-      document.body.style.overflow = '';
-      setTimeout(() => { lbImg.src = ''; }, 400);
-    }
-
-    document.querySelectorAll('.photo-card').forEach(card => {
-      card.addEventListener('click', () => openLightbox(card));
-      card.setAttribute('tabindex', '0');
-      card.addEventListener('keydown', e => { if (e.key === 'Enter') openLightbox(card); });
-    });
-
-    if (lbClose)  lbClose.addEventListener('click', closeLightbox);
-    if (lightbox) lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
-    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-
-    /* ══════════════════════════════════════════════════════
-       CLEANUP
-    ══════════════════════════════════════════════════════ */
-    window.addEventListener('beforeunload', threeCleanup);
 
   </script>
 </body>

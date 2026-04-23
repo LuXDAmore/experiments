@@ -59,45 +59,27 @@
       cursor: none;
     }
 
-    @media (pointer: coarse) {
-      body { cursor: auto; }
-      #cursor-leaf, #cursor-ring { display: none !important; }
-    }
-
-    /* ── Leaf cursor ── */
-    #cursor-leaf {
+    /* ── Light-Blocker Cursor ── */
+    #cursor-blocker {
       position: fixed;
       top: 0; left: 0;
-      width: 22px; height: 22px;
+      width: 80px; height: 80px;
+      border-radius: 50%;
       pointer-events: none;
       z-index: 9999;
       transform: translate(-50%, -50%);
       will-change: transform;
+      background: radial-gradient(circle, rgba(6,13,4,0.45) 0%, rgba(6,13,4,0.12) 55%, transparent 100%);
+      transition: width .3s ease, height .3s ease;
     }
 
-    #cursor-leaf svg {
-      width: 100%; height: 100%;
-      fill: var(--dapple);
-      opacity: .75;
-      transition: fill .4s ease;
+    body.is-hovering #cursor-blocker {
+      width: 120px; height: 120px;
     }
 
-    #cursor-ring {
-      position: fixed;
-      top: 0; left: 0;
-      width: 44px; height: 44px;
-      border: 1px solid rgba(200, 181, 66, .3);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 9998;
-      transform: translate(-50%, -50%);
-      will-change: transform;
-      transition: width .25s ease, height .25s ease, border-color .35s ease;
-    }
-
-    body.is-hovering #cursor-ring {
-      width: 64px; height: 64px;
-      border-color: var(--accent);
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-blocker { display: none !important; }
     }
 
     /* ── ThreeJS fullscreen canvas ── */
@@ -809,14 +791,8 @@
   <!-- Progress bar -->
   <div id="progress-bar" aria-hidden="true"></div>
 
-  <!-- Custom leaf cursor -->
-  <div id="cursor-leaf" aria-hidden="true">
-    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M12 3C12 3 5 7.5 5 14C5 17.86 8.14 21 12 21C15.86 21 19 17.86 19 14C19 7.5 12 3 12 3Z"/>
-      <path d="M12 3L12 21" stroke="rgba(6,13,4,.5)" stroke-width=".9" fill="none" stroke-linecap="round"/>
-    </svg>
-  </div>
-  <div id="cursor-ring" aria-hidden="true"></div>
+  <!-- Light Blocker Cursor -->
+  <div id="cursor-blocker" aria-hidden="true"></div>
 
   <!-- Navigation -->
   <a href="../experiment-04-mono-no-aware/index.html" class="back-link" aria-label="Back to experiment 04">EXP 04</a>
@@ -832,8 +808,10 @@
     </div>
   </div>
 
-  <!-- ThreeJS background canvas -->
+  <!-- God-Ray shader canvas -->
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
+  <!-- Firefly overlay canvas -->
+  <canvas id="firefly-canvas" aria-hidden="true" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
 
   <!-- ═══════════════════════════════════════════════════════
        MAIN CONTENT
@@ -1141,15 +1119,14 @@
     ══════════════════════════════════════════════════════ */
     let lenis = null;
     const LenisClass = (typeof Lenis !== 'undefined') ? (Lenis.default || Lenis) : null;
-    if (!LenisClass) console.warn('[KOMOREBI] Lenis failed to load; native scroll will be used.');
 
     if (LenisClass) {
       lenis = new LenisClass({
-        duration: 1.5,
+        duration: 1.8,
         easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
         wheelMultiplier: 0.85,
-        touchMultiplier: 1.8,
+        touchMultiplier: 2,
       });
       lenis.on('scroll', ScrollTrigger.update);
       gsap.ticker.add(time => lenis.raf(time * 1000));
@@ -1157,34 +1134,23 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       SCROLL PROGRESS (0 → 1)
+       SCROLL PROGRESS BAR
     ══════════════════════════════════════════════════════ */
     const progressBar = document.getElementById('progress-bar');
-    let scrollT = 0;
-
-    ScrollTrigger.create({
-      trigger: document.body,
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 2,
-      onUpdate: self => {
-        scrollT = self.progress;
-        if (progressBar) progressBar.style.width = `${scrollT * 100}%`;
-        updateDynamicColors(scrollT);
-      },
-    });
+    window.addEventListener('scroll', () => {
+      const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+      if (progressBar) progressBar.style.width = `${pct}%`;
+    }, { passive: true });
 
     /* ══════════════════════════════════════════════════════
        DYNAMIC COLOR PALETTE — updates CSS vars on scroll
-       Keyframes: 0 → morning mist, .25 → golden dawn,
-                  .5 → noon, .75 → amber afternoon, 1 → forest dusk
     ══════════════════════════════════════════════════════ */
     const PALETTE = [
-      { t: 0,    accent: [0.627, 0.694, 0.502] },  // mist blue-green
-      { t: 0.25, accent: [0.831, 0.710, 0.090] },  // golden morning
-      { t: 0.5,  accent: [0.784, 0.706, 0.012] },  // noon gold
-      { t: 0.75, accent: [0.831, 0.533, 0.165] },  // amber afternoon
-      { t: 1,    accent: [0.439, 0.533, 0.267] },  // forest dusk
+      { t: 0,    accent: [0.627, 0.694, 0.502] },
+      { t: 0.25, accent: [0.831, 0.710, 0.090] },
+      { t: 0.5,  accent: [0.784, 0.706, 0.012] },
+      { t: 0.75, accent: [0.831, 0.533, 0.165] },
+      { t: 1,    accent: [0.439, 0.533, 0.267] },
     ];
 
     function lerpPalette(t) {
@@ -1202,32 +1168,40 @@
     function updateDynamicColors(t) {
       const { accent } = lerpPalette(t);
       document.documentElement.style.setProperty('--accent', accent);
-      const leafSvg = document.querySelector('#cursor-leaf svg');
-      if (leafSvg) leafSvg.style.fill = accent;
       if (progressBar) progressBar.style.background =
         `linear-gradient(to right, ${accent}, var(--amber))`;
     }
 
+    let scrollT = 0;
+    ScrollTrigger.create({
+      trigger: document.body,
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 2,
+      onUpdate: self => {
+        scrollT = self.progress;
+        updateDynamicColors(scrollT);
+      },
+    });
+
     /* ══════════════════════════════════════════════════════
-       CUSTOM LEAF CURSOR
+       CURSOR — LIGHT BLOCKER
     ══════════════════════════════════════════════════════ */
-    const cursorLeaf = document.getElementById('cursor-leaf');
-    const cursorRing = document.getElementById('cursor-ring');
+    const cursorBlocker = document.getElementById('cursor-blocker');
+    let cursorSX = -999, cursorSY = -999;
+    let cursorTX = 0,   cursorTY = 0;
 
-    if (cursorLeaf && cursorRing) {
-      let rx = 0, ry = 0, tx = 0, ty = 0, rot = 0;
-
+    if (cursorBlocker && window.matchMedia('(pointer: fine)').matches) {
       window.addEventListener('mousemove', e => {
-        tx = e.clientX; ty = e.clientY;
-        rot += 0.9;
-        gsap.set(cursorLeaf, { x: e.clientX, y: e.clientY, rotation: rot });
+        cursorTX = e.clientX;
+        cursorTY = e.clientY;
       });
 
-      (function animRing() {
-        rx += (tx - rx) * 0.11;
-        ry += (ty - ry) * 0.11;
-        gsap.set(cursorRing, { x: rx, y: ry });
-        requestAnimationFrame(animRing);
+      (function animCursor() {
+        cursorSX += (cursorTX - cursorSX) * 0.10;
+        cursorSY += (cursorTY - cursorSY) * 0.10;
+        gsap.set(cursorBlocker, { x: cursorSX, y: cursorSY });
+        requestAnimationFrame(animCursor);
       })();
 
       document.querySelectorAll('a, button, .photo-card').forEach(el => {
@@ -1237,9 +1211,9 @@
     }
 
     /* ══════════════════════════════════════════════════════
-       THREE.JS — FOREST BACKGROUND SHADER + FLOATING LEAVES
+       GLSL GOD-RAY SHADER (Three.js fullscreen quad)
     ══════════════════════════════════════════════════════ */
-    const canvas = document.getElementById('bg-canvas');
+    const bgCanvas = document.getElementById('bg-canvas');
 
     const webglAvailable = (() => {
       try {
@@ -1251,357 +1225,299 @@
 
     let threeCleanup = () => {};
 
-    if (webglAvailable && canvas) {
+    if (webglAvailable && bgCanvas) {
+      const W = window.innerWidth;
+      const H = window.innerHeight;
 
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const scene    = new THREE.Scene();
+      const camera   = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+      const renderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: false, alpha: false });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-      /* ─────────────────────────────────────────────────────
-         BG SCENE — fullscreen forest gradient with dappled
-         light (ShaderMaterial on an orthographic quad)
-      ───────────────────────────────────────────────────── */
-      const bgScene  = new THREE.Scene();
-      const bgCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-      /*
-       * Color stops: [skyR,skyG,skyB, canopyR,canopyG,canopyB, floorR,floorG,floorB]
-       * scroll 0.00: morning mist — blue-green sky, dark canopy, dark floor
-       * scroll 0.25: golden dawn — warm gold sky, rich green, mossy floor
-       * scroll 0.50: bright noon  — pale gold sky, bright green, earthy floor
-       * scroll 0.75: amber afternoon — orange-amber sky, deep green, warm floor
-       * scroll 1.00: forest dusk  — indigo twilight, dark canopy, deep forest
-       */
-      const BG_STOPS = [
-        [0.53, 0.72, 0.80,  0.13, 0.33, 0.18,  0.04, 0.09, 0.05],
-        [0.87, 0.73, 0.35,  0.20, 0.40, 0.14,  0.05, 0.12, 0.03],
-        [0.96, 0.93, 0.72,  0.25, 0.52, 0.18,  0.08, 0.18, 0.06],
-        [0.87, 0.63, 0.22,  0.15, 0.32, 0.10,  0.06, 0.12, 0.04],
-        [0.17, 0.16, 0.28,  0.07, 0.14, 0.08,  0.02, 0.04, 0.03],
-      ];
-      const BG_T = [0, 0.25, 0.5, 0.75, 1.0];
-
-      const bgVS = `
+      /* ── God-ray vertex shader (passthrough) ── */
+      const vertexShader = /* glsl */`
         varying vec2 vUv;
-        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
       `;
 
-      const bgFS = `
+      /* ── God-ray fragment shader ── */
+      const fragmentShader = /* glsl */`
         precision mediump float;
-        varying vec2 vUv;
-        uniform float uScroll;
-        uniform float uTime;
-        uniform vec3 uSkyA;  uniform vec3 uSkyB;
-        uniform vec3 uMidA;  uniform vec3 uMidB;
-        uniform vec3 uBotA;  uniform vec3 uBotB;
 
-        /* ── Value noise ── */
+        uniform float uTime;
+        uniform vec2  uResolution;
+        uniform vec2  uMouse;
+        uniform float uScrollT;
+        uniform vec2  uPulsePos;
+        uniform float uPulseAge;
+        uniform float uBlockRadius;
+
+        varying vec2 vUv;
+
         float hash(vec2 p) {
-          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+          p = fract(p * vec2(234.34, 435.345));
+          p += dot(p, p + 34.23);
+          return fract(p.x * p.y);
         }
+
         float noise(vec2 p) {
-          vec2 i = floor(p), f = fract(p);
-          vec2 u = f * f * (3.0 - 2.0 * f);
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
           return mix(
-            mix(hash(i),               hash(i + vec2(1,0)), u.x),
-            mix(hash(i + vec2(0,1)),   hash(i + vec2(1,1)), u.x),
-            u.y
-          );
+            mix(hash(i), hash(i + vec2(1,0)), f.x),
+            mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x),
+            f.y);
         }
+
         float fbm(vec2 p) {
           float v = 0.0, a = 0.5;
-          for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.1; a *= 0.5; }
+          for (int i = 0; i < 4; i++) {
+            v += a * noise(p);
+            p = p * 2.1 + vec2(1.7, 9.2);
+            a *= 0.5;
+          }
           return v;
         }
 
-        /* ── Komorebi dappled light spots ── */
-        float komorebi(vec2 uv, float t) {
-          float n = fbm(uv * 3.2 + vec2(t * 0.07, t * 0.05));
-          n += 0.45 * fbm(uv * 6.8 - vec2(t * 0.11, 0.0));
-          return smoothstep(0.60, 0.77, n);
-        }
-
-        /* ── Crepuscular light rays from sun above canopy ── */
-        float lightRay(vec2 uv, float t) {
-          vec2 sunPos = vec2(0.40 + sin(t * 0.25) * 0.07, 1.12);
-          vec2 dir    = uv - sunPos;
-          float ang   = atan(dir.x, dir.y);
-          float rayN  = fbm(vec2(ang * 2.2, t * 0.035));
-          float rays  = smoothstep(0.40, 0.60, 0.5 + 0.5 * sin(ang * 8.0 + rayN * 2.8));
-          float dist  = length(dir);
-          return rays * exp(-dist * 1.9) * (1.0 - uScroll * 0.65);
-        }
-
         void main() {
-          vec3 sky = mix(uSkyA, uSkyB, uScroll);
-          vec3 mid = mix(uMidA, uMidB, uScroll);
-          vec3 bot = mix(uBotA, uBotB, uScroll);
+          vec2 uv = vUv;
+          vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
 
-          /* Three-band gradient: floor → canopy → sky */
-          float floorT = smoothstep(0.0, 0.38, vUv.y);
-          float skyT   = smoothstep(0.52, 0.82, vUv.y);
-          vec3 col = mix(bot, mix(mid, sky, skyT), floorT);
+          /* ── Base forest green gradient ── */
+          float depth = uScrollT;
+          vec3 forestTop  = mix(vec3(0.04, 0.08, 0.03), vec3(0.02, 0.05, 0.01), depth);
+          vec3 forestBot  = mix(vec3(0.06, 0.14, 0.04), vec3(0.03, 0.08, 0.02), depth);
+          vec3 bgColor    = mix(forestTop, forestBot, uv.y);
 
-          /* Komorebi dappled light — most visible in canopy band */
-          float dapple     = komorebi(vUv, uTime);
-          float dappleMask = smoothstep(0.22, 0.62, vUv.y) * smoothstep(0.95, 0.58, vUv.y);
-          col += dapple * dappleMask * mix(sky, vec3(1.0, 0.95, 0.70), 0.55) * 0.32;
+          /* ── God rays from top ── */
+          float raySum = 0.0;
+          float numRays = 8.0 + depth * 4.0;
 
-          /* Crepuscular rays */
-          float ray = lightRay(vUv, uTime);
-          col += ray * mix(sky, vec3(1.0, 0.90, 0.60), 0.55) * 0.22;
+          for (float r = 0.0; r < 12.0; r++) {
+            if (r >= numRays) break;
+            float offset  = r / numRays;
+            float rayX    = 0.15 + offset * 0.7
+                            + sin(uTime * 0.12 + r * 1.37) * 0.04;
+            float width   = 0.015 + sin(r * 2.17 + uTime * 0.05) * 0.01;
 
-          /* Subtle edge vignette */
-          vec2 vig = vUv * 2.0 - 1.0;
-          float v = 1.0 - dot(vig * 0.38, vig * 0.38);
-          col *= 0.88 + 0.12 * v;
+            float shimmer = fbm(vec2(uv.y * 3.0 + r, uTime * 0.15 + r * 0.4));
 
-          gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+            float rayDist = abs(uv.x - rayX) / (width + shimmer * 0.008);
+            float ray = exp(-rayDist * rayDist * 8.0);
+            ray *= (1.0 - uv.y * 0.75);
+            ray *= 0.6 + shimmer * 0.4;
+            raySum += ray * (0.12 + depth * 0.08);
+          }
+
+          /* ── Cursor light block ── */
+          vec2 cursorUV = uMouse;
+          cursorUV.y = 1.0 - cursorUV.y;
+          float blockDist = length((uv - cursorUV) * aspect);
+          float block = 1.0 - smoothstep(0.0, uBlockRadius, blockDist);
+          raySum *= (1.0 - block * 0.8);
+
+          /* ── Click sunbeam pulse ── */
+          if (uPulseAge >= 0.0) {
+            vec2 pulseUV = uPulsePos;
+            pulseUV.y = 1.0 - pulseUV.y;
+            float pd = length((uv - pulseUV) * aspect);
+            float pulse = exp(-pd * 8.0) * exp(-uPulseAge * 2.5);
+            raySum += pulse * 1.8;
+          }
+
+          /* ── Ambient canopy noise (leaf shadows) ── */
+          float canopy = fbm(uv * vec2(6.0, 4.0) + vec2(uTime * 0.02, 0.0));
+          canopy = 0.5 + canopy * 0.5;
+          canopy = pow(canopy, 1.4);
+
+          /* ── Vignette ── */
+          float vignette = 1.0 - smoothstep(0.3, 1.4, length((uv - 0.5) * 1.6));
+
+          /* ── Compose ── */
+          vec3 rayColor  = mix(vec3(0.78, 0.72, 0.22), vec3(0.5, 0.8, 0.2), depth);
+          vec3 finalColor = bgColor * canopy;
+          finalColor += rayColor * raySum;
+          finalColor *= vignette;
+
+          gl_FragColor = vec4(finalColor, 1.0);
         }
       `;
 
-      const bgUniforms = {
-        uScroll: { value: 0.0 },
-        uTime:   { value: 0.0 },
-        uSkyA:   { value: new THREE.Color().setRGB(BG_STOPS[0][0], BG_STOPS[0][1], BG_STOPS[0][2]) },
-        uSkyB:   { value: new THREE.Color().setRGB(BG_STOPS[1][0], BG_STOPS[1][1], BG_STOPS[1][2]) },
-        uMidA:   { value: new THREE.Color().setRGB(BG_STOPS[0][3], BG_STOPS[0][4], BG_STOPS[0][5]) },
-        uMidB:   { value: new THREE.Color().setRGB(BG_STOPS[1][3], BG_STOPS[1][4], BG_STOPS[1][5]) },
-        uBotA:   { value: new THREE.Color().setRGB(BG_STOPS[0][6], BG_STOPS[0][7], BG_STOPS[0][8]) },
-        uBotB:   { value: new THREE.Color().setRGB(BG_STOPS[1][6], BG_STOPS[1][7], BG_STOPS[1][8]) },
-      };
-
-      const bgMat = new THREE.ShaderMaterial({
-        uniforms: bgUniforms,
-        vertexShader: bgVS,
-        fragmentShader: bgFS,
-        depthWrite: false,
+      /* ── Fullscreen quad ── */
+      const geo = new THREE.PlaneGeometry(2, 2);
+      const mat = new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader,
+        uniforms: {
+          uTime:        { value: 0 },
+          uResolution:  { value: new THREE.Vector2(W, H) },
+          uMouse:       { value: new THREE.Vector2(0.5, 0.5) },
+          uScrollT:     { value: 0 },
+          uPulsePos:    { value: new THREE.Vector2(0.5, 0.5) },
+          uPulseAge:    { value: -1.0 },
+          uBlockRadius: { value: 0.12 },
+        },
       });
-      bgScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgMat));
+      scene.add(new THREE.Mesh(geo, mat));
 
-      function updateBgUniforms(t) {
-        let i = 0;
-        for (let k = BG_T.length - 2; k >= 0; k--) {
-          if (t >= BG_T[k]) { i = k; break; }
-        }
-        const a = BG_STOPS[i], b = BG_STOPS[i + 1];
-        const s = (t - BG_T[i]) / (BG_T[i + 1] - BG_T[i]);
-        bgUniforms.uScroll.value = s;
-        bgUniforms.uSkyA.value.setRGB(a[0], a[1], a[2]);
-        bgUniforms.uSkyB.value.setRGB(b[0], b[1], b[2]);
-        bgUniforms.uMidA.value.setRGB(a[3], a[4], a[5]);
-        bgUniforms.uMidB.value.setRGB(b[3], b[4], b[5]);
-        bgUniforms.uBotA.value.setRGB(a[6], a[7], a[8]);
-        bgUniforms.uBotB.value.setRGB(b[6], b[7], b[8]);
-      }
-
-      /* ─────────────────────────────────────────────────────
-         LEAF PARTICLE SCENE (perspective camera)
-         Particle count scales down on lower-end devices
-         (DPR ≤ 1 or limited logical CPU cores) for performance.
-      ───────────────────────────────────────────────────── */
-      const leafScene  = new THREE.Scene();
-      const leafCamera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 20);
-      leafCamera.position.z = 5;
-
-      const isLowEnd = window.devicePixelRatio <= 1 ||
-        (navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 2);
-      const LEAF_COUNT = isLowEnd ? 180 : 350;
-      const leafPositions = new Float32Array(LEAF_COUNT * 3);
-      const leafVelocities= new Float32Array(LEAF_COUNT * 3);
-      const leafPhases    = new Float32Array(LEAF_COUNT);
-      const leafSizes     = new Float32Array(LEAF_COUNT);
-      const leafRotations = new Float32Array(LEAF_COUNT);
-      const leafRotSpeeds = new Float32Array(LEAF_COUNT);
-      const leafColors    = new Float32Array(LEAF_COUNT * 3);
-
-      const SPREAD_X = 6, SPREAD_Y = 7;
-
-      const leafPalette = [
-        new THREE.Color(0.22, 0.55, 0.18),  // fresh green
-        new THREE.Color(0.40, 0.65, 0.15),  // yellow-green
-        new THREE.Color(0.60, 0.72, 0.10),  // golden-green
-        new THREE.Color(0.72, 0.55, 0.08),  // golden
-        new THREE.Color(0.75, 0.36, 0.06),  // amber
-        new THREE.Color(0.60, 0.22, 0.08),  // rust
-      ];
-
-      function resetLeaf(i) {
-        leafPositions[i*3]   = (Math.random() - 0.5) * SPREAD_X * 2;
-        leafPositions[i*3+1] = SPREAD_Y * 0.55 + Math.random() * SPREAD_Y;
-        leafPositions[i*3+2] = (Math.random() - 0.5) * 3.0;
-        leafVelocities[i*3]   = (Math.random() - 0.5) * 0.018;
-        leafVelocities[i*3+1] = -(0.010 + Math.random() * 0.022);
-        leafVelocities[i*3+2] = 0;
-        leafPhases[i]          = Math.random() * Math.PI * 2;
-        leafSizes[i]           = 0.09 + Math.random() * 0.18;
-        leafRotations[i]       = Math.random() * Math.PI * 2;
-        leafRotSpeeds[i]       = (Math.random() - 0.5) * 0.04;
-        const col = leafPalette[Math.floor(Math.random() * leafPalette.length)];
-        leafColors[i*3]   = col.r;
-        leafColors[i*3+1] = col.g;
-        leafColors[i*3+2] = col.b;
-      }
-
-      for (let i = 0; i < LEAF_COUNT; i++) {
-        resetLeaf(i);
-        // Scatter initial Y so they don't all enter at once on load
-        leafPositions[i*3+1] = (Math.random() - 0.5) * SPREAD_Y * 2;
-        leafRotations[i] = Math.random() * Math.PI * 2;
-      }
-
-      const leafGeo = new THREE.BufferGeometry();
-
-      const posAttr  = new THREE.BufferAttribute(leafPositions, 3);
-      const rotAttr  = new THREE.BufferAttribute(leafRotations, 1);
-      const sizeAttr = new THREE.BufferAttribute(leafSizes, 1);
-      const colAttr  = new THREE.BufferAttribute(leafColors, 3);
-
-      posAttr.setUsage(THREE.DynamicDrawUsage);
-      rotAttr.setUsage(THREE.DynamicDrawUsage);
-
-      leafGeo.setAttribute('position',  posAttr);
-      leafGeo.setAttribute('color',     colAttr);
-      leafGeo.setAttribute('aSize',     sizeAttr);
-      leafGeo.setAttribute('aRotation', rotAttr);
-
-      /*
-       * Leaf vertex shader.
-       * THREE.js injects `attribute vec3 color;` automatically when
-       * vertexColors: true — do NOT re-declare it.
-       */
-      const leafVS = `
-        attribute float aSize;
-        attribute float aRotation;
-        varying vec3  vColor;
-        varying float vAlpha;
-        varying float vRot;
-        uniform float uDensity;
-        void main() {
-          vColor = color;
-          vAlpha = uDensity;
-          vRot   = aRotation;
-          vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_Position  = projectionMatrix * mv;
-          gl_PointSize = aSize * (560.0 / -mv.z);
-        }
-      `;
-
-      /*
-       * Leaf fragment shader — draws an elongated oval leaf with a
-       * central vein highlight.
-       */
-      const leafFS = `
-        precision mediump float;
-        varying vec3  vColor;
-        varying float vAlpha;
-        varying float vRot;
-        void main() {
-          vec2 c  = gl_PointCoord - 0.5;
-          float ca = cos(vRot), sa = sin(vRot);
-          /* Rotate point coord by per-leaf angle */
-          vec2 r = vec2(ca * c.x - sa * c.y, sa * c.x + ca * c.y);
-
-          /* Elongated ellipse: narrow on X, tall on Y */
-          float ex = r.x / 0.17;
-          float ey = r.y / 0.44;
-          float body = ex * ex + ey * ey;
-          if (body > 1.0) discard;
-
-          /* Central vein — subtle brightness stripe */
-          float vein  = smoothstep(0.018, 0.0, abs(r.x));
-          float alpha = (1.0 - body) * 0.72 + vein * 0.12;
-
-          gl_FragColor = vec4(vColor * (0.85 + vein * 0.22), alpha * vAlpha * 0.60);
-        }
-      `;
-
-      const leafMat = new THREE.ShaderMaterial({
-        uniforms: { uDensity: { value: 1.0 } },
-        vertexShader: leafVS,
-        fragmentShader: leafFS,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        vertexColors: true,
+      /* ── Mouse / click / scroll uniforms ── */
+      window.addEventListener('mousemove', e => {
+        mat.uniforms.uMouse.value.set(
+          e.clientX / window.innerWidth,
+          e.clientY / window.innerHeight
+        );
       });
 
-      const leafMesh = new THREE.Points(leafGeo, leafMat);
-      leafScene.add(leafMesh);
+      let pulseAge = -1, pulseStart = 0;
+
+      window.addEventListener('click', e => {
+        mat.uniforms.uPulsePos.value.set(
+          e.clientX / window.innerWidth,
+          e.clientY / window.innerHeight
+        );
+        pulseStart = performance.now();
+        pulseAge   = 0;
+      });
+
+      ScrollTrigger.create({
+        trigger: document.body,
+        start: 'top top',
+        end: 'bottom bottom',
+        onUpdate: self => { mat.uniforms.uScrollT.value = self.progress; },
+      });
 
       /* ── Resize ── */
       const onResize = () => {
         const w = window.innerWidth, h = window.innerHeight;
         renderer.setSize(w, h);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        leafCamera.aspect = w / h;
-        leafCamera.updateProjectionMatrix();
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        mat.uniforms.uResolution.value.set(w, h);
       };
       window.addEventListener('resize', onResize);
 
       /* ── Render loop ── */
       let rafId;
-      const clock = new THREE.Clock();
-
       const tick = () => {
         rafId = requestAnimationFrame(tick);
-        const elapsed = clock.getElapsedTime();
 
-        updateBgUniforms(scrollT);
-        bgUniforms.uTime.value = elapsed;
+        mat.uniforms.uTime.value    = performance.now() * 0.001;
 
-        /* Leaf density pulses with scroll — denser mid-scroll */
-        leafMat.uniforms.uDensity.value = 0.25 + Math.sin(scrollT * Math.PI) * 0.75;
-
-        /* Update leaf positions, sway and rotation every frame */
-        const pa = leafGeo.getAttribute('position');
-        const ra = leafGeo.getAttribute('aRotation');
-
-        for (let i = 0; i < LEAF_COUNT; i++) {
-          let px = pa.getX(i);
-          let py = pa.getY(i);
-          let pz = pa.getZ(i);
-
-          const sway = Math.sin(elapsed * 0.55 + leafPhases[i]) * 0.007;
-          px += leafVelocities[i*3]   + sway;
-          py += leafVelocities[i*3+1];
-          pz += leafVelocities[i*3+2];
-          leafRotations[i] += leafRotSpeeds[i] * (1 + Math.abs(sway) * 5);
-
-          if (py < -SPREAD_Y) {
-            resetLeaf(i);
-            px = pa.getX(i);
-            py = pa.getY(i);
-            pz = pa.getZ(i);
-          }
-
-          pa.setXYZ(i, px, py, pz);
-          ra.setX(i, leafRotations[i]);
+        if (pulseAge >= 0) {
+          pulseAge = (performance.now() - pulseStart) * 0.001;
+          mat.uniforms.uPulseAge.value = pulseAge;
+          if (pulseAge > 3) { mat.uniforms.uPulseAge.value = -1; pulseAge = -1; }
         }
 
-        pa.needsUpdate = true;
-        ra.needsUpdate = true;
-
-        /* Render BG (orthographic) then leaves on top (no depth clear) */
-        renderer.autoClear = true;
-        renderer.render(bgScene, bgCamera);
-        renderer.autoClear = false;
-        renderer.render(leafScene, leafCamera);
-        renderer.autoClear = true;
+        renderer.render(scene, camera);
       };
       tick();
 
       threeCleanup = () => {
         cancelAnimationFrame(rafId);
         window.removeEventListener('resize', onResize);
-        bgMat.dispose();
-        leafGeo.dispose();
-        leafMat.dispose();
+        geo.dispose();
+        mat.dispose();
         renderer.dispose();
       };
+    }
 
-    } /* end webglAvailable */
+    /* ══════════════════════════════════════════════════════
+       FIREFLIES — canvas overlay
+    ══════════════════════════════════════════════════════ */
+    const ffCanvas = document.getElementById('firefly-canvas');
+
+    if (ffCanvas) {
+      const fCtx = ffCanvas.getContext('2d');
+
+      function resizeFF() {
+        ffCanvas.width  = window.innerWidth;
+        ffCanvas.height = window.innerHeight;
+      }
+      resizeFF();
+      window.addEventListener('resize', resizeFF, { passive: true });
+
+      let scrollProgress = 0;
+      window.addEventListener('scroll', () => {
+        scrollProgress = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+      }, { passive: true });
+
+      class Firefly {
+        constructor() { this.reset(true); }
+        reset(randomY = false) {
+          this.x   = Math.random() * ffCanvas.width;
+          this.y   = randomY ? Math.random() * ffCanvas.height : ffCanvas.height + 10;
+          this.vy  = -(0.2 + Math.random() * 0.5);
+          this.vx  = (Math.random() - 0.5) * 0.3;
+          this.r   = 1.5 + Math.random() * 2;
+          this.alpha = 0;
+          this.targetAlpha = 0.4 + Math.random() * 0.55;
+          this.phase = Math.random() * Math.PI * 2;
+          this.speed = 0.4 + Math.random() * 0.8;
+        }
+
+        update(curX, curY) {
+          this.phase += 0.015 + this.speed * 0.005;
+
+          this.x  += this.vx + Math.sin(this.phase) * 0.4;
+          this.y  += this.vy;
+
+          const dx = this.x - curX;
+          const dy = this.y - curY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const fleeR = 80;
+          if (dist < fleeR && dist > 0) {
+            const force = (1 - dist / fleeR) * 2;
+            this.x += (dx / dist) * force;
+            this.y += (dy / dist) * force;
+          }
+
+          this.alpha += (this.targetAlpha - this.alpha) * 0.03;
+          const glow = 0.5 + Math.sin(this.phase * 1.3) * 0.5;
+          this.alpha = this.targetAlpha * glow;
+
+          if (this.y < -20 || this.x < -20 || this.x > ffCanvas.width + 20) {
+            this.reset();
+          }
+        }
+
+        draw(ctx) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, this.alpha);
+          const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 4);
+          grad.addColorStop(0,   'rgba(200, 230, 80, 0.9)');
+          grad.addColorStop(0.3, 'rgba(160, 200, 50, 0.5)');
+          grad.addColorStop(1,   'rgba(80,  160, 20, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r * 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      const fireflies = [];
+      for (let i = 0; i < 30; i++) fireflies.push(new Firefly());
+
+      (function animFF() {
+        requestAnimationFrame(animFF);
+        fCtx.clearRect(0, 0, ffCanvas.width, ffCanvas.height);
+
+        const target = Math.floor(30 + scrollProgress * 50);
+        while (fireflies.length < Math.min(target, 80)) fireflies.push(new Firefly());
+
+        fireflies.forEach(f => {
+          f.update(cursorSX, cursorSY);
+          f.draw(fCtx);
+        });
+      })();
+    }
 
     /* ══════════════════════════════════════════════════════
        GSAP — HERO ENTRANCE (letter by letter)
