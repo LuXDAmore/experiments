@@ -975,14 +975,13 @@
     </section>
 
     <!-- ── NAGARE BREATH MEDITATION ── -->
-    <section class="breath-section" id="section-nagare" aria-labelledby="nagare-title"
-      role="button" tabindex="0" aria-label="Sezione meditazione — tocca per iniziare la respirazione guidata">
+    <section class="breath-section" id="section-nagare" aria-labelledby="nagare-title">
       <p class="breath-section__phase" aria-hidden="true">IV — Nagare 流れ</p>
       <div class="breath-circle-wrap" aria-hidden="true">
         <div class="breath-circle" id="breath-circle"></div>
       </div>
       <h2 class="breath-instruction" id="nagare-title" aria-live="polite">Lascia andare</h2>
-      <p class="breath-hint" aria-hidden="true">TOCCA · RESPIRA</p>
+      <button class="breath-hint" id="breath-btn" type="button" aria-label="Avvia la respirazione guidata">TOCCA · RESPIRA</button>
     </section>
 
     <!-- ── SEZIONE IV: LA PACE ── -->
@@ -1435,18 +1434,51 @@
     /* ══════════════════════════════════════════════════════
        GSAP — WORD-SPLIT SECTION TITLES
     ══════════════════════════════════════════════════════ */
-    document.querySelectorAll('.section-title').forEach(el => {
-      const rawHTML = el.innerHTML;
-      const lines = rawHTML.split('<br>');
-      el.innerHTML = lines.map(line => {
-        const words = line.trim().split(/\s+/).filter(Boolean);
-        return words.map(w =>
-          `<span class="word-wrap" style="overflow:hidden;display:inline-block;vertical-align:bottom"><span class="word" style="display:inline-block;transform:translateY(110%)">${w}</span></span>`
-        ).join(' ');
-      }).join('<br>');
+    function splitIntoWords(el) {
+      const nodes = [...el.childNodes];
+      while (el.firstChild) el.removeChild(el.firstChild);
+      nodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'BR') {
+          el.appendChild(document.createElement('br'));
+        } else if (node.nodeType === Node.TEXT_NODE) {
+          node.textContent.trim().split(/\s+/).filter(Boolean).forEach((w, i) => {
+            if (i > 0) el.appendChild(document.createTextNode(' '));
+            const wrap = document.createElement('span');
+            wrap.className = 'word-wrap';
+            wrap.style.cssText = 'overflow:hidden;display:inline-block;vertical-align:bottom';
+            const word = document.createElement('span');
+            word.className = 'word';
+            word.style.cssText = 'display:inline-block;transform:translateY(110%)';
+            word.textContent = w;
+            wrap.appendChild(word);
+            el.appendChild(wrap);
+          });
+        }
+      });
       el.style.opacity = '1';
       el.style.transform = 'none';
-    });
+    }
+
+    function splitQuoteWords(qt) {
+      const text = qt.textContent.trim();
+      while (qt.firstChild) qt.removeChild(qt.firstChild);
+      text.split(/\s+/).filter(Boolean).forEach((w, i) => {
+        if (i > 0) qt.appendChild(document.createTextNode(' '));
+        const wrap = document.createElement('span');
+        wrap.className = 'word-wrap';
+        wrap.style.cssText = 'overflow:hidden;display:inline-block;vertical-align:bottom';
+        const word = document.createElement('span');
+        word.className = 'word';
+        word.style.cssText = 'display:inline-block;transform:translateY(110%)';
+        word.textContent = w;
+        wrap.appendChild(word);
+        qt.appendChild(wrap);
+      });
+      qt.style.opacity = '1';
+      qt.style.transform = 'none';
+    }
+
+    document.querySelectorAll('.section-title').forEach(splitIntoWords);
 
     /* ══════════════════════════════════════════════════════
        GSAP — SCROLL REVEALS
@@ -1482,12 +1514,7 @@
       const qa = q.querySelector('.quote-attr');
       if (ql) gsap.to(ql, { autoAlpha: 1, duration: .8, scrollTrigger: { trigger: q, start: 'top 75%', toggleActions: 'play none none none' } });
       if (qt) {
-        const words = qt.textContent.trim().split(/\s+/);
-        qt.innerHTML = words.map(w =>
-          `<span class="word-wrap" style="overflow:hidden;display:inline-block;vertical-align:bottom"><span class="word" style="display:inline-block;transform:translateY(110%)">${w}</span></span>`
-        ).join(' ');
-        qt.style.opacity = '1';
-        qt.style.transform = 'none';
+        splitQuoteWords(qt);
         gsap.to(qt.querySelectorAll('.word'), { y: 0, duration: .9, ease: 'power3.out', stagger: 0.04, scrollTrigger: { trigger: q, start: 'top 70%', toggleActions: 'play none none none' }, delay: .2 });
       }
       if (qa) gsap.to(qa, { autoAlpha: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
