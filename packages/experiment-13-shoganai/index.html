@@ -457,7 +457,6 @@
       position: relative;
       overflow: hidden;
       padding: 80px clamp(24px, 8vw, 120px);
-      cursor: pointer;
       user-select: none;
     }
 
@@ -544,6 +543,15 @@
       margin-top: 28px;
       opacity: 0;
       transition: color .4s ease;
+      background: none;
+      border: none;
+      padding: 8px 0;
+      cursor: pointer;
+    }
+
+    .breath-hint:focus-visible {
+      outline: 1px solid rgba(145,184,168,.4);
+      outline-offset: 6px;
     }
 
     .breath-section.is-breathing .breath-hint {
@@ -551,7 +559,11 @@
     }
 
     @media (pointer: coarse) {
-      .breath-hint { display: none; }
+      .breath-hint {
+        font-size: 11px;
+        color: rgba(224,236,230,.3);
+        padding: 14px 24px;
+      }
     }
 
     /* ── HORIZONTAL SCROLL ── */
@@ -1524,7 +1536,8 @@
     const breathSection = document.getElementById('section-nagare');
     const breathCircle  = document.getElementById('breath-circle');
     const breathInstr   = document.getElementById('nagare-title');
-    const breathHint    = breathSection?.querySelector('.breath-hint');
+    const breathBtn     = document.getElementById('breath-btn');
+    const breathHint    = breathBtn;
     const breathPhase   = breathSection?.querySelector('.breath-section__phase');
 
     if (breathSection) {
@@ -1554,6 +1567,7 @@
       async function runBreath() {
         isBreathing = true;
         breathSection.classList.add('is-breathing');
+        if (breathBtn) breathBtn.setAttribute('aria-label', 'Interrompi la respirazione guidata');
         for (const step of STEPS) {
           if (!isBreathing) break;
           if (breathInstr) breathInstr.textContent = step.text;
@@ -1569,12 +1583,19 @@
         breathSection.classList.remove('is-breathing');
         gsap.to(breathCircle, { scale: 1, duration: .6, ease: 'power2.out' });
         if (breathInstr) breathInstr.textContent = 'Lascia andare';
+        if (breathBtn) breathBtn.setAttribute('aria-label', 'Avvia la respirazione guidata');
       }
 
-      breathSection.addEventListener('click', () => { if (isBreathing) stopBreath(); else runBreath(); });
-      breathSection.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (isBreathing) stopBreath(); else runBreath(); }
-      });
+      if (breathBtn) {
+        breathBtn.addEventListener('click', () => { if (isBreathing) stopBreath(); else runBreath(); });
+      }
+      /* Also allow clicking the circle area for ease-of-use */
+      if (breathSection) {
+        breathSection.addEventListener('click', e => {
+          if (e.target === breathBtn || breathBtn?.contains(e.target)) return;
+          if (isBreathing) stopBreath(); else runBreath();
+        });
+      }
     }
 
     /* Outro reveals */
