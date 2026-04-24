@@ -1,0 +1,3112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="儚い Hakanai — An immersive photography experience exploring the ephemeral beauty of sakura, mono no aware, and the journey of personal rebirth." />
+  <title>儚い Hakanai — Sakura · Mono no Aware</title>
+
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Fonts: Shippori Mincho for Japanese aesthetic + Cormorant for elegant latin -->
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       CSS CUSTOM PROPERTIES — Sakura Color Palette
+       Based on traditional Japanese color names:
+       - sakura-iro (桜色) — soft cherry pink
+       - usuzakura (薄桜) — pale cherry
+       - haizakura (灰桜) — ashen cherry  
+       - koubai (紅梅) — dark plum
+       - sumi (墨) — ink black
+       ============================================================ */
+    :root {
+      /* === Primary sakura palette === */
+      --sakura-iro: #F2B8C6;       /* Soft cherry pink */
+      --usuzakura: #FEEEED;        /* Palest cherry — backgrounds */
+      --haizakura: #D4A5A5;        /* Ashen cherry — muted pink */
+      --koubai: #E45E82;           /* Plum accent — vibrant */
+      --momo: #F596AA;             /* Peach blossom */
+      --fuji: #8B5CF6;             /* Wisteria purple — accent */
+      --wakakusa: #7BA23F;         /* Young grass green — renewal */
+      --sora: #58B2DC;             /* Sky blue */
+
+      /* === Dark tones === */
+      --sumi: #1A1118;             /* Ink black with warm undertone */
+      --keshizumi: #2D2028;        /* Extinguished charcoal */
+      --bark: #3D2B2B;             /* Cherry tree bark */
+
+      /* === Neutrals === */
+      --washi: #FAF5F0;            /* Japanese paper white */
+      --kinari: #F2E8DC;           /* Unbleached silk */
+
+      /* === Typography === */
+      --font-display: 'Cormorant Garamond', serif;
+      --font-jp: 'Shippori Mincho', serif;
+      --font-body: 'Noto Sans JP', sans-serif;
+
+      /* === Spacing scale === */
+      --space-xs: 0.5rem;
+      --space-sm: 1rem;
+      --space-md: 2rem;
+      --space-lg: 4rem;
+      --space-xl: 8rem;
+      --space-2xl: 12rem;
+
+      /* === Transitions === */
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* ============================================================
+       RESET & BASE
+       ============================================================ */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      /* Lenis will handle smooth scrolling */
+      scroll-behavior: auto;
+      /* overflow-x: clip prevents horizontal page scroll WITHOUT creating
+         a scroll container (unlike overflow: hidden, which breaks
+         position: sticky and GSAP ScrollTrigger pinning in some cases) */
+      overflow-x: clip;
+    }
+
+    /* Respect reduced motion preference */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--sumi);
+      color: var(--washi);
+      overflow-x: clip;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Screen-reader only helper */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    /* ============================================================
+       CUSTOM CURSOR — subtle sakura-colored dot
+       ============================================================ */
+    .cursor-dot {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 12px;
+      height: 12px;
+      background: var(--sakura-iro);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      mix-blend-mode: difference;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .cursor-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--sakura-iro);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      mix-blend-mode: difference;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.3s ease, width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo);
+    }
+
+    /* Hide custom cursor on touch devices */
+    @media (hover: none) {
+      .cursor-dot, .cursor-ring { display: none; }
+    }
+
+    /* ============================================================
+       THREE.JS CANVAS — Fixed background layer
+       ============================================================ */
+    #petals-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ============================================================
+       LOADING SCREEN
+       ============================================================ */
+    /* ============================================================
+       NAVIGATION — Minimal vertical dots
+       ============================================================ */
+    .nav-dots {
+      position: fixed;
+      right: var(--space-md);
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      opacity: 0;
+    }
+
+    .nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1px solid rgba(242, 184, 198, 0.4);
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.4s var(--ease-out-expo);
+      position: relative;
+    }
+
+    .nav-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: var(--font-body);
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+      color: var(--haizakura);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .nav-dot:hover::after {
+      opacity: 1;
+    }
+
+    .nav-dot.active {
+      background: var(--sakura-iro);
+      border-color: var(--sakura-iro);
+      transform: scale(1.4);
+    }
+
+    @media (max-width: 768px) {
+      .nav-dots { right: var(--space-xs); }
+      .nav-dot::after { display: none; }
+    }
+
+    /* ============================================================
+       CONTENT WRAPPER — sits above the Three.js canvas
+       ============================================================ */
+    .content {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ============================================================
+       SECTION: HERO — 儚い Hakanai
+       Full-viewport intro with large typography
+       ============================================================ */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-lg);
+      overflow: hidden;
+    }
+
+    .hero__kanji {
+      font-family: var(--font-jp);
+      font-size: clamp(5rem, 18vw, 14rem);
+      font-weight: 700;
+      line-height: 1;
+      color: var(--sakura-iro);
+      opacity: 0;
+      /* Subtle text-shadow glow */
+      text-shadow: 0 0 80px rgba(242, 184, 198, 0.3);
+    }
+
+    .hero__romaji {
+      font-family: var(--font-display);
+      font-size: clamp(1.25rem, 3vw, 2rem);
+      font-weight: 300;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: var(--haizakura);
+      margin-top: var(--space-sm);
+      opacity: 0;
+    }
+
+    .hero__tagline {
+      font-family: var(--font-display);
+      font-size: clamp(0.875rem, 1.5vw, 1.125rem);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(250, 245, 240, 0.5);
+      margin-top: var(--space-lg);
+      max-width: 40ch;
+      line-height: 1.8;
+      opacity: 0;
+    }
+
+    .hero__scroll-hint {
+      position: absolute;
+      bottom: var(--space-lg);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-xs);
+      opacity: 0;
+      /* reset button styles */
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: var(--space-sm);
+    }
+
+    .hero__scroll-hint span {
+      font-family: var(--font-body);
+      font-size: 0.625rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--haizakura);
+      transition: color 0.3s ease;
+    }
+
+    .hero__scroll-hint:hover span {
+      color: var(--sakura-iro);
+    }
+
+    /* ============================================================
+       SCRUB WORDS — individual word spans for scroll-driven reveal
+       ============================================================ */
+    .scrub-word {
+      display: inline;
+    }
+
+    .hero__scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--sakura-iro), transparent);
+      animation: scrollPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+      50% { opacity: 1; transform: scaleY(1); }
+    }
+
+    /* ============================================================
+       SECTION: PHILOSOPHY — Mono no Aware intro
+       ============================================================ */
+    .philosophy {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-xl) var(--space-lg);
+    }
+
+    .philosophy__inner {
+      max-width: 800px;
+      text-align: center;
+    }
+
+    .philosophy__jp {
+      font-family: var(--font-jp);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 600;
+      color: var(--sakura-iro);
+      margin-bottom: var(--space-sm);
+      opacity: 0;
+    }
+
+    .philosophy__term {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      font-weight: 300;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--haizakura);
+      margin-bottom: var(--space-lg);
+      opacity: 0;
+    }
+
+    .philosophy__text {
+      font-family: var(--font-display);
+      font-size: clamp(1.125rem, 2vw, 1.5rem);
+      font-weight: 300;
+      line-height: 2;
+      color: rgba(250, 245, 240, 0.7);
+      opacity: 0;
+    }
+
+    .philosophy__divider {
+      width: 60px;
+      height: 1px;
+      background: var(--sakura-iro);
+      margin: var(--space-lg) auto;
+      opacity: 0;
+    }
+
+    /* ============================================================
+       GALLERY SHARED STYLES
+       ============================================================ */
+    .section-header {
+      text-align: center;
+      padding: var(--space-xl) var(--space-lg) var(--space-lg);
+    }
+
+    .section-header__kanji {
+      font-family: var(--font-jp);
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 700;
+      color: var(--sakura-iro);
+      opacity: 0;
+    }
+
+    .section-header__romaji {
+      font-family: var(--font-display);
+      font-size: clamp(0.75rem, 1.2vw, 0.875rem);
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--haizakura);
+      margin-top: var(--space-xs);
+      opacity: 0;
+    }
+
+    .section-header__meaning {
+      font-family: var(--font-display);
+      font-size: clamp(0.875rem, 1.5vw, 1.125rem);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(250, 245, 240, 0.5);
+      margin-top: var(--space-sm);
+      opacity: 0;
+    }
+
+    /* Photo card shared styles */
+    .photo-card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 4px;
+      opacity: 0;
+      /* Match the gsap.set() initial state to avoid FOUC.
+         gsap.set will override this but CSS sets it first. */
+      transform: translateY(50px) scale(0.97);
+    }
+
+    /* Mankai cards are immediately visible — no entrance animation */
+    .photo-card--no-entrance {
+      opacity: 1 !important;
+      /* No transform override — skewX loop applies inline transform to these cards */
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.9s var(--ease-out-expo);
+      content-visibility: auto;
+    }
+
+    .photo-card:hover img {
+      transform: scale(1.06);
+    }
+
+    /* Bottom gradient — always present, opacity driven by hover */
+    .photo-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to top,
+        rgba(26, 17, 24, 0.55) 0%,
+        rgba(26, 17, 24, 0.1) 40%,
+        transparent 65%
+      );
+      opacity: 0;
+      /* Gradient fades in slowly, fades out faster — mimics eyes adjusting */
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .photo-card:hover::before {
+      opacity: 1;
+    }
+
+    /* Photo number — appears on hover bottom-right */
+    .photo-card__num {
+      position: absolute;
+      bottom: 14px;
+      right: 14px;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      color: rgba(250, 245, 240, 0.7);
+      z-index: 2;
+      opacity: 0;
+      transform: translateY(8px);
+      /* Number slides in 150ms after the gradient starts */
+      transition: opacity 0.5s ease 0.15s, transform 0.5s var(--ease-out-expo) 0.15s;
+      pointer-events: none;
+    }
+
+    .photo-card:hover .photo-card__num {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* On mouse leave: number disappears faster than the gradient */
+    .photo-card:not(:hover) .photo-card__num {
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    /* Light theme photo card overlay */
+    [data-theme="light"] .photo-card::before {
+      background: linear-gradient(
+        to top,
+        rgba(45, 27, 46, 0.35) 0%,
+        transparent 60%
+      );
+    }
+    [data-theme="light"] .photo-card__num {
+      color: rgba(250, 245, 240, 0.85);
+    }
+
+    /* ============================================================
+       SECTION: TSUBOMI — The Bud (蕾)
+       Masonry-ish grid — anticipation, potential
+       ============================================================ */
+    .tsubomi {
+      padding: 0 var(--space-md) var(--space-xl);
+    }
+
+    .tsubomi__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-sm);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Varying heights for organic feel */
+    .tsubomi__grid .photo-card:nth-child(odd) {
+      aspect-ratio: 3 / 4;
+    }
+
+    .tsubomi__grid .photo-card:nth-child(even) {
+      aspect-ratio: 4 / 5;
+    }
+
+    .tsubomi__grid .photo-card:nth-child(3n+1) {
+      grid-row: span 1;
+    }
+
+    @media (max-width: 768px) {
+      .tsubomi__grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .tsubomi__grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================================
+       INTERLUDE — Large text quote between sections
+       ============================================================ */
+    .interlude {
+      min-height: 80vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-xl) var(--space-lg);
+      text-align: center;
+    }
+
+    .interlude__text {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 4vw, 3rem);
+      font-weight: 300;
+      line-height: 1.6;
+      color: var(--washi);
+      max-width: 20ch;
+      opacity: 0;
+    }
+
+    .interlude__text em {
+      font-style: italic;
+      color: var(--sakura-iro);
+    }
+
+    /* ============================================================
+       SECTION: MANKAI — Full Bloom (満開)
+       Horizontal scrolling gallery
+       ============================================================ */
+    .mankai {
+      position: relative;
+      /* Prevent the track's width from escaping the section bounds.
+         The track itself is far wider than the viewport (15 cards),
+         but GSAP animates its translateX, so we need to clip here. */
+      overflow: hidden;
+    }
+
+    /* Mankai wrapper — GSAP pins .mankai section to full viewport.
+       The wrapper is the visible "window" through which the track slides. */
+    .mankai__track-wrapper {
+      display: flex;
+      align-items: center;
+      min-height: 100vh; /* matches pinned viewport height */
+      width: 100%;
+      overflow: hidden; /* clips the track's overflow horizontally */
+    }
+
+    .mankai__track {
+      display: flex;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      /* width: max-content ensures the track is naturally as wide as needed
+         rather than being squeezed by its parent — GSAP moves it leftward */
+      width: max-content;
+    }
+
+    .mankai__track .photo-card {
+      flex: 0 0 auto;
+      width: clamp(280px, 30vw, 450px);
+      aspect-ratio: 3 / 4;
+    }
+
+    /* ============================================================
+       SECTION: HANAFUBUKI — Flower Blizzard (花吹雪)
+       Scattered asymmetric layout — chaos and beauty
+       ============================================================ */
+    .hanafubuki {
+      padding: 0 var(--space-md) var(--space-xl);
+    }
+
+    .hanafubuki__grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: minmax(100px, auto);
+      gap: var(--space-sm);
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* Intentionally asymmetric placement */
+    .hanafubuki__grid .photo-card:nth-child(1)  { grid-column: 1 / 5; grid-row: span 3; }
+    .hanafubuki__grid .photo-card:nth-child(2)  { grid-column: 5 / 8; grid-row: span 2; }
+    .hanafubuki__grid .photo-card:nth-child(3)  { grid-column: 8 / 13; grid-row: span 4; }
+    .hanafubuki__grid .photo-card:nth-child(4)  { grid-column: 1 / 4; grid-row: span 2; }
+    .hanafubuki__grid .photo-card:nth-child(5)  { grid-column: 4 / 7; grid-row: span 3; }
+    .hanafubuki__grid .photo-card:nth-child(6)  { grid-column: 7 / 10; grid-row: span 2; }
+    .hanafubuki__grid .photo-card:nth-child(7)  { grid-column: 10 / 13; grid-row: span 3; }
+    .hanafubuki__grid .photo-card:nth-child(8)  { grid-column: 1 / 6; grid-row: span 3; }
+    .hanafubuki__grid .photo-card:nth-child(9)  { grid-column: 6 / 9; grid-row: span 2; }
+    .hanafubuki__grid .photo-card:nth-child(10) { grid-column: 9 / 13; grid-row: span 3; }
+    .hanafubuki__grid .photo-card:nth-child(11) { grid-column: 1 / 5; grid-row: span 2; }
+    .hanafubuki__grid .photo-card:nth-child(12) { grid-column: 5 / 9; grid-row: span 3; }
+
+    @media (max-width: 768px) {
+      .hanafubuki__grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-rows: minmax(150px, auto);
+      }
+      .hanafubuki__grid .photo-card {
+        grid-column: auto !important;
+        grid-row: span 1 !important;
+        aspect-ratio: 4/3;
+      }
+    }
+
+    /* ============================================================
+       SECTION: HANAIKADA — Flower Raft (花筏)
+       Reflective, slower section
+       ============================================================ */
+    .hanaikada {
+      padding: 0 var(--space-md) var(--space-xl);
+    }
+
+    .hanaikada__grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-lg);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .hanaikada__grid .photo-card {
+      aspect-ratio: 4 / 5;
+    }
+
+    /* Every other card offset downward for a floating feel */
+    .hanaikada__grid .photo-card:nth-child(even) {
+      margin-top: var(--space-xl);
+    }
+
+    @media (max-width: 768px) {
+      .hanaikada__grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-md);
+      }
+      .hanaikada__grid .photo-card:nth-child(even) {
+        margin-top: 0;
+      }
+    }
+
+    /* ============================================================
+       SECTION: HAZAKURA — Leaf Cherry / Renewal (葉桜)
+       Wide cinematic images + closing text
+       ============================================================ */
+    .hazakura {
+      padding: 0 var(--space-md);
+    }
+
+    .hazakura__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-sm);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .hazakura__grid .photo-card {
+      aspect-ratio: 16 / 10;
+    }
+
+    /* Hero-size final image */
+    .hazakura__grid .photo-card:last-child {
+      grid-column: 1 / -1;
+      aspect-ratio: 21 / 9;
+    }
+
+    @media (max-width: 768px) {
+      .hazakura__grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    /* ============================================================
+       FOOTER / CLOSING
+       ============================================================ */
+    .closing {
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-xl) var(--space-lg);
+    }
+
+    .closing__kanji {
+      font-family: var(--font-jp);
+      font-size: clamp(3rem, 10vw, 8rem);
+      font-weight: 700;
+      color: var(--sakura-iro);
+      opacity: 0;
+      text-shadow: 0 0 80px rgba(242, 184, 198, 0.2);
+    }
+
+    .closing__text {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      font-weight: 300;
+      font-style: italic;
+      color: rgba(250, 245, 240, 0.5);
+      margin-top: var(--space-lg);
+      max-width: 50ch;
+      line-height: 2;
+      opacity: 0;
+    }
+
+
+    /* ============================================================
+       AMBIENT GRADIENT OVERLAY — shifts hue on scroll
+       ============================================================ */
+    .ambient-gradient {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.15;
+      background: radial-gradient(
+        ellipse at 50% 50%,
+        var(--sakura-iro) 0%,
+        transparent 70%
+      );
+      transition: background 0.5s ease;
+    }
+
+
+    /* ============================================================
+       THEME — Light mode overrides
+       Applied via data-theme="light" on <html>
+       ============================================================ */
+    [data-theme="light"] {
+      /* Backgrounds: warm paper white */
+      --sumi: #FAF5F0;
+      --keshizumi: #F0E8DF;
+      --bark: #C8A882;
+      /* Text: deep ink tones */
+      --washi: #2D1B2E;
+      --kinari: #3D2B3B;
+      /* Accent pinks: more saturated for light bg */
+      --sakura-iro: #C4446E;
+      --haizakura: #7A3A50;
+      --koubai: #A82040;
+      --momo: #D0506A;
+      --fuji: #6040B0;
+    }
+
+    /* Nav dots: visible on light bg */
+    [data-theme="light"] .nav-dot {
+      border-color: rgba(196, 68, 110, 0.5);
+    }
+    [data-theme="light"] .nav-dot.active {
+      background: var(--sakura-iro);
+      border-color: var(--sakura-iro);
+    }
+    [data-theme="light"] .nav-dot::after {
+      color: var(--haizakura);
+    }
+
+    /* Cursor: adapt to light bg */
+    [data-theme="light"] .cursor-dot {
+      background: var(--koubai);
+    }
+    [data-theme="light"] .cursor-ring {
+      border-color: var(--koubai);
+    }
+
+    /* Three.js canvas stays fully opaque — JS picks appropriate colors */
+    /* (light theme colors are handled inside initPetals based on data-theme) */
+
+    /* Ambient gradient: slightly stronger on light bg */
+    [data-theme="light"] .ambient-gradient {
+      opacity: 0.08;
+    }
+
+    /* Grain: reduce on light */
+    [data-theme="light"] .grain {
+      opacity: 0.025;
+    }
+
+    /* Philosophy section text on light */
+    [data-theme="light"] .philosophy__text {
+      color: rgba(45, 27, 46, 0.75);
+    }
+
+    /* Interlude text */
+    [data-theme="light"] .interlude__text {
+      color: var(--washi);
+    }
+
+    /* Hero tagline */
+    [data-theme="light"] .hero__tagline {
+      color: rgba(45, 27, 46, 0.6);
+    }
+
+    /* Section meaning text */
+    [data-theme="light"] .section-header__meaning {
+      color: rgba(45, 27, 46, 0.6);
+    }
+
+    /* Closing text */
+    [data-theme="light"] .closing__text {
+      color: rgba(45, 27, 46, 0.6);
+    }
+    /* Photo card overlay: lighter for light theme */
+    [data-theme="light"] .photo-card::after {
+      background: linear-gradient(to top, rgba(250,245,240,0.3) 0%, transparent 50%);
+    }
+
+    /* Lightbox backdrop */
+    [data-theme="light"] .lightbox {
+      background: rgba(250, 245, 240, 0.97);
+    }
+    [data-theme="light"] .lightbox__close {
+      background: rgba(250, 245, 240, 0.8);
+      border-color: rgba(196, 68, 110, 0.3);
+    }
+    [data-theme="light"] .lightbox__close::before,
+    [data-theme="light"] .lightbox__close::after {
+      background: var(--washi); /* dark ink on light background */
+    }
+    [data-theme="light"] .lightbox__nav svg {
+      stroke: var(--haizakura);
+    }
+    [data-theme="light"] .lightbox__counter {
+      color: var(--haizakusa);
+    }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      position: fixed;
+      top: var(--space-md);
+      left: var(--space-md);
+      z-index: 100;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(242, 184, 198, 0.3);
+      background: rgba(26, 17, 24, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: border-color 0.3s ease, background 0.3s ease, transform 0.3s ease;
+    }
+
+    [data-theme="light"] .theme-toggle {
+      background: rgba(250, 245, 240, 0.8);
+      border-color: rgba(212, 85, 122, 0.3);
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--sakura-iro);
+      transform: scale(1.1);
+    }
+
+    /* Sun/moon SVG icon */
+    .theme-toggle__icon {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: var(--sakura-iro);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      transition: opacity 0.3s ease, transform 0.4s ease;
+    }
+
+    .theme-toggle__moon { display: block; }
+    .theme-toggle__sun  { display: none; }
+
+    [data-theme="light"] .theme-toggle__moon { display: none; }
+    [data-theme="light"] .theme-toggle__sun  { display: block; }
+
+    /* Smooth background/color transitions on theme change */
+    body, .loader, .lightbox, .nav-dot, .cursor-dot, .cursor-ring {
+      transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease;
+    }
+
+    /* ============================================================
+       LENIS CSS — inlined to avoid CDN dependency
+       ============================================================ */
+    html.lenis,
+    html.lenis body {
+      height: auto;
+    }
+    .lenis:not(.lenis-autoToggle).lenis-stopped {
+      overflow: clip;
+    }
+    .lenis [data-lenis-prevent],
+    .lenis [data-lenis-prevent-wheel],
+    .lenis [data-lenis-prevent-touch],
+    .lenis [data-lenis-prevent-vertical],
+    .lenis [data-lenis-prevent-horizontal] {
+      overscroll-behavior: contain;
+    }
+    .lenis.lenis-smooth iframe {
+      pointer-events: none;
+    }
+    .lenis.lenis-autoToggle {
+      transition-property: overflow;
+      transition-duration: 1ms;
+      transition-behavior: allow-discrete;
+    }
+
+    /* ============================================================
+       FILM GRAIN OVERLAY
+       Analog noise texture via SVG feTurbulence — gives the page
+       that physical photography feel. Animates subtly so it breathes.
+       ============================================================ */
+    .grain {
+      position: fixed;
+      inset: -50%;          /* Oversized so it doesn't show edges */
+      width: 200%;
+      height: 200%;
+      z-index: 9990;
+      pointer-events: none;
+      opacity: 0.04;        /* Very subtle — felt more than seen */
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+      animation: grainShift 0.2s steps(1) infinite;
+    }
+
+    /* The grain shifts position every frame to simulate real analog noise */
+    @keyframes grainShift {
+      0%   { transform: translate(0,   0);   }
+      10%  { transform: translate(-3%, -4%); }
+      20%  { transform: translate(-6%,  2%); }
+      30%  { transform: translate( 4%, -6%); }
+      40%  { transform: translate(-2%,  7%); }
+      50%  { transform: translate(-5%, -3%); }
+      60%  { transform: translate( 6%,  4%); }
+      70%  { transform: translate(-4%, -2%); }
+      80%  { transform: translate( 3%,  6%); }
+      90%  { transform: translate(-7%,  1%); }
+      100% { transform: translate( 2%, -5%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .grain { animation: none; }
+    }
+
+    /* ============================================================
+       LIGHTBOX
+       Full-screen overlay for photo viewing.
+       Opens with a GSAP clip-path expand from the clicked photo.
+       ============================================================ */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: rgba(10, 6, 9, 0.97);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      cursor: zoom-out;
+    }
+
+    .lightbox.is-open {
+      pointer-events: all;
+    }
+
+    .lightbox__img-wrap {
+      position: relative;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow: hidden;
+      /* clip-path expanded by GSAP */
+      clip-path: inset(50% 50% 50% 50% round 4px);
+    }
+
+    .lightbox__img {
+      display: block;
+      max-width: 90vw;
+      max-height: 90vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      /* prevent dragging */
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Subtle vignette on lightbox image */
+    .lightbox__img-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(10,6,9,0.4) 100%);
+      pointer-events: none;
+    }
+
+    .lightbox__close {
+      position: fixed;
+      top: var(--space-md);
+      right: var(--space-md);
+      width: 52px;
+      height: 52px;
+      border: 1px solid rgba(242, 184, 198, 0.3);
+      border-radius: 50%;
+      background: rgba(26, 17, 24, 0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      z-index: 9001;
+      transition: border-color 0.25s ease, background 0.25s ease, transform 0.25s ease;
+    }
+
+    .lightbox__close:hover {
+      border-color: var(--sakura-iro);
+      transform: scale(1.08);
+    }
+
+    .lightbox__close::before,
+    .lightbox__close::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 2px; /* thicker — 2px instead of 1px */
+      background: var(--washi); /* full paper-white, high contrast */
+      transition: background 0.2s ease;
+      border-radius: 2px;
+    }
+
+    .lightbox__close::before { transform: rotate(45deg); }
+    .lightbox__close::after  { transform: rotate(-45deg); }
+
+    .lightbox__close:hover::before,
+    .lightbox__close:hover::after {
+      background: var(--sakura-iro);
+    }
+
+    /* Navigation arrows */
+    .lightbox__nav {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      opacity: 0;
+      z-index: 9001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s ease;
+    }
+
+    .lightbox__nav:hover { opacity: 1 !important; }
+    .lightbox__nav--prev { left: var(--space-md); }
+    .lightbox__nav--next { right: var(--space-md); }
+
+    .lightbox__nav svg {
+      width: 24px;
+      height: 24px;
+      stroke: var(--haizakura);
+      fill: none;
+      stroke-width: 1;
+      transition: stroke 0.2s ease;
+    }
+
+    .lightbox__nav:hover svg { stroke: var(--sakura-iro); }
+
+    /* Photo counter */
+    .lightbox__counter {
+      position: fixed;
+      bottom: var(--space-md);
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-body);
+      font-size: 0.6875rem;
+      letter-spacing: 0.3em;
+      color: var(--haizakura);
+      opacity: 0;
+      z-index: 9001;
+    }
+
+    /* ============================================================
+       SPLIT TEXT — char-by-char reveal for headings
+       Each character is wrapped in a span.char by JS,
+       then GSAP staggers them in
+       ============================================================ */
+    .split-text .char {
+      display: inline-block;
+      /* will-change only added during animation, not persistently */
+    }
+
+    /* ============================================================
+       PHOTO CARD — enhanced hover & cursor indicator
+       ============================================================ */
+    .photo-card {
+      cursor: zoom-in;
+    }
+
+    /* Expand cursor ring when hovering photos */
+    body.cursor-on-photo .cursor-ring {
+      width: 80px !important;
+      height: 80px !important;
+      border-color: rgba(242, 184, 198, 0.8);
+    }
+
+    /* ============================================================
+       PETAL BURST — canvas for click effect
+       ============================================================ */
+    .burst-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 9989;
+      pointer-events: none;
+    }
+
+    /* ============================================================
+       SECTION TRANSITIONS — clip-path horizontal wipes
+       ============================================================ */
+    .section-divider {
+      position: relative;
+      height: 1px;
+      margin: 0 var(--space-lg);
+      overflow: hidden;
+    }
+
+    .section-divider::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: var(--line-w, 0%);
+      background: linear-gradient(to right, transparent, var(--sakura-iro), transparent);
+      transition: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Film grain overlay — analog texture -->
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Petal burst canvas — click effect -->
+  <canvas class="burst-canvas" id="burst-canvas" aria-hidden="true"></canvas>
+
+  <!-- ============================================================
+       LIGHTBOX
+       ============================================================ -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer">
+    <div class="lightbox__img-wrap" id="lightbox-img-wrap">
+      <img class="lightbox__img" id="lightbox-img" src="" alt="" />
+    </div>
+    <button class="lightbox__close" id="lightbox-close" aria-label="Close photo"></button>
+    <button class="lightbox__nav lightbox__nav--prev" id="lightbox-prev" aria-label="Previous photo">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="lightbox__nav lightbox__nav--next" id="lightbox-next" aria-label="Next photo">
+      <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <div class="lightbox__counter" id="lightbox-counter"></div>
+  </div>
+
+  <!-- ============================================================
+       LOADING SCREEN
+       ============================================================ -->
+
+
+  <!-- ============================================================
+       CUSTOM CURSOR (desktop only)
+       ============================================================ -->
+  <div class="cursor-dot" aria-hidden="true"></div>
+  <div class="cursor-ring" aria-hidden="true"></div>
+
+  <!-- ============================================================
+       THREE.JS CANVAS — Floating sakura petals
+       ============================================================ -->
+  <canvas id="petals-canvas" aria-hidden="true"></canvas>
+
+  <!-- ============================================================
+       AMBIENT GRADIENT — Color-shifting overlay
+       ============================================================ -->
+  <div class="ambient-gradient" aria-hidden="true"></div>
+
+  <!-- ============================================================
+       NAVIGATION DOTS
+       ============================================================ -->
+  <nav class="nav-dots" aria-label="Section navigation">
+    <button class="nav-dot active" data-section="hero" data-label="儚い" aria-label="Go to hero section"></button>
+    <button class="nav-dot" data-section="philosophy" data-label="物の哀れ" aria-label="Go to philosophy section"></button>
+    <button class="nav-dot" data-section="tsubomi" data-label="蕾 Tsubomi" aria-label="Go to tsubomi section"></button>
+    <button class="nav-dot" data-section="mankai" data-label="満開 Mankai" aria-label="Go to mankai section"></button>
+    <button class="nav-dot" data-section="hanafubuki" data-label="花吹雪 Hanafubuki" aria-label="Go to hanafubuki section"></button>
+    <button class="nav-dot" data-section="hanaikada" data-label="花筏 Hanaikada" aria-label="Go to hanaikada section"></button>
+    <button class="nav-dot" data-section="hazakura" data-label="葉桜 Hazakura" aria-label="Go to hazakura section"></button>
+  </nav>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">
+    <!-- Moon icon (shown in dark mode) -->
+    <svg class="theme-toggle__icon theme-toggle__moon" viewBox="0 0 24 24">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>
+    </svg>
+    <!-- Sun icon (shown in light mode) -->
+    <svg class="theme-toggle__icon theme-toggle__sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+  </button>
+
+  <!-- ============================================================
+       MAIN CONTENT
+       ============================================================ -->
+  <main class="content">
+
+    <!-- ====== HERO ====== -->
+    <section class="hero" id="hero" aria-label="Introduction">
+      <h1 class="sr-only">Hakanai — An immersive sakura photography experience</h1>
+      <div class="hero__kanji" aria-hidden="true">儚い</div>
+      <div class="hero__romaji">Hakanai</div>
+      <p class="hero__tagline">
+        The most precious thing in life is its uncertainty.
+        A journey through the ephemeral beauty of sakura —
+        and the rebirth that follows every fall.
+      </p>
+      <button class="hero__scroll-hint" id="scroll-hint" aria-label="Scroll to content">
+        <span>Scroll</span>
+        <div class="hero__scroll-line"></div>
+      </button>
+    </section>
+
+    <!-- ====== PHILOSOPHY ====== -->
+    <section class="philosophy" id="philosophy" aria-label="Mono no Aware — The pathos of things">
+      <div class="philosophy__inner">
+        <div class="philosophy__jp">物の哀れ</div>
+        <div class="philosophy__term">Mono no Aware</div>
+        <div class="philosophy__divider"></div>
+        <p class="philosophy__text">
+          The bittersweet awareness that beauty is fleeting.
+          Not grief, but a heightened sensitivity to the transient nature of all things
+          — the understanding that impermanence is what makes love, beauty, and life precious at all.
+        </p>
+      </div>
+    </section>
+
+    <!-- ====== TSUBOMI — The Bud ====== -->
+    <section id="tsubomi" aria-label="Tsubomi — The Bud">
+      <header class="section-header">
+        <h2 class="section-header__kanji">蕾</h2>
+        <div class="section-header__romaji">Tsubomi</div>
+        <p class="section-header__meaning">The bud — anticipation, latent potential, the gathering before expression</p>
+      </header>
+      <div class="tsubomi">
+        <div class="tsubomi__grid" id="tsubomi-grid">
+          <!-- 12 placeholder photos — buds, early spring -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== INTERLUDE 1 ====== -->
+    <div class="section-divider" aria-hidden="true"></div>
+    <div class="interlude" aria-hidden="true">
+      <p class="interlude__text">
+        If there were no cherry blossoms, how much more <em>tranquil</em> our hearts would be in spring
+      </p>
+    </div>
+
+    <!-- ====== MANKAI — Full Bloom ====== -->
+    <section id="mankai" aria-label="Mankai — Full Bloom">
+      <header class="section-header">
+        <h2 class="section-header__kanji">満開</h2>
+        <div class="section-header__romaji">Mankai</div>
+        <p class="section-header__meaning">Full bloom — peak beauty, the apex that already contains its own decline</p>
+      </header>
+      <div class="mankai">
+        <div class="mankai__track-wrapper">
+          <div class="mankai__track" id="mankai-track">
+            <!-- 15 placeholder photos — full bloom glory -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== INTERLUDE 2 ====== -->
+    <div class="interlude" aria-hidden="true">
+      <p class="interlude__text">
+        The flower is marvellous because it blooms, and <em>singular</em> because it falls
+      </p>
+    </div>
+
+    <!-- ====== HANAFUBUKI — Flower Blizzard ====== -->
+    <section id="hanafubuki" aria-label="Hanafubuki — Flower Blizzard">
+      <header class="section-header">
+        <h2 class="section-header__kanji">花吹雪</h2>
+        <div class="section-header__romaji">Hanafubuki</div>
+        <p class="section-header__meaning">The flower blizzard — surrender, the beauty of letting go</p>
+      </header>
+      <div class="hanafubuki">
+        <div class="hanafubuki__grid" id="hanafubuki-grid">
+          <!-- 12 placeholder photos — swirling, scattered -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== INTERLUDE 3 ====== -->
+    <div class="interlude" aria-hidden="true">
+      <p class="interlude__text">
+        Under the cherry blossoms, none are <em>utter strangers</em>
+      </p>
+    </div>
+
+    <!-- ====== HANAIKADA — Flower Raft ====== -->
+    <section id="hanaikada" aria-label="Hanaikada — Flower Raft">
+      <header class="section-header">
+        <h2 class="section-header__kanji">花筏</h2>
+        <div class="section-header__romaji">Hanaikada</div>
+        <p class="section-header__meaning">The flower raft — petals floating on water, beauty's quiet afterlife</p>
+      </header>
+      <div class="hanaikada">
+        <div class="hanaikada__grid" id="hanaikada-grid">
+          <!-- 10 placeholder photos — reflective, serene -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== HAZAKURA — Leaf Cherry / Renewal ====== -->
+    <section id="hazakura" aria-label="Hazakura — Renewal">
+      <header class="section-header">
+        <h2 class="section-header__kanji">葉桜</h2>
+        <div class="section-header__romaji">Hazakura</div>
+        <p class="section-header__meaning">Leaf cherry — renewal after loss, the quiet persistence of life</p>
+      </header>
+      <div class="hazakura">
+        <div class="hazakura__grid" id="hazakura-grid">
+          <!-- 10 placeholder photos — green leaves, new life -->
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ====== CLOSING ====== -->
+    <section class="closing" id="closing" aria-label="Closing">
+      <div class="closing__kanji">桜</div>
+      <p class="closing__text">
+        What we feared losing was never ours to keep.
+        And that is precisely what makes it sacred.
+        The cycle continues — from bud to bloom to blizzard to renewal.
+        Every ending is a beginning seen from the other side.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- ============================================================
+       SCRIPTS — CDN Libraries
+       ============================================================ -->
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- GSAP 3.12 + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <style>
+    /* ============================================================
+       MOBILE — Comprehensive responsive fixes
+       ============================================================ */
+    @media (max-width: 768px) {
+
+      /* Hide nav dot labels on mobile */
+      .nav-dot::after { display: none; }
+
+      /* Nav dots smaller and closer to edge */
+      .nav-dots { right: 8px; gap: 10px; }
+      .nav-dot { width: 6px; height: 6px; }
+
+      /* Theme toggle closer to edge */
+      .theme-toggle { left: 12px; top: 12px; }
+
+      /* Hero text sizing */
+      .hero__kanji { font-size: clamp(4rem, 20vw, 7rem); }
+      .hero__tagline { font-size: 0.9rem; max-width: 32ch; }
+
+      /* Sections: reduce padding */
+      .philosophy { padding: var(--space-lg) var(--space-md); }
+      .interlude  { padding: var(--space-lg) var(--space-md); min-height: 60vh; }
+      .section-header { padding: var(--space-lg) var(--space-md) var(--space-md); }
+
+      /* Hanafubuki: 2 cols on mobile (CSS grid override already exists) */
+
+      /* Hanaikada: no offset on mobile */
+      .hanaikada__grid .photo-card:nth-child(even) { margin-top: 0; }
+
+      /* Closing */
+      .closing { padding: var(--space-xl) var(--space-md); }
+
+      /* About */
+      .about { padding: var(--space-xl) var(--space-md); }
+
+      /* Lightbox arrows smaller */
+      .lightbox__nav { width: 36px; height: 36px; }
+      .lightbox__nav--prev { left: 8px; }
+      .lightbox__nav--next { right: 8px; }
+
+      /* Grain less visible on small screens */
+      .grain { opacity: 0.025; }
+    }
+
+    @media (max-width: 480px) {
+      .hero__romaji { font-size: 1rem; letter-spacing: 0.3em; }
+      .philosophy__jp { font-size: 2rem; }
+      .section-header__kanji { font-size: 2rem; }
+      .tsubomi__grid { grid-template-columns: 1fr; }
+      .hanaikada__grid { grid-template-columns: 1fr; }
+    }
+
+
+  </style>
+
+  <!-- Lenis CSS inlined (513 bytes) — avoids extra request -->
+  <style>
+    html.lenis, html.lenis body { height: auto; }
+    .lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+    .lenis [data-lenis-prevent],
+    .lenis [data-lenis-prevent-wheel],
+    .lenis [data-lenis-prevent-touch] { overscroll-behavior: contain; }
+    .lenis.lenis-smooth iframe { pointer-events: none; }
+  </style>
+
+  <script type="module">
+    // ---- Lenis imported directly from ESM build ----
+    // This is the correct way to use Lenis: import the class directly.
+    // No globalThis/window hacks needed — Lenis is in scope via import.
+    import Lenis from 'https://cdn.jsdelivr.net/npm/lenis@1.3.21/dist/lenis.mjs';
+
+    /* ============================================================
+       MAIN APPLICATION
+       Structured in modules for clarity:
+       1. Placeholder image generation
+       2. Three.js petal particle system
+       3. Lenis smooth scroll setup
+       4. GSAP animations (loader, hero, scroll-triggered sections)
+       5. Custom cursor
+       6. Navigation dots
+       7. Ambient gradient color shift
+       ============================================================ */
+
+    // ============================================================
+    // 1. PLACEHOLDER IMAGE GENERATOR
+    //    Creates colored gradient placeholders that match the 
+    //    sakura aesthetic — replace these with your real photos later
+    // ============================================================
+    function generatePlaceholderImages() {
+      // Color palettes per section to match the narrative mood
+      const palettes = {
+        // Tsubomi: muted, dark, anticipatory tones
+        tsubomi: [
+          ['#2D1B2E', '#5C3D5E'], ['#3D2B2B', '#6B4646'],
+          ['#1F2937', '#4B5563'], ['#2D1B2E', '#7C5280'],
+          ['#3D2B2B', '#9B6B6B'], ['#1A1118', '#4A3040'],
+          ['#2B1E2F', '#6E4E72'], ['#3B2323', '#7A5050'],
+          ['#1E1B2E', '#5E5380'], ['#2E2028', '#6D4858'],
+          ['#342030', '#7B5080'], ['#3D2B3B', '#8B6080']
+        ],
+        // Mankai: vibrant pinks, full saturation — peak bloom
+        mankai: [
+          ['#F2B8C6', '#E45E82'], ['#F596AA', '#D94F72'],
+          ['#FEEEED', '#F2B8C6'], ['#E8A0BF', '#D35D8B'],
+          ['#F4C2C2', '#E57898'], ['#FFB7C5', '#FF69B4'],
+          ['#FFC0CB', '#DB7093'], ['#F8B4C8', '#E06090'],
+          ['#FADADD', '#F596AA'], ['#FFB6C1', '#FF1493'],
+          ['#F2B8C6', '#C71585'], ['#FFC0CB', '#E45E82'],
+          ['#FEEEED', '#F596AA'], ['#E8A0BF', '#FF69B4'],
+          ['#F4C2C2', '#DB7093']
+        ],
+        // Hanafubuki: dynamic, mixed — chaos and release
+        hanafubuki: [
+          ['#F2B8C6', '#8B5CF6'], ['#E45E82', '#58B2DC'],
+          ['#F596AA', '#7BA23F'], ['#FEEEED', '#F2B8C6'],
+          ['#D4A5A5', '#E45E82'], ['#8B5CF6', '#F596AA'],
+          ['#58B2DC', '#F2B8C6'], ['#E45E82', '#FFB7C5'],
+          ['#F596AA', '#D94F72'], ['#7BA23F', '#F2B8C6'],
+          ['#FEEEED', '#8B5CF6'], ['#D4A5A5', '#58B2DC']
+        ],
+        // Hanaikada: cool, serene, watery blues and pale pinks
+        hanaikada: [
+          ['#58B2DC', '#F2B8C6'], ['#7ECFDB', '#FEEEED'],
+          ['#4A90A4', '#D4A5A5'], ['#6BACBE', '#F596AA'],
+          ['#3D7EA6', '#E8A0BF'], ['#5BA0B7', '#FFB7C5'],
+          ['#4E95AC', '#FADADD'], ['#6FBACE', '#F2B8C6'],
+          ['#58B2DC', '#FEEEED'], ['#7ECFDB', '#F596AA']
+        ],
+        // Hazakura: greens and fresh tones — renewal
+        hazakura: [
+          ['#7BA23F', '#F2B8C6'], ['#8DB652', '#FEEEED'],
+          ['#5E8C31', '#D4A5A5'], ['#6B9E3A', '#F596AA'],
+          ['#4A7A28', '#E8A0BF'], ['#7BA23F', '#FFB7C5'],
+          ['#8DB652', '#FADADD'], ['#5E8C31', '#F2B8C6'],
+          ['#6B9E3A', '#FEEEED'], ['#4A7A28', '#D4A5A5']
+        ]
+      };
+
+      // Global counter for photo numbering across all grids
+      let photoCounter = 0;
+
+      // Helper: creates a canvas-based gradient placeholder
+      // and returns its data URL as an image src
+      function createGradientImage(colors, width = 600, height = 800) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Diagonal gradient for more visual interest
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, colors[0]);
+        gradient.addColorStop(1, colors[1]);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        // Add some subtle noise texture for realism
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const noise = (Math.random() - 0.5) * 20;
+          data[i] += noise;     // R
+          data[i + 1] += noise; // G
+          data[i + 2] += noise; // B
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        return canvas.toDataURL('image/jpeg', 0.7);
+      }
+
+      // Populate each grid with photo cards
+      function populateGrid(gridId, palette, count) {
+        const grid = document.getElementById(gridId);
+        if (!grid) return;
+        for (let i = 0; i < count; i++) {
+          const colors = palette[i % palette.length];
+          const card = document.createElement('div');
+          card.className = 'photo-card';
+          const img = document.createElement('img');
+          img.src = createGradientImage(colors);
+          img.alt = `Sakura photograph ${i + 1}`;
+          img.loading = 'lazy'; // Native lazy loading for Web Vitals
+          img.decoding = 'async';
+          card.appendChild(img);
+          // Photo number overlay — visible on hover
+          const num = document.createElement('span');
+          num.className = 'photo-card__num';
+          photoCounter++;
+          num.textContent = String(photoCounter).padStart(2, '0');
+          card.appendChild(num);
+          grid.appendChild(card);
+        }
+      }
+
+      // Populate the horizontal track (mankai) differently
+      function populateTrack(trackId, palette, count) {
+        const track = document.getElementById(trackId);
+        if (!track) return;
+        for (let i = 0; i < count; i++) {
+          const colors = palette[i % palette.length];
+          const card = document.createElement('div');
+          // mankai cards get NO entrance animation — they are in a pinned
+          // horizontal scroll container and should be immediately visible
+          card.className = 'photo-card photo-card--no-entrance';
+          const img = document.createElement('img');
+          img.src = createGradientImage(colors, 450, 600);
+          img.alt = `Sakura photograph ${i + 1}`;
+          img.loading = 'lazy';
+          img.decoding = 'async';
+          card.appendChild(img);
+          track.appendChild(card);
+        }
+      }
+
+      // Generate images for each section
+      populateGrid('tsubomi-grid', palettes.tsubomi, 12);
+      populateTrack('mankai-track', palettes.mankai, 15);
+      populateGrid('hanafubuki-grid', palettes.hanafubuki, 12);
+      populateGrid('hanaikada-grid', palettes.hanaikada, 10);
+      populateGrid('hazakura-grid', palettes.hazakura, 10);
+    }
+
+    // ============================================================
+    // 2. THREE.JS — SAKURA PETAL PARTICLE SYSTEM
+    //    Creates floating, rotating petals shaped like real sakura petals
+    //    using THREE.Shape with bezier curves.
+    //    They react to mouse movement and scroll position.
+    // ============================================================
+    function initPetals() {
+      const canvas = document.getElementById('petals-canvas');
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: true // Transparent background so content shows through
+      });
+      // Use visualViewport for correct sizing under pinch-zoom on mobile
+      const initialVV = window.visualViewport;
+      const initialW = initialVV ? initialVV.width  : window.innerWidth;
+      const initialH = initialVV ? initialVV.height : window.innerHeight;
+      renderer.setSize(initialW, initialH);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2x
+
+      const scene = new THREE.Scene();
+
+      // Perspective camera — positioned far back so petals fill the screen
+      const camera = new THREE.PerspectiveCamera(
+        60,
+        initialW / initialH,
+        0.1,
+        1000
+      );
+      camera.position.z = 50;
+
+      // ============================================================
+      // PETAL GEOMETRY — built with THREE.Shape + bezier curves
+      // A real sakura petal is oval/teardrop with a slight notch at
+      // the tip (the characteristic heart-notch of Somei Yoshino).
+      // We build 5 slightly different shapes for variety.
+      // ============================================================
+
+      // Helper: create one sakura petal Shape
+      // w = width, h = height, notchDepth = how deep the tip notch is
+      function createPetalShape(w, h, notchDepth) {
+        const shape = new THREE.Shape();
+
+        // Start at the bottom tip of the petal
+        shape.moveTo(0, -h * 0.5);
+
+        // Left side — smooth bezier curve up to the widest point
+        shape.bezierCurveTo(
+          -w * 0.6, -h * 0.3,   // control point 1
+          -w * 0.5,  h * 0.1,   // control point 2
+          -w * 0.3,  h * 0.35   // end point (upper left)
+        );
+
+        // Upper left arc to center — the characteristic rounded top
+        shape.bezierCurveTo(
+          -w * 0.2,  h * 0.55,  // control point 1
+          -w * 0.05, h * 0.5,   // control point 2
+          0,         h * 0.5 - notchDepth // the center notch (heart dip)
+        );
+
+        // Upper right arc from center
+        shape.bezierCurveTo(
+           w * 0.05, h * 0.5,   // control point 1
+           w * 0.2,  h * 0.55,  // control point 2
+           w * 0.3,  h * 0.35   // end point (upper right)
+        );
+
+        // Right side — mirror of the left side
+        shape.bezierCurveTo(
+           w * 0.5,  h * 0.1,   // control point 1
+           w * 0.6, -h * 0.3,   // control point 2
+           0,       -h * 0.5    // back to bottom tip
+        );
+
+        return shape;
+      }
+
+      // 5 petal variants — slightly different proportions for variety
+      const petalVariants = [
+        createPetalShape(0.8, 1.1, 0.08),
+        createPetalShape(0.9, 1.0, 0.10),
+        createPetalShape(0.75, 1.2, 0.06),
+        createPetalShape(0.85, 1.05, 0.09),
+        createPetalShape(0.7,  1.15, 0.07),
+      ];
+
+      // Convert each Shape into a BufferGeometry
+      // ShapeGeometry fills the shape as a flat polygon, then we
+      // manipulate the vertices to add subtle concavity — real petals
+      // are slightly cupped, not perfectly flat. The curvature also
+      // catches light differently depending on orientation, giving
+      // them a more organic, translucent feel.
+      const petalGeometries = petalVariants.map(shape => {
+        const geo = new THREE.ShapeGeometry(shape, 12); // 12 = curve segments for smoother edge
+        const positions = geo.attributes.position;
+
+        // Push center vertices forward to create a subtle bowl shape
+        for (let i = 0; i < positions.count; i++) {
+          const x = positions.getX(i);
+          const y = positions.getY(i);
+          // Distance from petal center (0,0) normalized by petal size (~1)
+          const dist = Math.sqrt(x * x + y * y);
+          // Z bulge: max in center, 0 at edges. Creates a gentle cup.
+          const z = Math.max(0, 0.12 * (1 - dist * 1.2));
+          positions.setZ(i, z);
+        }
+        positions.needsUpdate = true;
+        geo.computeVertexNormals();
+        return geo;
+      });
+
+      // Two color palettes: one for dark theme (pale, luminous),
+      // one for light theme (saturated, visible on white background)
+      const petalColorsDark = [
+        new THREE.Color('#FEEEED'), // usuzakura — near-white (most common)
+        new THREE.Color('#F2B8C6'), // sakura-iro — soft pink
+        new THREE.Color('#FADADD'), // very pale pink
+        new THREE.Color('#F596AA'), // momo — medium pink
+        new THREE.Color('#FFB7C5'), // warm light pink
+        new THREE.Color('#FFFFFF'), // pure white
+        new THREE.Color('#F8E0E6'), // barely-there blush
+      ];
+      const petalColorsLight = [
+        new THREE.Color('#E4567E'), // deeper pink, visible on cream
+        new THREE.Color('#D4557A'), // sakura-iro saturated
+        new THREE.Color('#C0294D'), // koubai
+        new THREE.Color('#E0607A'), // momo saturated
+        new THREE.Color('#F596AA'), // medium pink
+        new THREE.Color('#B84266'), // deep rose
+        new THREE.Color('#C8447A'), // medium-deep pink
+      ];
+
+      // Helper to get current palette based on theme
+      function getPetalColors() {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        return isLight ? petalColorsLight : petalColorsDark;
+      }
+
+      // Initial palette
+      let petalColors = getPetalColors();
+
+      // Reduce petal count on mobile for performance
+      const isMobile = window.innerWidth < 768;
+      const PETAL_COUNT = isMobile ? 45 : 100;
+      const petals = [];
+      const petalGroup = new THREE.Group();
+
+      for (let i = 0; i < PETAL_COUNT; i++) {
+        // Pick a random petal geometry variant
+        const geo = petalGeometries[i % petalGeometries.length];
+
+        // Mostly pale colors, rarely deeper pink — like a real sakura
+        const colorWeights = [0, 0, 0, 1, 2, 3, 4, 5, 6]; // index into petalColors, biased toward pale
+        const colorIdx = Math.floor(Math.random() * petalColors.length);
+
+        const material = new THREE.MeshBasicMaterial({
+          color: petalColors[colorIdx],
+          side: THREE.DoubleSide,       // visible from both sides as it tumbles
+          transparent: true,
+          // Varying opacity creates depth — some petals appear closer than they are,
+          // mimicking how real petals at different distances catch the light differently
+          opacity: 0.45 + Math.random() * 0.40,
+        });
+
+        const mesh = new THREE.Mesh(geo, material);
+
+        // Spread petals across the full viewport volume
+        mesh.position.set(
+          (Math.random() - 0.5) * 100,
+          (Math.random() - 0.5) * 80,
+          (Math.random() - 0.5) * 50
+        );
+
+        // Random initial tumble rotation
+        mesh.rotation.set(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2
+        );
+
+        // Scale variance — larger petals for more visual presence
+        const scale = 0.8 + Math.random() * 2.2;
+        mesh.scale.set(scale, scale, scale);
+
+        // Per-petal physics parameters
+        petals.push({
+          mesh,
+          fallSpeed:       0.005 + Math.random() * 0.012, // ~5cm/s real speed, slightly amplified for screen
+          driftX:          (Math.random() - 0.5) * 0.022, // horizontal wind drift
+          rotX:            (Math.random() - 0.5) * 0.014, // tumble X
+          rotY:            (Math.random() - 0.5) * 0.018, // tumble Y (main flutter axis)
+          rotZ:            (Math.random() - 0.5) * 0.010, // slight spin
+          phase:           Math.random() * Math.PI * 2,   // sway phase offset
+          swayAmp:         0.25 + Math.random() * 0.5,    // sway amplitude — a bit wider
+          swayFreq:        0.25 + Math.random() * 0.45,   // sway frequency (slower avg)
+          // Secondary flutter: creates non-uniform tumbling that pauses and resumes
+          flutterPhase:    Math.random() * Math.PI * 2,
+          flutterFreq:     0.6 + Math.random() * 0.8,
+        });
+
+        petalGroup.add(mesh);
+      }
+
+      scene.add(petalGroup);
+
+      // Mouse tracking — petals subtly react to cursor
+      const mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+      document.addEventListener('mousemove', (e) => {
+        mouse.targetX = (e.clientX / window.innerWidth)  *  2 - 1;
+        mouse.targetY = (e.clientY / window.innerHeight) * -2 + 1;
+      });
+
+      // Scroll tracking — deeper scroll = faster fall
+      let scrollProgress = 0;
+      window.addEventListener('scroll', () => {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        scrollProgress = max > 0 ? window.scrollY / max : 0;
+      });
+
+      // Animation loop
+      let time = 0;
+      function animate() {
+        requestAnimationFrame(animate);
+        time += 0.008;
+
+        // Lerp mouse for smooth follow
+        mouse.x += (mouse.targetX - mouse.x) * 0.04;
+        mouse.y += (mouse.targetY - mouse.y) * 0.04;
+
+        // Global wind gust — a slow sine that shifts all petals together.
+        // Creates the feeling of a passing breeze rather than each petal
+        // being independent. Real falling petals are coupled by the air.
+        const gust = Math.sin(time * 0.25) * 0.4 + Math.sin(time * 0.12) * 0.2;
+
+        petals.forEach(p => {
+          const { mesh, fallSpeed, driftX, rotX, rotY, rotZ, phase, swayAmp, swayFreq, flutterPhase, flutterFreq } = p;
+
+          // Gravity — petal falls downward
+          mesh.position.y -= fallSpeed + scrollProgress * 0.04;
+
+          // Sway combines per-petal sine + global gust — coherent but varied
+          mesh.position.x += Math.sin(time * swayFreq + phase) * swayAmp * 0.02 + driftX + gust * 0.015;
+
+          // Subtle mouse push
+          mesh.position.x += mouse.x * 0.015;
+          mesh.position.y += mouse.y * 0.008;
+
+          // Flutter: non-uniform tumble. By multiplying rotation delta by
+          // a sine, we create moments where the petal barely rotates,
+          // then tumbles faster — the way real petals pause mid-flutter
+          // as they catch and release the air.
+          const flutterIntensity = 0.5 + 0.5 * Math.sin(time * flutterFreq + flutterPhase);
+          mesh.rotation.x += rotX * flutterIntensity;
+          mesh.rotation.y += rotY * flutterIntensity + Math.sin(time * swayFreq + phase) * 0.008;
+          mesh.rotation.z += rotZ * flutterIntensity;
+
+          // Recycle petal when it exits bottom
+          if (mesh.position.y < -45) {
+            mesh.position.y  = 46 + Math.random() * 8;
+            mesh.position.x  = (Math.random() - 0.5) * 100;
+            mesh.position.z  = (Math.random() - 0.5) * 50;
+          }
+
+          // Recycle if drifted too far sideways
+          if (Math.abs(mesh.position.x) > 62) {
+            mesh.position.x = -Math.sign(mesh.position.x) * 50;
+          }
+        });
+
+        // Camera breathes gently with mouse — subtle parallax
+        camera.position.x += (mouse.x * 2.5 - camera.position.x) * 0.025;
+        camera.position.y += (mouse.y * 1.5 - camera.position.y) * 0.025;
+        camera.lookAt(0, 0, 0);
+
+        renderer.render(scene, camera);
+      }
+
+      // Watch for theme changes and update petal materials accordingly
+      // This lets petals transition smoothly when user toggles theme
+      const themeObserver = new MutationObserver(() => {
+        petalColors = getPetalColors();
+        petals.forEach((p, i) => {
+          const newColor = petalColors[Math.floor(Math.random() * petalColors.length)];
+          p.mesh.material.color = newColor;
+          p.mesh.material.needsUpdate = true;
+        });
+      });
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+      });
+
+      animate();
+
+      // Resize handler — accounts for pinch-zoom on mobile.
+      // visualViewport reflects the actual visible area after the
+      // user pinches, while window.innerWidth/Height stays at the
+      // layout viewport size. Using visualViewport keeps the canvas
+      // proportional to what the user sees.
+      function handleResize() {
+        const vv = window.visualViewport;
+        const w = vv ? vv.width  : window.innerWidth;
+        const h = vv ? vv.height : window.innerHeight;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h, false); // false = don't set canvas style size
+        // Match the canvas CSS size to the visual viewport explicitly
+        canvas.style.width  = w + 'px';
+        canvas.style.height = h + 'px';
+      }
+      window.addEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleResize);
+        window.visualViewport.addEventListener('scroll', handleResize);
+      }
+      handleResize();
+    }
+
+    // ============================================================
+    // 3. LENIS SMOOTH SCROLL
+    //    Lenis is inlined above so it's always available.
+    //    Pattern from the official README: connect to GSAP ticker.
+    // ============================================================
+    let lenis;
+
+    function initLenis() {
+      lenis = new Lenis({
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: 'vertical',
+        gestureOrientation: 'vertical',
+        smoothWheel: true,
+        wheelMultiplier: 1,
+        touchMultiplier: 2,
+      });
+
+      // Official GSAP + Lenis sync pattern from README
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add((time) => { lenis.raf(time * 1000); });
+      gsap.ticker.lagSmoothing(0);
+    }
+
+    // ============================================================
+    // 4. GSAP ANIMATIONS
+    //    All scroll-triggered and entrance animations
+    // ============================================================
+    function initAnimations() {
+      // Register ScrollTrigger plugin
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Check for reduced motion preference
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // If user prefers reduced motion, skip most animations
+      // but still show content (no opacity: 0 stuck)
+      if (prefersReducedMotion) {
+        // Make everything visible immediately — no animations at all
+        gsap.set([
+          '.hero__kanji', '.hero__romaji', '.hero__tagline', '.hero__scroll-hint',
+          '.philosophy__jp', '.philosophy__term', '.philosophy__divider', '.philosophy__text',
+          '.section-header__kanji', '.section-header__romaji', '.section-header__meaning',
+          '.interlude__text', '.photo-card',
+          '.closing__kanji', '.closing__text',
+          '.nav-dots', '.theme-toggle'
+        ], { opacity: 1, y: 0, x: 0, scale: 1 });
+        // Also make all potential scrub-word spans visible
+        document.querySelectorAll('.scrub-word').forEach(w => w.style.opacity = '1');
+        return;
+      }
+
+
+      // Hero entrance runs immediately
+      heroEntrance();
+
+      // ---- HERO ENTRANCE ----
+      function heroEntrance() {
+        const tl = gsap.timeline();
+
+        // Split-char stagger for the big kanji — each character
+        // falls in from above, like petals landing one by one
+        const heroChars = document.querySelectorAll('.hero__kanji .char');
+        if (heroChars.length > 0) {
+          tl.set('.hero__kanji', { opacity: 1 })
+            .fromTo(heroChars,
+              { opacity: 0, y: -40, rotationX: -60 },
+              {
+                opacity: 1,
+                y: 0,
+                rotationX: 0,
+                duration: 0.8,
+                stagger: 0.12,
+                ease: 'back.out(1.4)',
+              }
+            );
+        } else {
+          tl.to('.hero__kanji', { opacity: 1, duration: 1.5, ease: 'power3.out' });
+        }
+
+        tl.to('.hero__romaji', {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            ease: 'power2.out'
+          }, '-=0.4')
+          .to('.hero__scroll-hint', {
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power2.out'
+          }, '-=0.2')
+          .to('.nav-dots', {
+            opacity: 1,
+            duration: 0.6,
+            ease: 'power2.out'
+          }, '-=0.5');
+      }
+
+      // ---- HERO PARALLAX on scroll ----
+      // Only move on Y — no opacity here, because scrub leaves
+      // opacity=0 when you scroll back and the entrance already
+      // handles the fade-in. We fade the whole hero block instead.
+      gsap.to('.hero__kanji', {
+        yPercent: -30,
+        scrollTrigger: {
+          trigger: '.hero',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.5
+        }
+      });
+
+      gsap.to('.hero__romaji', {
+        yPercent: -15,
+        scrollTrigger: {
+          trigger: '.hero',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.5
+        }
+      });
+
+      // Fade the whole hero as one unit — restores correctly on scroll back
+      gsap.to('.hero', {
+        opacity: 0,
+        scrollTrigger: {
+          trigger: '.hero',
+          start: '60% top',
+          end: 'bottom top',
+          scrub: 1
+        }
+      });
+
+      // ---- PHILOSOPHY SECTION ----
+      const philoTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: '.philosophy',
+          start: 'top 70%',
+          end: 'bottom 30%',
+          toggleActions: 'play none none reverse'
+        }
+      });
+
+      philoTl
+        .to('.philosophy__jp', { opacity: 1, duration: 1, ease: 'power2.out' })
+        .to('.philosophy__term', { opacity: 1, duration: 0.8, ease: 'power2.out' }, '-=0.5')
+        .to('.philosophy__divider', { opacity: 1, scaleX: 1, duration: 0.6, ease: 'power2.out' }, '-=0.3')
+        .to('.philosophy__text', { opacity: 1, duration: 1, ease: 'power2.out' }, '-=0.2');
+
+      // ---- SECTION HEADERS (all of them) ----
+      document.querySelectorAll('.section-header').forEach(header => {
+        const kanjiEl  = header.querySelector('.section-header__kanji');
+        const romajiEl = header.querySelector('.section-header__romaji');
+        const meaningEl = header.querySelector('.section-header__meaning');
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: header,
+            start: 'top 75%',
+            toggleActions: 'play none none reverse'
+          }
+        });
+
+        // Split-char reveal for the kanji — chars rise from below
+        const chars = kanjiEl ? kanjiEl.querySelectorAll('.char') : [];
+        if (chars.length > 0) {
+          tl.set(kanjiEl, { opacity: 1 })
+            .fromTo(chars,
+              { opacity: 0, y: 30, rotation: -10 },
+              {
+                opacity: 1,
+                y: 0,
+                rotation: 0,
+                duration: 0.6,
+                stagger: 0.08,
+                ease: 'power3.out'
+              }
+            );
+        } else if (kanjiEl) {
+          tl.to(kanjiEl, { opacity: 1, duration: 0.8, ease: 'power2.out' });
+        }
+
+        if (romajiEl) {
+          tl.to(romajiEl, { opacity: 1, duration: 0.6, ease: 'power2.out' }, '-=0.3');
+        }
+        if (meaningEl) {
+          tl.to(meaningEl, { opacity: 1, duration: 0.6, ease: 'power2.out' }, '-=0.3');
+        }
+      });
+
+      // ---- PHOTO CARD REVEAL (Batch for performance) ----
+      // Pattern:
+      // 1. CSS sets opacity:0 on all .photo-card (already done in stylesheet)
+      // 2. gsap.set() sets the transform offsets on ALL cards immediately —
+      //    this is safe because it happens synchronously before any paint,
+      //    and does NOT use immediateRender (which is a fromTo concern)
+      // 3. ScrollTrigger.batch onEnter uses gsap.to() — reads current state
+      //    (opacity:0 from CSS, y/x/rotation from gsap.set) and animates to target
+      // This avoids the "snap" caused by fromTo's immediateRender:true which
+      // would override the start state at the moment of tween creation.
+
+      // Set initial transform state on all cards (opacity stays as CSS 0)
+      // ---- MANKAI HORIZONTAL SCROLL + VELOCITY SKEW ----
+      const mankaiTrack = document.getElementById('mankai-track');
+      if (mankaiTrack) {
+        const getScrollAmount = () => -(mankaiTrack.scrollWidth - window.innerWidth);
+
+        // Main horizontal scroll tween — GSAP moves the track via translateX
+        gsap.to(mankaiTrack, {
+          x: getScrollAmount,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: '.mankai',
+            start: 'top top',
+            end: () => `+=${Math.abs(getScrollAmount())}`,
+            pin: true,
+            scrub: 1,
+            invalidateOnRefresh: true,
+          }
+        });
+
+        // ---- VELOCITY SKEW via rAF loop ----
+        // The proven pattern: read the GSAP x value every frame,
+        // compute delta (velocity), lerp toward target skew, apply
+        // directly to card style. No GSAP events, no Lenis events —
+        // just raw per-frame delta measurement.
+        //
+        // Why this works when everything else didn't:
+        // - ScrollTrigger velocity APIs are smoothed/delayed by scrub
+        // - Lenis velocity is in different units and fires asynchronously
+        // - rAF reads EXACTLY what GSAP rendered this frame
+        const mankaiCards = mankaiTrack.querySelectorAll('.photo-card');
+        // Reset the base photo-card CSS transform on mankai cards
+        // (the base .photo-card CSS sets translateY(50px) scale(0.97)
+        //  which would be wrong for mankai cards that start visible)
+        mankaiCards.forEach(card => {
+          gsap.set(card, { clearProps: 'transform' });
+        });
+
+        let lastX = 0;
+        let skewCurrent = 0;
+
+        function skewLoop() {
+          // Read the current translated X from GSAP's internal state
+          const currentX = gsap.getProperty(mankaiTrack, 'x');
+          // Delta = how many px the track moved THIS frame
+          const vel = currentX - lastX;
+          lastX = currentX;
+
+          // Target skew: scale velocity to degrees, clamp to ±12°
+          const skewTarget = Math.max(-12, Math.min(12, vel * 0.3));
+          // Lerp current skew toward target — 0.1 = smooth decay
+          skewCurrent += (skewTarget - skewCurrent) * 0.1;
+
+          // Apply to each card only when there's meaningful movement
+          if (Math.abs(skewCurrent) > 0.02) {
+            mankaiCards.forEach(card => {
+              card.style.transform = `skewX(${skewCurrent.toFixed(3)}deg)`;
+            });
+          } else {
+            mankaiCards.forEach(card => {
+              card.style.transform = '';
+            });
+          }
+
+          requestAnimationFrame(skewLoop);
+        }
+        skewLoop();
+      }
+
+      // ---- PHOTO CARD REVEAL (Batch) ----
+      // Created AFTER the mankai pin so ScrollTrigger knows the
+      // correct document height and card positions.
+      gsap.set('.photo-card:not(.photo-card--no-entrance)', {
+        y: 50,
+        rotation: (i) => i % 2 === 0 ? -2 : 2,
+        x: (i) => i % 2 === 0 ? -14 : 14,
+        scale: 0.97,
+      });
+
+      ScrollTrigger.batch('.photo-card:not(.photo-card--no-entrance)', {
+        onEnter: (elements) => {
+          gsap.to(elements, {
+            opacity: 1,
+            y: 0,
+            x: 0,
+            rotation: 0,
+            scale: 1,
+            duration: 1.1,
+            stagger: 0.07,
+            ease: 'power3.out',
+            overwrite: true,
+          });
+        },
+        onLeaveBack: (elements) => {
+          gsap.to(elements, {
+            opacity: 0,
+            y: 50,
+            scale: 0.97,
+            duration: 0.4,
+            ease: 'power2.in',
+            overwrite: true,
+          });
+        },
+        start: 'top 88%',
+      });
+
+      // Force recalc after pin is created and before closing/dividers
+      // (closing/dividers are further down the page, so they need correct positions too)
+
+      // ---- CLOSING TEXT — time-based word-by-word reveal ----
+      // Split closing__text into word spans so we can reveal them with
+      // a stagger. This is TIME-based (not scroll-scrubbed) so the
+      // animation ALWAYS completes even when the section is at the
+      // very bottom of the page with no remaining scroll room.
+      const closingText = document.querySelector('.closing__text');
+      let closingWordSpans = null;
+      if (closingText) {
+        const words = closingText.textContent.trim().split(/\s+/);
+        closingText.innerHTML = '';
+        words.forEach((word, i) => {
+          const span = document.createElement('span');
+          span.className = 'scrub-word';
+          span.textContent = word;
+          closingText.appendChild(span);
+          if (i < words.length - 1) {
+            closingText.appendChild(document.createTextNode(' '));
+          }
+        });
+        closingWordSpans = closingText.querySelectorAll('.scrub-word');
+        // Container visible; words start invisible
+        gsap.set(closingText, { opacity: 1 });
+        gsap.set(closingWordSpans, { opacity: 0 });
+      }
+
+      const closingTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: '.closing',
+          start: 'top 70%',       // fire earlier so there's time to complete
+          toggleActions: 'play none none reverse'
+        }
+      });
+
+      closingTl
+        .to('.closing__kanji', {
+          opacity: 1,
+          duration: 1.5,
+          ease: 'power3.out'
+        });
+
+      // Stagger the words — each one takes a moment to appear,
+      // creating a breathing rhythm without requiring scroll input
+      if (closingWordSpans && closingWordSpans.length) {
+        closingTl.to(closingWordSpans, {
+          opacity: 1,
+          duration: 0.5,
+          stagger: 0.05,        // ~50ms between words — feels like reading
+          ease: 'power1.out',
+        }, '-=0.9');            // start while kanji is still fading in
+      }
+
+      // ---- SECTION DIVIDER LINES ----
+      // Each .section-divider::after grows from 0 to 100% width on scroll
+      document.querySelectorAll('.section-divider').forEach(divider => {
+        gsap.fromTo(divider,
+          { '--line-w': '0%' },
+          {
+            '--line-w': '100%',
+            ease: 'power2.inOut',
+            scrollTrigger: {
+              trigger: divider,
+              start: 'top 85%',
+              toggleActions: 'play none none reverse'
+            }
+          }
+        );
+      });
+
+      // ---- PARALLAX on IMG inside cards (not the card itself) ----
+      // Parallax on the <img> within tsubomi/hazakura cards.
+      // Using the img avoids conflicts with the batch animation
+      // which animates the .photo-card wrapper.
+      document.querySelectorAll('.tsubomi__grid .photo-card img, .hazakura__grid .photo-card img').forEach((img, i) => {
+        gsap.to(img, {
+          yPercent: i % 2 === 0 ? -8 : 8,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: img,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 1.5
+          }
+        });
+      });
+
+      // Mankai cards: no entrance animation needed — they are immediately visible
+      // in the horizontal scroll container (photo-card--no-entrance class excludes them)
+
+      // Refresh ALL ScrollTrigger positions now that every trigger
+      // (including the mankai pin) has been created. Without this,
+      // cards in sections below the pin have incorrect trigger positions.
+      ScrollTrigger.refresh();
+    }
+
+    // ============================================================
+    // 5. CUSTOM CURSOR
+    //    Subtle sakura-pink cursor that follows mouse with lag
+    // ============================================================
+    function initCursor() {
+      // Skip on touch devices
+      if (!window.matchMedia('(hover: hover)').matches) return;
+
+      const dot = document.querySelector('.cursor-dot');
+      const ring = document.querySelector('.cursor-ring');
+
+      // Show cursors once mouse enters viewport
+      document.addEventListener('mousemove', function showCursor() {
+        dot.style.opacity = '1';
+        ring.style.opacity = '1';
+        document.removeEventListener('mousemove', showCursor);
+      });
+
+      // Smooth cursor tracking with GSAP
+      // The dot follows instantly, the ring lags behind (organic feel)
+      document.addEventListener('mousemove', (e) => {
+        gsap.to(dot, {
+          x: e.clientX,
+          y: e.clientY,
+          duration: 0.1,
+          ease: 'power2.out'
+        });
+
+        gsap.to(ring, {
+          x: e.clientX,
+          y: e.clientY,
+          duration: 0.4,
+          ease: 'power2.out'
+        });
+      });
+
+      // Expand ring on hover over interactive elements
+      document.querySelectorAll('a, button, .photo-card').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          ring.style.width = '60px';
+          ring.style.height = '60px';
+        });
+        el.addEventListener('mouseleave', () => {
+          ring.style.width = '40px';
+          ring.style.height = '40px';
+        });
+      });
+    }
+
+    // ============================================================
+    // 6. NAVIGATION DOTS
+    //    Vertical dots that track current section and allow
+    //    click-to-navigate. Uses IntersectionObserver for
+    //    performance (no scroll event spam)
+    // ============================================================
+    function initNavDots() {
+      const dots = document.querySelectorAll('.nav-dot');
+      const sections = [];
+
+      // Map each dot to its corresponding section
+      dots.forEach(dot => {
+        const sectionId = dot.dataset.section;
+        const section = document.getElementById(sectionId);
+        if (section) sections.push({ dot, section });
+      });
+
+      // Scroll-based detection: find the section whose top edge
+      // is closest to 40% from the top of the viewport.
+      // This works correctly even for pinned sections (mankai)
+      // that confuse IntersectionObserver.
+      function updateActiveDot() {
+        const vh = window.innerHeight;
+        const targetY = vh * 0.4; // 40% from top = detection line
+        let bestIdx = 0;
+        let bestDist = Infinity;
+
+        sections.forEach(({ section }, idx) => {
+          const rect = section.getBoundingClientRect();
+          // Use distance of the section's vertical center from targetY
+          const sectionCenter = rect.top + rect.height * 0.5;
+          const dist = Math.abs(sectionCenter - targetY);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = idx;
+          }
+        });
+
+        dots.forEach(d => d.classList.remove('active'));
+        if (sections[bestIdx]) {
+          sections[bestIdx].dot.classList.add('active');
+        }
+      }
+
+      // Run on scroll (Lenis fires native scroll events too)
+      window.addEventListener('scroll', updateActiveDot, { passive: true });
+      // Run once on init
+      updateActiveDot();
+
+      // Click handler — scroll to section using Lenis (or native fallback)
+      dots.forEach(dot => {
+        dot.addEventListener('click', () => {
+          const sectionId = dot.dataset.section;
+          const target = document.getElementById(sectionId);
+          if (!target) return;
+
+          // If Lenis is available, use its smooth scrollTo
+          if (lenis) {
+            lenis.scrollTo(target, {
+              offset: 0,
+              duration: 2,
+              easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+            });
+          } else {
+            // Fallback: native smooth scroll
+            target.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      });
+    }
+
+    // ============================================================
+    // 7. AMBIENT GRADIENT
+    //    The background radial gradient shifts color based on
+    //    scroll progress — from warm sakura pink through violet
+    //    to cool renewal greens
+    // ============================================================
+    function initAmbientGradient() {
+      const gradient = document.querySelector('.ambient-gradient');
+      if (!gradient) return;
+
+      // Define color stops along the scroll journey
+      // Each color represents a phase of the sakura lifecycle
+      const colors = [
+        { r: 242, g: 184, b: 198 }, // sakura-iro (hero)
+        { r: 245, g: 150, b: 170 }, // momo (tsubomi)
+        { r: 228, g: 94,  b: 130 }, // koubai (mankai — peak)
+        { r: 139, g: 92,  b: 246 }, // fuji (hanafubuki — mystical)
+        { r: 88,  g: 178, b: 220 }, // sora (hanaikada — serene)
+        { r: 123, g: 162, b: 63  }, // wakakusa (hazakura — renewal)
+      ];
+
+      // Use ScrollTrigger to update gradient color on scroll
+      ScrollTrigger.create({
+        trigger: '.content',
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: true,
+        onUpdate: (self) => {
+          const progress = self.progress;
+          const idx = progress * (colors.length - 1);
+          const lower = Math.floor(idx);
+          const upper = Math.min(lower + 1, colors.length - 1);
+          const t = idx - lower;
+          const r = Math.round(colors[lower].r + (colors[upper].r - colors[lower].r) * t);
+          const g = Math.round(colors[lower].g + (colors[upper].g - colors[lower].g) * t);
+          const b = Math.round(colors[lower].b + (colors[upper].b - colors[lower].b) * t);
+          // Use rgb() (no alpha in the stop) to match the CSS initial state.
+          // Transparency comes from the container's opacity: 0.15.
+          // Using rgba(..., 0.3) here would give 0.3 × 0.15 = 0.045 effective,
+          // way less visible than the CSS initial — causing a visual "jump"
+          // on first scroll where the oval suddenly disappears.
+          gradient.style.background = `radial-gradient(ellipse at 50% 50%, rgb(${r},${g},${b}) 0%, transparent 70%)`;
+        }
+      });
+    }
+
+    // ============================================================
+    // 8. LIGHTBOX
+    //    Click any photo → it expands fullscreen with a clip-path
+    //    animation. Think of it like a "digital tatami reveal" —
+    //    the image unfolds from its own position.
+    //    Supports keyboard navigation and swipe gestures.
+    // ============================================================
+    function initLightbox() {
+      const lightbox     = document.getElementById('lightbox');
+      const lbImg        = document.getElementById('lightbox-img');
+      const lbImgWrap    = document.getElementById('lightbox-img-wrap');
+      const lbClose      = document.getElementById('lightbox-close');
+      const lbPrev       = document.getElementById('lightbox-prev');
+      const lbNext       = document.getElementById('lightbox-next');
+      const lbCounter    = document.getElementById('lightbox-counter');
+
+      // All photo cards — built after generatePlaceholderImages() runs
+      let allPhotos = [];
+      let currentIndex = 0;
+      let isAnimating = false;
+
+      // We delay gathering photos until after they're generated
+      function gatherPhotos() {
+        allPhotos = Array.from(document.querySelectorAll('.photo-card img'));
+      }
+
+      // ---- OPEN ----
+      function openLightbox(img, index) {
+        if (isAnimating) return;
+        isAnimating = true;
+        currentIndex = index;
+
+        lightbox.classList.add('is-open');
+        lbImg.src = img.src;
+        lbImg.alt = img.alt;
+
+        // Update counter: "12 / 60" style
+        lbCounter.textContent = `${currentIndex + 1} / ${allPhotos.length}`;
+
+        // GSAP timeline: fade lightbox bg + clip-path expand on image
+        const tl = gsap.timeline({
+          onComplete: () => { isAnimating = false; }
+        });
+
+        tl.set(lightbox, { pointerEvents: 'all' })
+          .to(lightbox, {
+            opacity: 1,
+            duration: 0.4,
+            ease: 'power2.out'
+          })
+          .to(lbImgWrap, {
+            // clip-path expands from center outward — like a bloom opening
+            clipPath: 'inset(0% 0% 0% 0% round 4px)',
+            duration: 0.6,
+            ease: 'power3.out'
+          }, '-=0.2')
+          .to([lbClose, lbPrev, lbNext, lbCounter], {
+            opacity: 0.6,
+            duration: 0.3,
+            stagger: 0.05
+          }, '-=0.2');
+
+        // Trap focus for accessibility
+        lbClose.focus();
+      }
+
+      // ---- CLOSE ----
+      function closeLightbox() {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        const tl = gsap.timeline({
+          onComplete: () => {
+            isAnimating = false;
+            lightbox.classList.remove('is-open');
+            gsap.set(lightbox, { opacity: 0, pointerEvents: 'none' });
+            gsap.set(lbImgWrap, { clipPath: 'inset(50% 50% 50% 50% round 4px)' });
+            gsap.set([lbClose, lbPrev, lbNext, lbCounter], { opacity: 0 });
+          }
+        });
+
+        tl.to([lbClose, lbPrev, lbNext, lbCounter], {
+            opacity: 0,
+            duration: 0.2
+          })
+          .to(lbImgWrap, {
+            clipPath: 'inset(50% 50% 50% 50% round 4px)',
+            duration: 0.4,
+            ease: 'power2.in'
+          }, '-=0.1')
+          .to(lightbox, {
+            opacity: 0,
+            duration: 0.3,
+            ease: 'power2.in'
+          }, '-=0.2');
+      }
+
+      // ---- NAVIGATE ----
+      function navigateTo(newIndex) {
+        if (isAnimating || allPhotos.length === 0) return;
+        isAnimating = true;
+
+        // Slide out current image, slide in new one
+        const direction = newIndex > currentIndex ? -1 : 1;
+
+        gsap.to(lbImgWrap, {
+          x: direction * 60,
+          opacity: 0,
+          duration: 0.25,
+          ease: 'power2.in',
+          onComplete: () => {
+            currentIndex = (newIndex + allPhotos.length) % allPhotos.length;
+            lbImg.src = allPhotos[currentIndex].src;
+            lbImg.alt = allPhotos[currentIndex].alt;
+            lbCounter.textContent = `${currentIndex + 1} / ${allPhotos.length}`;
+
+            gsap.fromTo(lbImgWrap,
+              { x: -direction * 60, opacity: 0 },
+              {
+                x: 0,
+                opacity: 1,
+                duration: 0.35,
+                ease: 'power2.out',
+                onComplete: () => { isAnimating = false; }
+              }
+            );
+          }
+        });
+      }
+
+      // ---- ATTACH CLICK TO PHOTOS ----
+      // Uses event delegation on the content — works with dynamically
+      // created cards from generatePlaceholderImages()
+      document.querySelector('.content').addEventListener('click', (e) => {
+        const img = e.target.closest('.photo-card')?.querySelector('img');
+        if (!img) return;
+
+        // Ensure photos are gathered (first click)
+        if (allPhotos.length === 0) gatherPhotos();
+
+        const idx = allPhotos.indexOf(img);
+        openLightbox(img, idx >= 0 ? idx : 0);
+      });
+
+      // Cursor hint on photo hover
+      document.querySelector('.content').addEventListener('mouseover', (e) => {
+        if (e.target.closest('.photo-card')) {
+          document.body.classList.add('cursor-on-photo');
+        }
+      });
+      document.querySelector('.content').addEventListener('mouseout', (e) => {
+        if (e.target.closest('.photo-card')) {
+          document.body.classList.remove('cursor-on-photo');
+        }
+      });
+
+      // ---- CONTROLS ----
+      lbClose.addEventListener('click', closeLightbox);
+
+      // Click backdrop to close
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) closeLightbox();
+      });
+
+      lbPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigateTo(currentIndex - 1);
+      });
+
+      lbNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigateTo(currentIndex + 1);
+      });
+
+      // Keyboard navigation
+      document.addEventListener('keydown', (e) => {
+        if (!lightbox.classList.contains('is-open')) return;
+        if (e.key === 'Escape')      closeLightbox();
+        if (e.key === 'ArrowLeft')   navigateTo(currentIndex - 1);
+        if (e.key === 'ArrowRight')  navigateTo(currentIndex + 1);
+      });
+
+      // Touch swipe support for mobile
+      let touchStartX = 0;
+      lightbox.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+      }, { passive: true });
+
+      lightbox.addEventListener('touchend', (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(dx) > 50) {
+          navigateTo(currentIndex + (dx < 0 ? 1 : -1));
+        }
+      }, { passive: true });
+    }
+
+    // ============================================================
+    // 9. SPLIT TEXT ANIMATIONS
+    //    Wraps each character of key headings in a <span class="char">
+    //    so GSAP can stagger-reveal them individually.
+    //    This replaces the simple opacity fade for hero/section titles.
+    // ============================================================
+    function initSplitText() {
+      // Elements to split — hero kanji, section kanji headers
+      const targets = document.querySelectorAll(
+        '.hero__kanji, .philosophy__jp, .closing__kanji, .section-header__kanji'
+      );
+
+      targets.forEach(el => {
+        el.classList.add('split-text');
+        const text = el.textContent;
+        el.textContent = '';
+
+        // Wrap each character in a span
+        // For Japanese kanji each codepoint = one character
+        [...text].forEach(char => {
+          const span = document.createElement('span');
+          span.className = 'char';
+          span.textContent = char;
+          span.style.display = 'inline-block'; // required for transform
+          el.appendChild(span);
+        });
+      });
+    }
+
+    // ============================================================
+    // 10. CLICK PETAL BURST
+    //     On click anywhere on the page, a burst of 2D canvas petals
+    //     explodes outward from the cursor position and fades out.
+    //     Lightweight Canvas2D — separate from the Three.js canvas.
+    // ============================================================
+    function initClickBurst() {
+      const canvas = document.getElementById('burst-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      function resize() {
+        canvas.width  = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      let particles = [];
+
+      // Gentle toss: petals drift upward and to the sides like
+      // scooping a handful of petals and throwing them in the air.
+      // NOT a radial explosion — a directed upward arc with gravity.
+      // Canvas has pointer-events:none so clicks pass through to
+      // elements below — we listen on document to catch clicks anywhere
+      document.addEventListener('click', (e) => {
+        // Skip clicks on interactive UI (nav dots, close buttons, etc.)
+        // to avoid petals appearing when user just clicks a button
+        if (e.target.closest('button, a, .nav-dot, .theme-toggle, .lightbox')) return;
+        const count = 12 + Math.floor(Math.random() * 6); // 12-18 petals
+        for (let i = 0; i < count; i++) {
+          // Direction: mostly upward, spread ~120° arc
+          const angle = -Math.PI / 2 + (Math.random() - 0.5) * (Math.PI * 0.7);
+          const speed = 1.5 + Math.random() * 2.5; // gentle initial speed
+          particles.push({
+            x: e.clientX + (Math.random() - 0.5) * 20, // slight offset from click point
+            y: e.clientY + (Math.random() - 0.5) * 10,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: 4 + Math.random() * 5,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.08,
+            life: 1.0,
+            // Slower decay — petals linger and float down
+            decay: 0.006 + Math.random() * 0.006,
+            gravity: 0.025 + Math.random() * 0.015, // gentle gravity
+            // Sway as they fall — like the Three.js petals
+            swayPhase: Math.random() * Math.PI * 2,
+            swayAmp: 0.3 + Math.random() * 0.5,
+            // Color from sakura palette
+            color: [
+              'rgba(242, 184, 198,',
+              'rgba(254, 238, 237,',
+              'rgba(250, 218, 221,',
+              'rgba(245, 150, 170,',
+              'rgba(255, 183, 197,',
+            ][Math.floor(Math.random() * 5)],
+          });
+        }
+      });
+
+      let time = 0;
+      function draw() {
+        requestAnimationFrame(draw);
+        if (!particles.length) return;
+        time += 0.016;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles = particles.filter(p => {
+          p.life -= p.decay;
+          if (p.life <= 0) return false;
+
+          // Apply velocity + gravity
+          p.vy += p.gravity;
+          // Air resistance — decelerates horizontally
+          p.vx *= 0.995;
+          // Sway in the wind as they fall
+          p.x += p.vx + Math.sin(time * 2 + p.swayPhase) * p.swayAmp * 0.3;
+          p.y += p.vy;
+          p.rotation += p.rotSpeed;
+
+          // Draw a petal shape (oval with taper)
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.globalAlpha = p.life * 0.8;
+          ctx.fillStyle = p.color + (p.life * 0.9) + ')';
+          ctx.beginPath();
+          // Petal shape: ellipse with a slight point at bottom
+          ctx.ellipse(0, 0, p.size * 0.5, p.size, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          return true;
+        });
+      }
+      draw();
+    }
+
+    // ============================================================
+    // 11. SECTION DIVIDER ANIMATIONS
+    //     The horizontal sakura-pink lines between sections
+    //     animate from 0 to full width on scroll
+    // ============================================================
+    function initDividers() {
+      document.querySelectorAll('.section-divider').forEach(divider => {
+        gsap.to(divider.querySelector('::after') || divider, {
+          scrollTrigger: {
+            trigger: divider,
+            start: 'top 80%',
+            toggleActions: 'play none none reverse'
+          }
+        });
+
+        // Use CSS animation via toggleClass instead
+        ScrollTrigger.create({
+          trigger: divider,
+          start: 'top 80%',
+          onEnter: () => {
+            divider.style.setProperty('--line-progress', '1');
+            gsap.to(divider, {
+              '--line-progress': 1,
+              duration: 1.2,
+              ease: 'power2.out'
+            });
+          }
+        });
+      });
+    }
+
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+    // Module scripts are always deferred — they execute after
+    // the DOM is parsed. So DOMContentLoaded may have already fired.
+    // This wrapper runs immediately if DOM is ready, or waits if not.
+    function onReady(fn) {
+      if (document.readyState !== 'loading') fn();
+      else document.addEventListener('DOMContentLoaded', fn);
+    }
+
+    onReady(() => {
+      // Split text before animations so GSAP can target .char spans
+      initSplitText();
+
+      generatePlaceholderImages();
+      initPetals();
+      initLenis();
+      initAnimations();
+      initCursor();
+      initNavDots();
+      initAmbientGradient();
+      initThemeToggle();
+      initScrollHint();
+      // Text scrub runs after a short delay so heroEntrance
+      // can set opacity on elements before words are split
+      setTimeout(initTextScrub, 50);
+
+      // These depend on DOM being fully ready with photos
+      initLightbox();
+      initClickBurst();
+    });
+
+    // ============================================================
+    // 8b. THEME TOGGLE — dark / light
+    //     Switches data-theme attribute on <html>.
+    //     Persists to localStorage so it survives page reloads.
+    //     The button itself fades in after the hero entrance.
+    // ============================================================
+    function initThemeToggle() {
+      const btn  = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+
+      // Restore saved preference
+      const saved = localStorage.getItem('sakura-theme');
+      if (saved === 'light') html.setAttribute('data-theme', 'light');
+
+      // Fade the button in after a delay (alongside nav-dots)
+      gsap.to(btn, { opacity: 1, duration: 0.6, delay: 1.5, ease: 'power2.out' });
+
+      btn.addEventListener('click', () => {
+        const isLight = html.getAttribute('data-theme') === 'light';
+        if (isLight) {
+          html.removeAttribute('data-theme');
+          localStorage.setItem('sakura-theme', 'dark');
+        } else {
+          html.setAttribute('data-theme', 'light');
+          localStorage.setItem('sakura-theme', 'light');
+        }
+
+        // Small button pulse on click
+        gsap.fromTo(btn,
+          { scale: 0.85 },
+          { scale: 1, duration: 0.4, ease: 'back.out(2)' }
+        );
+      });
+    }
+
+    // ============================================================
+    // 8c. SCROLL HINT CLICK
+    //     Clicking the "Scroll" hint in the hero scrolls to the
+    //     first real section (#philosophy) via Lenis.
+    // ============================================================
+    function initScrollHint() {
+      const hint = document.getElementById('scroll-hint');
+      if (!hint) return;
+
+      hint.addEventListener('click', () => {
+        const target = document.getElementById('philosophy');
+        if (!target) return;
+
+        if (lenis) {
+          lenis.scrollTo(target, {
+            duration: 2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+          });
+        } else {
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    }
+
+    // ============================================================
+    // 8d. TEXT SCRUB — prose paragraphs fade in word-by-word
+    //     as they enter the viewport and continue scrolling.
+    //     The philosophy text, interlude quotes, tagline, and
+    //     closing text are split into <span class="word"> and
+    //     each word's opacity is driven by scroll progress.
+    //
+    //     Think of it like a typewriter effect but driven by
+    //     scroll instead of time — each word "develops" like
+    //     photographic film as you read through it.
+    // ============================================================
+    function initTextScrub() {
+      // The key insight: using 'end: bottom X%' fails when the element
+      // is near the page bottom because there's not enough scroll room
+      // to reach that position. Instead we use 'end: top X%' which
+      // measures only from the top edge — the animation must complete
+      // between when the top enters at 85% and when it reaches 20%.
+      // This works regardless of element height or page position.
+
+      // Note: closing__text is NOT scrubbed — it's at the bottom of the
+      // page where there's often not enough scroll room to complete the
+      // reveal. Instead, closingTl (below) plays a time-based stagger
+      // when the section enters the viewport.
+      const scrubTargets = [
+        '.philosophy__text',
+      ];
+
+      scrubTargets.forEach(selector => {
+        document.querySelectorAll(selector).forEach(el => {
+          const words = el.textContent.trim().split(/\s+/);
+          el.innerHTML = '';
+          words.forEach((word, i) => {
+            const span = document.createElement('span');
+            span.className = 'scrub-word';
+            span.textContent = word;
+            el.appendChild(span);
+            if (i < words.length - 1) {
+              el.appendChild(document.createTextNode(' '));
+            }
+          });
+
+          const wordSpans = el.querySelectorAll('.scrub-word');
+          if (!wordSpans.length) return;
+
+          gsap.set(el, { opacity: 1 });
+          gsap.set(wordSpans, { opacity: 0 });
+
+          // Use top-based start/end — independent of element height
+          // and remaining scroll space
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 85%',
+              end: 'top 15%',   // all words revealed by the time top hits 15%
+              scrub: 1,         // faster response for smoother feel
+            }
+          });
+
+          tl.to(wordSpans, {
+            opacity: 1,
+            stagger: { each: 0.03, ease: 'none' },
+            ease: 'none',
+            immediateRender: false,
+          });
+        });
+      });
+
+      // hero__tagline: simple entrance fade
+      const tagline = document.querySelector('.hero__tagline');
+      if (tagline) gsap.set(tagline, { opacity: 1 });
+
+      // Interlude texts: word-by-word scrub preserving <em> tags
+      document.querySelectorAll('.interlude__text').forEach(el => {
+        const frag = document.createDocumentFragment();
+        el.childNodes.forEach(node => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            node.textContent.split(/(\s+)/).forEach(part => {
+              if (/\s+/.test(part)) {
+                frag.appendChild(document.createTextNode(' '));
+              } else if (part) {
+                const span = document.createElement('span');
+                span.className = 'scrub-word';
+                span.textContent = part;
+                frag.appendChild(span);
+              }
+            });
+          } else {
+            const clone = node.cloneNode(false);
+            node.textContent.split(/\s+/).forEach((word, wi) => {
+              if (!word) return;
+              const span = document.createElement('span');
+              span.className = 'scrub-word';
+              span.textContent = (wi === 0 ? '' : ' ') + word;
+              clone.appendChild(span);
+            });
+            frag.appendChild(clone);
+          }
+        });
+        el.innerHTML = '';
+        el.appendChild(frag);
+
+        const wordSpans = el.querySelectorAll('.scrub-word');
+        if (!wordSpans.length) return;
+
+        gsap.set(el, { opacity: 1 });
+        gsap.set(wordSpans, { opacity: 0 });
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 80%',
+            end: 'top 15%',    // same top-based pattern
+            scrub: 1,
+          }
+        });
+        tl.to(wordSpans, {
+          opacity: 1,
+          stagger: { each: 0.04, ease: 'none' },
+          ease: 'none',
+          immediateRender: false,
+        });
+      });
+    }
+  </script>
+</body>
+</html>
