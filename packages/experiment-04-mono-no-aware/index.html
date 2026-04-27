@@ -1324,7 +1324,7 @@
   <canvas class="burst-canvas" id="burst-canvas" aria-hidden="true"></canvas>
 
   <!-- Navigation -->
-  <a href="../experiment-03-hinatabokko/index.html" class="back-link" aria-label="Back to experiment 03">EXP 03</a>
+  <a href="../landing/index.html" class="back-link" aria-label="Back to all experiments">EXPERIMENTS</a>
   <span class="exp-label" aria-hidden="true">EXP 04 / MONO NO AWARE</span>
 
   <!-- ============================================================
@@ -2030,6 +2030,7 @@
 
     function initLenis() {
       lenis = new Lenis({
+        autoRaf: false,
         duration: 1.2,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         orientation: 'vertical',
