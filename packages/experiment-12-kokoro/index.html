@@ -447,72 +447,83 @@
       opacity: 0;
     }
 
-    /* ── KOKORO interlude (shinrin-equivalent) ── */
-    .shinrin {
-      min-height: 90svh;
-      padding: 100px clamp(24px, 8vw, 120px);
+    /* ── KOKORO HEARTBEAT PULSAR ── */
+    .heartbeat-section {
+      min-height: 100svh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      text-align: center;
+      position: relative;
+      overflow: hidden;
+      padding: 80px clamp(24px, 8vw, 120px);
     }
 
-    .shinrin__phase {
+    .hb-rings {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hb-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(192,57,75,.4);
+      width: 0; height: 0;
+      transform: translate(-50%, -50%);
+      left: 50%; top: 50%;
+    }
+
+    .heartbeat-section__phase {
       font-family: 'Space Mono', monospace;
       font-size: 10px;
       letter-spacing: .35em;
       color: var(--accent);
       text-transform: uppercase;
-      margin-bottom: 16px;
+      margin-bottom: 32px;
       opacity: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 16px;
-      transition: color .6s ease;
     }
 
-    .shinrin__phase::before,
-    .shinrin__phase::after {
+    .heartbeat-section__phase::before,
+    .heartbeat-section__phase::after {
       content: '';
       display: block;
       width: 32px; height: 1px;
       background: var(--accent);
-      flex-shrink: 0;
-      transition: background .6s ease;
     }
 
-    .shinrin__title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(48px, 9vw, 120px);
-      font-weight: 700;
-      line-height: .9;
-      letter-spacing: -.02em;
-      margin-bottom: 20px;
-      opacity: 0;
-      transform: translateY(30px);
-    }
-
-    .shinrin__title-jp {
+    .heartbeat-kanji {
       font-family: 'Noto Serif JP', serif;
-      font-size: clamp(14px, 1.6vw, 20px);
+      font-size: clamp(100px, 22vw, 280px);
       font-weight: 300;
-      color: rgba(192,57,75,.5);
-      letter-spacing: .14em;
-      margin-bottom: 28px;
+      line-height: 1;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(192,57,75,.35);
+      position: relative;
+      z-index: 1;
       opacity: 0;
+      transform: scale(0.6);
+      letter-spacing: -.02em;
     }
 
-    .shinrin__desc {
+    .heartbeat-desc {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(16px, 1.8vw, 22px);
+      font-size: clamp(15px, 1.7vw, 21px);
       font-style: italic;
-      color: rgba(245,232,232,.5);
-      line-height: 1.85;
-      max-width: 560px;
+      color: rgba(245,232,232,.45);
+      line-height: 1.9;
+      max-width: 520px;
+      text-align: center;
+      margin-top: 36px;
       opacity: 0;
-      transform: translateY(16px);
+      transform: translateY(20px);
     }
 
     /* ── HORIZONTAL SCROLL ── */
@@ -775,9 +786,11 @@
       .hero__label, .hero__sub, .hero__jp-subtitle, .hero__scroll { opacity: 1 !important; visibility: visible !important; }
       .section-phase, .section-title, .section-title-jp,
       .section-desc, .photo-card, .quote-line, .quote-text,
-      .quote-attr, .shinrin__phase, .shinrin__title, .shinrin__title-jp,
-      .shinrin__desc, .outro__symbol, .outro__title, .outro__desc,
-      .h-scroll__card { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+      .quote-attr, .heartbeat-section__phase, .heartbeat-kanji,
+      .heartbeat-desc, .outro__symbol, .outro__title, .outro__desc,
+      .h-scroll__card { opacity: 1 !important; visibility: visible !important; transform: none !important; clip-path: none !important; }
+      .word-wrap { overflow: visible !important; }
+      .word { transform: none !important; opacity: 1 !important; }
     }
   </style>
 </head>
@@ -936,14 +949,19 @@
       </div>
     </section>
 
-    <!-- ── HARA interlude ── -->
-    <section class="shinrin" id="section-hara" aria-labelledby="hara-title">
-      <p class="shinrin__phase" aria-hidden="true">IV — Hara 腹</p>
-      <h2 class="shinrin__title" id="hara-title">Il Centro<br>Vitale</h2>
-      <p class="shinrin__title-jp" lang="ja">腹 — Il Centro dell'Essere</p>
-      <p class="shinrin__desc">
-        Hara: il centro fisico e spirituale del corpo, sotto l'ombelico. In Giappone, le decisioni vere
-        non vengono dalla mente — vengono dal hara. Da quel luogo profondo dove risiede la verità.
+    <!-- ── HARA HEARTBEAT PULSAR ── -->
+    <section class="heartbeat-section" id="section-hara" aria-labelledby="hara-title">
+      <div class="hb-rings" aria-hidden="true">
+        <div class="hb-ring" id="hb-ring-1"></div>
+        <div class="hb-ring" id="hb-ring-2"></div>
+        <div class="hb-ring" id="hb-ring-3"></div>
+        <div class="hb-ring" id="hb-ring-4"></div>
+      </div>
+      <p class="heartbeat-section__phase" aria-hidden="true">IV — Hara 腹</p>
+      <div class="heartbeat-kanji" id="hara-title" aria-label="Hara — Il Centro dell'Essere">心</div>
+      <p class="heartbeat-desc">
+        Hara: il centro vitale. Le decisioni più vere non vengono dalla mente — vengono da qui,
+        da questo punto caldo dove pulsano il coraggio, l'intuizione e la verità più profonda.
       </p>
     </section>
 
@@ -1393,6 +1411,55 @@
     }
 
     /* ══════════════════════════════════════════════════════
+       GSAP — WORD-SPLIT SECTION TITLES
+    ══════════════════════════════════════════════════════ */
+    function splitIntoWords(el) {
+      const nodes = [...el.childNodes];
+      while (el.firstChild) el.removeChild(el.firstChild);
+      nodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'BR') {
+          el.appendChild(document.createElement('br'));
+        } else if (node.nodeType === Node.TEXT_NODE) {
+          node.textContent.trim().split(/\s+/).filter(Boolean).forEach((w, i) => {
+            if (i > 0) el.appendChild(document.createTextNode(' '));
+            const wrap = document.createElement('span');
+            wrap.className = 'word-wrap';
+            wrap.style.cssText = 'overflow:hidden;display:inline-block;vertical-align:bottom';
+            const word = document.createElement('span');
+            word.className = 'word';
+            word.style.cssText = 'display:inline-block;transform:translateY(110%)';
+            word.textContent = w;
+            wrap.appendChild(word);
+            el.appendChild(wrap);
+          });
+        }
+      });
+      el.style.opacity = '1';
+      el.style.transform = 'none';
+    }
+
+    function splitQuoteWords(qt) {
+      const text = qt.textContent.trim();
+      while (qt.firstChild) qt.removeChild(qt.firstChild);
+      text.split(/\s+/).filter(Boolean).forEach((w, i) => {
+        if (i > 0) qt.appendChild(document.createTextNode(' '));
+        const wrap = document.createElement('span');
+        wrap.className = 'word-wrap';
+        wrap.style.cssText = 'overflow:hidden;display:inline-block;vertical-align:bottom';
+        const word = document.createElement('span');
+        word.className = 'word';
+        word.style.cssText = 'display:inline-block;transform:translateY(110%)';
+        word.textContent = w;
+        wrap.appendChild(word);
+        qt.appendChild(wrap);
+      });
+      qt.style.opacity = '1';
+      qt.style.transform = 'none';
+    }
+
+    document.querySelectorAll('.section-title').forEach(splitIntoWords);
+
+    /* ══════════════════════════════════════════════════════
        GSAP — SCROLL REVEALS
     ══════════════════════════════════════════════════════ */
     document.querySelectorAll('.photo-section').forEach(section => {
@@ -1401,18 +1468,23 @@
       const titleJp = section.querySelector('.section-title-jp');
       const desc    = section.querySelector('.section-desc');
 
-      if (phase)   gsap.to(phase,   { autoAlpha: 1, x: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%', toggleActions: 'play none none none' } });
-      if (title)   gsap.to(title,   { autoAlpha: 1, y: 0,  duration: 1,  ease: 'power4.out', scrollTrigger: { trigger: section, start: 'top 70%', toggleActions: 'play none none none' }, delay: .1 });
-      if (titleJp) gsap.to(titleJp, { autoAlpha: 1,        duration: .7, ease: 'power2.out', scrollTrigger: { trigger: section, start: 'top 65%', toggleActions: 'play none none none' }, delay: .2 });
-      if (desc)    gsap.to(desc,    { autoAlpha: 1, y: 0,  duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 62%', toggleActions: 'play none none none' }, delay: .3 });
+      if (phase)   gsap.to(phase,   { autoAlpha: 1, x: 0, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 75%', toggleActions: 'play none none none' } });
+      if (title)   gsap.to(title.querySelectorAll('.word'), { y: 0, duration: 1.1, ease: 'power4.out', stagger: 0.06, scrollTrigger: { trigger: section, start: 'top 72%', toggleActions: 'play none none none' } });
+      if (titleJp) gsap.to(titleJp, { autoAlpha: 1, duration: .7, ease: 'power2.out', scrollTrigger: { trigger: section, start: 'top 65%', toggleActions: 'play none none none' }, delay: .25 });
+      if (desc)    gsap.to(desc,    { autoAlpha: 1, y: 0, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: section, start: 'top 62%', toggleActions: 'play none none none' }, delay: .4 });
     });
 
     document.querySelectorAll('.photo-card').forEach((card, i) => {
-      gsap.to(card, {
-        autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out',
-        scrollTrigger: { trigger: card, start: 'top 85%', toggleActions: 'play none none none' },
-        delay: (i % 3) * 0.12,
-      });
+      const xDir = (i % 2 === 0) ? -28 : 28;
+      gsap.fromTo(card,
+        { autoAlpha: 0, x: xDir, clipPath: 'inset(0 0 100% 0)' },
+        {
+          autoAlpha: 1, x: 0, clipPath: 'inset(0 0 0% 0)',
+          duration: 1.05, ease: 'power3.out',
+          scrollTrigger: { trigger: card, start: 'top 88%', toggleActions: 'play none none none' },
+          delay: (i % 3) * 0.1,
+        }
+      );
     });
 
     document.querySelectorAll('.quote-section').forEach(q => {
@@ -1420,17 +1492,45 @@
       const qt = q.querySelector('.quote-text');
       const qa = q.querySelector('.quote-attr');
       if (ql) gsap.to(ql, { autoAlpha: 1, duration: .8, scrollTrigger: { trigger: q, start: 'top 75%', toggleActions: 'play none none none' } });
-      if (qt) gsap.to(qt, { autoAlpha: 1, y: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: q, start: 'top 70%', toggleActions: 'play none none none' }, delay: .2 });
+      if (qt) {
+        splitQuoteWords(qt);
+        gsap.to(qt.querySelectorAll('.word'), { y: 0, duration: .9, ease: 'power3.out', stagger: 0.04, scrollTrigger: { trigger: q, start: 'top 70%', toggleActions: 'play none none none' }, delay: .2 });
+      }
       if (qa) gsap.to(qa, { autoAlpha: 1, duration: .6, scrollTrigger: { trigger: q, start: 'top 60%', toggleActions: 'play none none none' }, delay: .4 });
     });
 
-    /* Hara interlude section reveals */
-    const hara = document.getElementById('section-hara');
-    if (hara) {
-      gsap.to(hara.querySelector('.shinrin__phase'),    { autoAlpha: 1, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: hara, start: 'top 70%', toggleActions: 'play none none none' } });
-      gsap.to(hara.querySelector('.shinrin__title'),    { autoAlpha: 1, y: 0, duration: 1.2, ease: 'power4.out', scrollTrigger: { trigger: hara, start: 'top 65%', toggleActions: 'play none none none' }, delay: .1 });
-      gsap.to(hara.querySelector('.shinrin__title-jp'), { autoAlpha: 1, duration: .8, ease: 'power2.out', scrollTrigger: { trigger: hara, start: 'top 60%', toggleActions: 'play none none none' }, delay: .2 });
-      gsap.to(hara.querySelector('.shinrin__desc'),     { autoAlpha: 1, y: 0, duration: .9, ease: 'power3.out', scrollTrigger: { trigger: hara, start: 'top 55%', toggleActions: 'play none none none' }, delay: .3 });
+    /* Heartbeat pulsar section reveals */
+    const haraSection = document.getElementById('section-hara');
+    if (haraSection) {
+      const hbPhase  = haraSection.querySelector('.heartbeat-section__phase');
+      const hbKanji  = haraSection.querySelector('.heartbeat-kanji');
+      const hbDesc   = haraSection.querySelector('.heartbeat-desc');
+      const hbRings  = [
+        document.getElementById('hb-ring-1'),
+        document.getElementById('hb-ring-2'),
+        document.getElementById('hb-ring-3'),
+        document.getElementById('hb-ring-4'),
+      ];
+
+      function pulseRing(ring, delayVal) {
+        if (!ring) return;
+        gsap.fromTo(ring,
+          { width: 0, height: 0, opacity: .7 },
+          { width: '140vmax', height: '140vmax', opacity: 0, duration: 2.8, ease: 'power1.out', delay: delayVal, repeat: -1, repeatDelay: 1.4 }
+        );
+      }
+
+      const hbTl = gsap.timeline({
+        scrollTrigger: { trigger: haraSection, start: 'top 60%', toggleActions: 'play none none none' }
+      });
+
+      hbTl
+        .to(hbPhase, { autoAlpha: 1, duration: .8, ease: 'power3.out' })
+        .to(hbKanji, { autoAlpha: 1, scale: 1, duration: 1.2, ease: 'back.out(1.5)' }, '-=0.2')
+        .add(() => {
+          hbRings.forEach((ring, i) => pulseRing(ring, i * 0.6));
+        }, '-=0.8')
+        .to(hbDesc, { autoAlpha: 1, y: 0, duration: 1, ease: 'power3.out' }, '+=0.1');
     }
 
     /* Outro reveals */
