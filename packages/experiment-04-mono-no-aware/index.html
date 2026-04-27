@@ -4,18 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="儚い Hakanai — An immersive photography experience exploring the ephemeral beauty of sakura, mono no aware, and the journey of personal rebirth." />
-  <meta name="theme-color" content="#1A1118">
-  <title>儚い Hakanai — Sakura · Mono no Aware — Experiment 04</title>
-
-  <!-- THREE.js ImportMap — must appear before any type="module" script -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
-    }
-  }
-  </script>
+  <title>儚い Hakanai — Sakura · Mono no Aware</title>
 
   <!-- Preconnect for performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -23,16 +12,6 @@
 
   <!-- Fonts: Shippori Mincho for Japanese aesthetic + Cormorant for elegant latin -->
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet" />
-
-  <!-- TailwindCSS Play CDN v4 -->
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <style type="text/tailwindcss">
-    @theme {
-      --font-display: "Cormorant Garamond", Georgia, serif;
-      --font-jp:      "Shippori Mincho", serif;
-      --font-body:    "Noto Sans JP", sans-serif;
-    }
-  </style>
 
   <style>
     /* ============================================================
@@ -900,7 +879,7 @@
       stroke: var(--haizakura);
     }
     [data-theme="light"] .lightbox__counter {
-      color: var(--haizakura);
+      color: var(--haizakusa);
     }
 
     /* Theme toggle button */
@@ -1217,102 +1196,6 @@
       background: linear-gradient(to right, transparent, var(--sakura-iro), transparent);
       transition: none;
     }
-
-    /* ============================================================
-       NAVIGATION — back-link and experiment label
-       ============================================================ */
-    .back-link {
-      position: fixed;
-      top: 28px;
-      left: clamp(24px, 4vw, 60px);
-      font-family: var(--font-body);
-      font-size: 10px;
-      letter-spacing: 0.3em;
-      color: rgba(250, 245, 240, 0.35);
-      text-decoration: none;
-      z-index: 9000;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: color 0.25s;
-    }
-
-    .back-link:hover { color: var(--sakura-iro); }
-    .back-link::before { content: '←'; }
-
-    .exp-label {
-      position: fixed;
-      top: 28px;
-      right: clamp(24px, 4vw, 60px);
-      font-family: var(--font-body);
-      font-size: 10px;
-      letter-spacing: 0.3em;
-      color: rgba(250, 245, 240, 0.2);
-      z-index: 9000;
-    }
-
-    @media (max-width: 768px) {
-      .back-link, .exp-label { display: none; }
-    }
-
-    /* ============================================================
-       MOBILE — Comprehensive responsive fixes
-       ============================================================ */
-    @media (max-width: 768px) {
-
-      /* Hide nav dot labels on mobile */
-      .nav-dot::after { display: none; }
-
-      /* Nav dots smaller and closer to edge */
-      .nav-dots { right: 8px; gap: 10px; }
-      .nav-dot { width: 6px; height: 6px; }
-
-      /* Theme toggle closer to edge */
-      .theme-toggle { left: 12px; top: 12px; }
-
-      /* Hero text sizing */
-      .hero__kanji { font-size: clamp(4rem, 20vw, 7rem); }
-      .hero__tagline { font-size: 0.9rem; max-width: 32ch; }
-
-      /* Sections: reduce padding */
-      .philosophy { padding: var(--space-lg) var(--space-md); }
-      .interlude  { padding: var(--space-lg) var(--space-md); min-height: 60vh; }
-      .section-header { padding: var(--space-lg) var(--space-md) var(--space-md); }
-
-      /* Hanafubuki: 2 cols on mobile (CSS grid override already exists) */
-
-      /* Hanaikada: no offset on mobile */
-      .hanaikada__grid .photo-card:nth-child(even) { margin-top: 0; }
-
-      /* Closing */
-      .closing { padding: var(--space-xl) var(--space-md); }
-
-      /* Lightbox arrows smaller */
-      .lightbox__nav { width: 36px; height: 36px; }
-      .lightbox__nav--prev { left: 8px; }
-      .lightbox__nav--next { right: 8px; }
-
-      /* Grain less visible on small screens */
-      .grain { opacity: 0.025; }
-    }
-
-    @media (max-width: 480px) {
-      .hero__romaji { font-size: 1rem; letter-spacing: 0.3em; }
-      .philosophy__jp { font-size: 2rem; }
-      .section-header__kanji { font-size: 2rem; }
-      .tsubomi__grid { grid-template-columns: 1fr; }
-      .hanaikada__grid { grid-template-columns: 1fr; }
-    }
-
-    /* ============================================================
-       LENIS CSS — inlined to avoid extra request
-       ============================================================ */
-    html.lenis, html.lenis body { height: auto; }
-    .lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
-    .lenis [data-lenis-prevent],
-    .lenis [data-lenis-prevent-wheel],
-    .lenis [data-lenis-prevent-touch] { overscroll-behavior: contain; }
-    .lenis.lenis-smooth iframe { pointer-events: none; }
   </style>
 </head>
 <body>
@@ -1322,10 +1205,6 @@
 
   <!-- Petal burst canvas — click effect -->
   <canvas class="burst-canvas" id="burst-canvas" aria-hidden="true"></canvas>
-
-  <!-- Navigation -->
-  <a href="../landing/index.html" class="back-link" aria-label="Back to all experiments">EXPERIMENTS</a>
-  <span class="exp-label" aria-hidden="true">EXP 04 / MONO NO AWARE</span>
 
   <!-- ============================================================
        LIGHTBOX
@@ -1540,13 +1419,79 @@
   <!-- ============================================================
        SCRIPTS — CDN Libraries
        ============================================================ -->
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <!-- GSAP 3.12 + ScrollTrigger -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
+  <style>
+    /* ============================================================
+       MOBILE — Comprehensive responsive fixes
+       ============================================================ */
+    @media (max-width: 768px) {
+
+      /* Hide nav dot labels on mobile */
+      .nav-dot::after { display: none; }
+
+      /* Nav dots smaller and closer to edge */
+      .nav-dots { right: 8px; gap: 10px; }
+      .nav-dot { width: 6px; height: 6px; }
+
+      /* Theme toggle closer to edge */
+      .theme-toggle { left: 12px; top: 12px; }
+
+      /* Hero text sizing */
+      .hero__kanji { font-size: clamp(4rem, 20vw, 7rem); }
+      .hero__tagline { font-size: 0.9rem; max-width: 32ch; }
+
+      /* Sections: reduce padding */
+      .philosophy { padding: var(--space-lg) var(--space-md); }
+      .interlude  { padding: var(--space-lg) var(--space-md); min-height: 60vh; }
+      .section-header { padding: var(--space-lg) var(--space-md) var(--space-md); }
+
+      /* Hanafubuki: 2 cols on mobile (CSS grid override already exists) */
+
+      /* Hanaikada: no offset on mobile */
+      .hanaikada__grid .photo-card:nth-child(even) { margin-top: 0; }
+
+      /* Closing */
+      .closing { padding: var(--space-xl) var(--space-md); }
+
+      /* About */
+      .about { padding: var(--space-xl) var(--space-md); }
+
+      /* Lightbox arrows smaller */
+      .lightbox__nav { width: 36px; height: 36px; }
+      .lightbox__nav--prev { left: 8px; }
+      .lightbox__nav--next { right: 8px; }
+
+      /* Grain less visible on small screens */
+      .grain { opacity: 0.025; }
+    }
+
+    @media (max-width: 480px) {
+      .hero__romaji { font-size: 1rem; letter-spacing: 0.3em; }
+      .philosophy__jp { font-size: 2rem; }
+      .section-header__kanji { font-size: 2rem; }
+      .tsubomi__grid { grid-template-columns: 1fr; }
+      .hanaikada__grid { grid-template-columns: 1fr; }
+    }
+
+
+  </style>
+
+  <!-- Lenis CSS inlined (513 bytes) — avoids extra request -->
+  <style>
+    html.lenis, html.lenis body { height: auto; }
+    .lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+    .lenis [data-lenis-prevent],
+    .lenis [data-lenis-prevent-wheel],
+    .lenis [data-lenis-prevent-touch] { overscroll-behavior: contain; }
+    .lenis.lenis-smooth iframe { pointer-events: none; }
+  </style>
+
   <script type="module">
-    // ---- Three.js: imported via importmap (v0.169.0) ----
-    import * as THREE from 'three';
     // ---- Lenis imported directly from ESM build ----
     // This is the correct way to use Lenis: import the class directly.
     // No globalThis/window hacks needed — Lenis is in scope via import.
@@ -2030,7 +1975,6 @@
 
     function initLenis() {
       lenis = new Lenis({
-        autoRaf: false,
         duration: 1.2,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         orientation: 'vertical',
@@ -2915,6 +2859,37 @@
         });
       }
       draw();
+    }
+
+    // ============================================================
+    // 11. SECTION DIVIDER ANIMATIONS
+    //     The horizontal sakura-pink lines between sections
+    //     animate from 0 to full width on scroll
+    // ============================================================
+    function initDividers() {
+      document.querySelectorAll('.section-divider').forEach(divider => {
+        gsap.to(divider.querySelector('::after') || divider, {
+          scrollTrigger: {
+            trigger: divider,
+            start: 'top 80%',
+            toggleActions: 'play none none reverse'
+          }
+        });
+
+        // Use CSS animation via toggleClass instead
+        ScrollTrigger.create({
+          trigger: divider,
+          start: 'top 80%',
+          onEnter: () => {
+            divider.style.setProperty('--line-progress', '1');
+            gsap.to(divider, {
+              '--line-progress': 1,
+              duration: 1.2,
+              ease: 'power2.out'
+            });
+          }
+        });
+      });
     }
 
     // ============================================================
