@@ -31,40 +31,73 @@ Progressive reference system for Vue 3 projects. Load only files relevant to cur
 
 **For styled UI components:** use `nuxt-ui` skill
 **For headless accessible components:** use `reka-ui` skill
+**For VueUse composables:** use `vueuse` skill
 
 ## Quick Reference
 
-| Working on...            | Load file                  |
-| ------------------------ | -------------------------- |
-| `.vue` in `components/`  | references/components.md   |
-| File in `composables/`   | references/composables.md  |
-| File in `utils/`         | references/utils-client.md |
-| `.spec.ts` or `.test.ts` | references/testing.md      |
+| Working on...            | Load file                    |
+| ------------------------ | ---------------------------- |
+| `.vue` in `components/`  | references/components.md     |
+| File in `composables/`   | references/composables.md    |
+| File in `utils/`         | references/utils-client.md   |
+| `.spec.ts` or `.test.ts` | references/testing.md        |
+| TypeScript patterns      | references/typescript.md     |
+| Vue Router typing        | references/router.md         |
+| Reactivity (ref, watch)  | references/reactivity.md     |
+| Custom directives        | references/directives.md     |
+| Provide/inject           | references/provide-inject.md |
+| Edge cases, vue-tsc      | references/gotchas.md        |
 
 ## Loading Files
 
-**Load one file at a time based on file context:**
+**Consider loading these reference files based on your task:**
 
-- Component work → [references/components.md](references/components.md)
-- Composable work → [references/composables.md](references/composables.md)
-- Utils work → [references/utils-client.md](references/utils-client.md)
-- Testing → [references/testing.md](references/testing.md)
+- [ ] [references/components.md](references/components.md) - if working in `components/` or writing `.vue` files
+- [ ] [references/composables.md](references/composables.md) - if creating composables (`use*` functions)
+- [ ] [references/utils-client.md](references/utils-client.md) - if working in `utils/` or writing client utilities
+- [ ] [references/testing.md](references/testing.md) - if writing `.spec.ts` or `.test.ts` files
+- [ ] [references/typescript.md](references/typescript.md) - if working with Vue TypeScript patterns or generics
+- [ ] [references/router.md](references/router.md) - if working with Vue Router or route typing
+- [ ] [references/reactivity.md](references/reactivity.md) - if using ref, reactive, computed, watch, or watchEffect
+- [ ] [references/directives.md](references/directives.md) - if creating or using custom directives
+- [ ] [references/provide-inject.md](references/provide-inject.md) - if using provide/inject patterns
+- [ ] [references/gotchas.md](references/gotchas.md) - if debugging edge cases or hydration issues
 
-**DO NOT load all files at once** - wastes context on irrelevant patterns.
+**DO NOT load all files at once.** Load only what's relevant to your current task.
+
+## Quick Start
+
+```vue
+<script setup lang="ts">
+const { count = 0 } = defineProps<{ count?: number }>()
+const emit = defineEmits<{ update: [value: number] }>()
+</script>
+
+<template>
+  <button @click="emit('update', count + 1)">
+    Count: {{ count }}
+  </button>
+</template>
+```
 
 ## Available Guidance
 
 **[references/components.md](references/components.md)** - Props with reactive destructuring, emits patterns, defineModel for v-model, slots shorthand
 
-**[references/composables.md](references/composables.md)** - Composition API structure, VueUse integration, lifecycle hooks, async patterns
+**[references/composables.md](references/composables.md)** - Composition API structure, VueUse integration, lifecycle hooks, async patterns, reactivity gotchas
 
 **[references/utils-client.md](references/utils-client.md)** - Pure functions, formatters, validators, transformers, when NOT to use utils
 
-**[references/testing.md](references/testing.md)** - Vitest + @vue/test-utils, component testing, composable testing, mocking patterns
+**[references/testing.md](references/testing.md)** - Vitest + @vue/test-utils, component testing, composable testing, router mocking
 
-## Examples
+**[references/typescript.md](references/typescript.md)** - InjectionKey for provide/inject, vue-tsc strict templates, tsconfig settings, generic components
 
-Working examples in `resources/examples/`:
+**[references/router.md](references/router.md)** - Route meta types, typed params with unplugin-vue-router, scroll behavior, navigation guards
 
-- `component-example.vue` - Full component with all patterns
-- `composable-example.ts` - Reusable composition function
+**[references/reactivity.md](references/reactivity.md)** - ref, reactive, computed, watch, watchEffect, reactivity fundamentals
+
+**[references/directives.md](references/directives.md)** - Custom directive hooks, v-focus, v-click-outside, v-tooltip patterns
+
+**[references/provide-inject.md](references/provide-inject.md)** - InjectionKey typing, app-level provide, readonly patterns
+
+**[references/gotchas.md](references/gotchas.md)** - Common gotchas, vue-tsc edge cases, hydration issues, race conditions (from vuejs-ai/skills)

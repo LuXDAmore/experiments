@@ -60,6 +60,116 @@ importers:
         specifier: ^0.169.0
         version: 0.169.0
 
+  packages/experiment-05-komorebi:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-06-ikigai:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-07-wabi-sabi:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-08-ichigo-ichie:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-09-kintsugi:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-10-yugen:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-11-natsukashii:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-12-kokoro:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/experiment-13-shoganai:
+    dependencies:
+      gsap:
+        specifier: ^3.12.5
+        version: 3.15.0
+      lenis:
+        specifier: ^1.1.14
+        version: 1.3.23(react@19.2.5)
+      three:
+        specifier: ^0.169.0
+        version: 0.169.0
+
+  packages/landing: {}
+
 packages:
 
   '@alcalzone/ansi-tokenize@0.3.0':
@@ -477,8 +587,8 @@ packages:
     resolution: {integrity: sha512-XlkWvfIm6RmsWtNJx+uqtKLS8eqFbxUg0ZzLXqY0caEy9l7hruX8IpiDnjsLavoBgqCCR71TqWO8MaXYheJ3RQ==}
     engines: {node: '>=10'}
 
-  string-width@8.2.0:
-    resolution: {integrity: sha512-6hJPQ8N0V0P3SNmP6h2J99RLuzrWz2gvT7VnK5tKvrNqJoyS9W4/Fb8mo31UiPvy00z7DQXkP2hnKBVav76thw==}
+  string-width@8.2.1:
+    resolution: {integrity: sha512-IIaP0g3iy9Cyy18w3M9YcaDudujEAVHKt3a3QJg1+sr/oX96TbaGUubG0hJyCjCBThFH+tFpcIyoUHUn1ogaLA==}
     engines: {node: '>=20'}
 
   stringify-entities@4.0.4:
@@ -674,7 +784,7 @@ snapshots:
   cli-truncate@6.0.0:
     dependencies:
       slice-ansi: 9.0.0
-      string-width: 8.2.0
+      string-width: 8.2.1
 
   code-excerpt@4.0.0:
     dependencies:
@@ -748,7 +858,7 @@ snapshots:
       signal-exit: 3.0.7
       slice-ansi: 9.0.0
       stack-utils: 2.0.6
-      string-width: 8.2.0
+      string-width: 8.2.1
       terminal-size: 4.0.1
       type-fest: 5.6.0
       widest-line: 6.0.0
@@ -1175,7 +1285,7 @@ snapshots:
     dependencies:
       escape-string-regexp: 2.0.0
 
-  string-width@8.2.0:
+  string-width@8.2.1:
     dependencies:
       get-east-asian-width: 1.5.0
       strip-ansi: 7.2.0
@@ -1246,12 +1356,12 @@ snapshots:
 
   widest-line@6.0.0:
     dependencies:
-      string-width: 8.2.0
+      string-width: 8.2.1
 
   wrap-ansi@10.0.0:
     dependencies:
       ansi-styles: 6.2.3
-      string-width: 8.2.0
+      string-width: 8.2.1
       strip-ansi: 7.2.0
 
   ws@8.20.0: {}

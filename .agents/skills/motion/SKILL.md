@@ -57,11 +57,13 @@ export default defineNuxtConfig({
 
 ## Loading Files
 
-**Load one file at a time based on context:**
+**Consider loading these reference files based on your task:**
 
-- Component animations → [references/components.md](references/components.md)
-- Composables, motion values → [references/composables.md](references/composables.md)
-- Examples, inspiration → [references/examples.md](references/examples.md)
+- [ ] [references/components.md](references/components.md) - if using Motion component, gestures, or layout animations
+- [ ] [references/composables.md](references/composables.md) - if using useMotionValue, useScroll, useSpring, or animate()
+- [ ] [references/examples.md](references/examples.md) - if looking for animation patterns or inspiration
+
+**DO NOT load all files at once.** Load only what's relevant to your current task.
 
 ## Core Concepts
 
@@ -71,43 +73,43 @@ Render any HTML/SVG element with animation capabilities:
 
 ```vue
 <script setup lang="ts">
-import { Motion } from 'motion-v'
+import { motion } from 'motion-v'
 </script>
 
 <template>
-  <Motion.div
+  <motion.div
     :initial="{ opacity: 0, y: 20 }"
     :animate="{ opacity: 1, y: 0 }"
     :exit="{ opacity: 0, y: -20 }"
     :transition="{ duration: 0.3 }"
   >
     Animated content
-  </Motion.div>
+  </motion.div>
 </template>
 ```
 
 ### Gesture Animations
 
 ```vue
-<Motion.button
+<motion.button
   :whileHover="{ scale: 1.05 }"
   :whilePress="{ scale: 0.95 }"
   :transition="{ type: 'spring', stiffness: 400 }"
 >
   Click me
-</Motion.button>
+</motion.button>
 ```
 
 ### Scroll Animations
 
 ```vue
-<Motion.div
+<motion.div
   :initial="{ opacity: 0 }"
   :whileInView="{ opacity: 1 }"
   :viewport="{ once: true, margin: '-100px' }"
 >
   Appears on scroll
-</Motion.div>
+</motion.div>
 ```
 
 ## Available Guidance

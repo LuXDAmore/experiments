@@ -6,115 +6,135 @@
       "sourceType": "github",
       "computedHash": "ac3fc5b4e206488ffc408a2806f829bb2e5eaf518fded09be34790685c2b3a0d"
     },
-    "gsap-core": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-core",
-      "sourceType": "local",
-      "computedHash": "c4a01101d9e1aafbf4b49f75d74f9349790d8741981ba0237c990093863035a6"
-    },
     "gsap-frameworks": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-frameworks",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\gsap-frameworks",
       "sourceType": "local",
       "computedHash": "151f82c17668f8568be9ee77a7b6faadc295118fe5ee77e44c6971f59c66c857"
     },
     "gsap-performance": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-performance",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\gsap-performance",
       "sourceType": "local",
       "computedHash": "863842ac2d7aee53fd4f0025c960173d7ad3e658a5715b89b2211fa280213c1f"
     },
     "gsap-plugins": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-plugins",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\gsap-plugins",
       "sourceType": "local",
       "computedHash": "83f5517521ddb74264d5227a2f11e58425edd10d20e8c0f1264e10cbcc00e712"
     },
     "gsap-react": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-react",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\gsap-react",
       "sourceType": "local",
       "computedHash": "7d3b52822681a4158e371f895c58fb7030ecaf33f585a534b7162f9e92c5d893"
     },
     "gsap-scrolltrigger": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-scrolltrigger",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\gsap-scrolltrigger",
       "sourceType": "local",
       "computedHash": "1cdc5647693783cb7a662d84a5de434c88a051ed56b4d33597c9b5782b5973e6"
     },
     "gsap-timeline": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-timeline",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\gsap-timeline",
       "sourceType": "local",
       "computedHash": "54981c2feec5a9c0d57988aeb32315af32bdeadd261550d5e9db7a7b1f08b487"
     },
     "gsap-utils": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\gsap-utils",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\gsap-utils",
       "sourceType": "local",
       "computedHash": "1ab2387f6e694718a4f1b5acf2a4ab16e1b884c3428adf5f6b26d830f00826cf"
     },
+    "karpathy-guidelines": {
+      "source": "forrestchang/andrej-karpathy-skills",
+      "sourceType": "github",
+      "computedHash": "0ec1641120accbb458780e0bd19a50a4182f2b97863e90851b91307f29802c9f"
+    },
     "motion": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\motion",
-      "sourceType": "local",
-      "computedHash": "0cda9472ea509fcdca5c4f7ac4edba19750db6c02b9aee55e09214658cf900fb"
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "computedHash": "88f028610d2a273dd1de1b79c0e4cc70ed041105af86f890520ff9b1c674352e"
     },
     "nuxt": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\nuxt",
-      "sourceType": "local",
-      "computedHash": "0df55243360dc073fec15253d3ec82f1a389e8d6951361459707703b3f4f8d33"
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "computedHash": "e814b473cac8105db33cbd6ddc5ac9d000faf4d4f3e28df4aa7a8113bb668f8e"
     },
     "nuxt-ui": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\nuxt-ui",
-      "sourceType": "local",
-      "computedHash": "facee784bd90fc9554147a469084db87581cf6a31769aaa3954fd6bd7dfc7041"
+      "source": "nuxt/ui",
+      "sourceType": "github",
+      "computedHash": "725aefb56278dae0197dc3d71a594f889723be243a76d25844a19f3726681ef9"
+    },
+    "pnpm": {
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "computedHash": "999ed1ace847ce7897ec596fa92630bafb3532b592956045a3915136499d6635"
     },
     "threejs-animation": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-animation",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-animation",
       "sourceType": "local",
       "computedHash": "8c50b1493812bd88f3ed0637c0c3c5d846afdb322157b67b2ffba4ce8e552835"
     },
     "threejs-fundamentals": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-fundamentals",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-fundamentals",
       "sourceType": "local",
       "computedHash": "e08d49571071f0f54ef2a76fdfcb96c16673e4fda478067727def4659feb80ca"
     },
     "threejs-geometry": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-geometry",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-geometry",
       "sourceType": "local",
       "computedHash": "4e5757bf80a329810545c237e557e362fa14fd3a3e6a567ec1d75435be6b2dda"
     },
     "threejs-interaction": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-interaction",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-interaction",
       "sourceType": "local",
       "computedHash": "988d235b7ebd85276a584c6f81ce7c801280ebc45b401017b334136dc8a7ec82"
     },
     "threejs-lighting": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-lighting",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-lighting",
       "sourceType": "local",
       "computedHash": "9303d1b8a9704e88415e5a98c98ad7b6e0f654f8029a3606af7947c0efcb86cc"
     },
     "threejs-loaders": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-loaders",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-loaders",
       "sourceType": "local",
       "computedHash": "f2cceed635fd7a2119acf6e5b1a2fcba63a0e52cf2514c1830a69e4744554fcc"
     },
     "threejs-materials": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-materials",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-materials",
       "sourceType": "local",
       "computedHash": "201cf0f3720c0ea9e415e6376b8ad389aa86b483875e87ca0e51aa2770c856aa"
     },
     "threejs-postprocessing": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-postprocessing",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-postprocessing",
       "sourceType": "local",
       "computedHash": "48e04ff507582a18e0d509c2738b9d9466881b00e8ca2600727910a0d52abf75"
     },
     "threejs-shaders": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-shaders",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-shaders",
       "sourceType": "local",
       "computedHash": "649ceb058edfb5cfd51e80fb3a6c57aca9bab4a9d3a03f6077aa9502be0c0771"
     },
     "threejs-textures": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\threejs-textures",
+      "source": "D:\\Projects\\two-team\\unibo\\.github\\skills\\threejs-textures",
       "sourceType": "local",
       "computedHash": "772a0bfc1d64cfcbc5347d206584a8fa412983201ad7a2cfb8766097b4936db9"
     },
+    "vite": {
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "computedHash": "bfce47b3705ca5d9ae2ac38f273b2a024f56c0ea8b75860d0b40cdb905cf235b"
+    },
     "vue": {
-      "source": "D:\\Projects\\luca-iaconelli\\experiments\\.github\\skills\\vue",
-      "sourceType": "local",
-      "computedHash": "0cca9f50ea3b5c68918eaee7f6d61c62af93b8df8396d70bbcc78bb6db6d2f6d"
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "computedHash": "30afec05f0f4127ab4d8789ee07d8b7b009edc5aa674d48ba30a7b6869c5e3f1"
+    },
+    "vueuse": {
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "computedHash": "417a84b46df8c3f2e23a8b91b59ae151ab7cec9674a690efa6d2b9032d9de52c"
+    },
+    "writing-web-documentation": {
+      "source": "onmax/nuxt-skills",
+      "sourceType": "github",
+      "computedHash": "eaa80590f1f7ed97cc1af6657821eab4dfc8400a45033747a48c3d1e5d2b8957"
     }
   }
 }

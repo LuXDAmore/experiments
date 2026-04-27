@@ -1,65 +1,98 @@
 ---
 name: nuxt-ui
-description: Use when building styled UI with @nuxt/ui v4 components (Button, Modal, Form, Table, etc.) - provides ready-to-use components with Tailwind Variants theming. Use vue skill for raw component patterns, reka-ui for headless primitives.
-license: MIT
+description: Build UIs with @nuxt/ui v4 — 125+ accessible Vue components with Tailwind CSS theming. Use when creating interfaces, customizing themes to match a brand, building forms, or composing layouts like dashboards, docs sites, and chat interfaces.
 ---
 
-# Nuxt UI v4
+# Nuxt UI
 
-Component library for Vue 3 and Nuxt 4+ built on Reka UI (headless) + Tailwind CSS v4 + Tailwind Variants.
+Vue component library built on [Reka UI](https://reka-ui.com/) + [Tailwind CSS](https://tailwindcss.com/) + [Tailwind Variants](https://www.tailwind-variants.org/). Works with Nuxt, Vue (Vite), Laravel (Vite + Inertia), and AdonisJS (Vite + Inertia).
 
-**Current stable version:** v4.3.0 (December 2025)
+## MCP Server
 
-## When to Use
+For component API details (props, slots, events, full documentation, examples), use the [Nuxt UI MCP server](https://ui.nuxt.com/docs/getting-started/ai/mcp). If not already configured, add it:
 
-- Installing/configuring @nuxt/ui
-- Using UI components (Button, Card, Table, Form, etc.)
-- Customizing theme (colors, variants, CSS variables)
-- Building forms with validation
-- Using overlays (Modal, Toast, CommandPalette)
-- Working with composables (useToast, useOverlay)
+**Cursor** — `.cursor/mcp.json`:
 
-**For Vue component patterns:** use `vue` skill
-**For Nuxt routing/server:** use `nuxt` skill
+```json
+{ "mcpServers": { "nuxt-ui": { "type": "http", "url": "https://ui.nuxt.com/mcp" } } }
+```
 
-## Available Guidance
+**Claude Code**:
 
-| File                                                         | Topics                                                                           |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| **[references/installation.md](references/installation.md)** | Nuxt/Vue setup, pnpm gotchas, UApp wrapper, module options, prefix, tree-shaking |
-| **[references/theming.md](references/theming.md)**           | Semantic colors, CSS variables, app.config.ts, Tailwind Variants                 |
-| **[references/components.md](references/components.md)**     | Component index by category (125+ components)                                    |
-| **components/\*.md**                                         | Per-component details (button.md, modal.md, etc.)                                |
-| **[references/forms.md](references/forms.md)**               | Form components, validation (Zod/Valibot), useFormField                          |
-| **[references/overlays.md](references/overlays.md)**         | Toast, Modal, Slideover, Drawer, CommandPalette                                  |
-| **[references/composables.md](references/composables.md)**   | useToast, useOverlay, defineShortcuts, useScrollspy                              |
+```bash
+claude mcp add --transport http nuxt-ui https://ui.nuxt.com/mcp
+```
 
-## Usage Pattern
+Key MCP tools:
+- `search_components` — find components by name, description, or category (no params = list all)
+- `search_composables` — find composables by name or description (no params = list all)
+- `search_icons` — search Iconify icons (defaults to `lucide`), returns `i-{prefix}-{name}` names
+- `get_component` — full component documentation with usage examples
+- `get_component_metadata` — props, slots, events (lightweight, no docs content)
+- `get_example` — real-world code examples
 
-**Load based on context:**
+When you need to know **what a component accepts** or **how its API works**, use the MCP. This skill teaches you **when to use which component** and **how to build well**.
 
-- Installing Nuxt UI? → [references/installation.md](references/installation.md)
-- Customizing theme? → [references/theming.md](references/theming.md)
-- Component index → [references/components.md](references/components.md)
-- Specific component → [components/button.md](components/button.md), [components/modal.md](components/modal.md), etc.
-- Building forms? → [references/forms.md](references/forms.md)
-- Using overlays? → [references/overlays.md](references/overlays.md)
-- Using composables? → [references/composables.md](references/composables.md)
+## Core rules (always apply)
 
-**DO NOT read all files at once.** Load based on context.
+1. **Always wrap the app in `UApp`** — required for toasts, tooltips, and programmatic overlays. Accepts a `locale` prop for i18n.
+2. **Always use semantic colors** — `text-default`, `bg-elevated`, `border-muted`, etc. Never use raw Tailwind palette colors like `text-gray-500`.
+3. **Read generated theme files for slot names** — Nuxt: `.nuxt/ui/<component>.ts`, Vue: `node_modules/.nuxt-ui/ui/<component>.ts`. These show every slot, variant, and default class for any component.
+4. **Override priority** (highest wins): `ui` prop / `class` prop → global config → theme defaults.
+5. **Icons use `i-{collection}-{name}` format** — `lucide` is the default collection. Use the MCP `search_icons` tool to find icons, or browse at [icones.js.org](https://icones.js.org).
 
-## Key Concepts
+## How to use this skill
 
-| Concept           | Description                                                |
-| ----------------- | ---------------------------------------------------------- |
-| UApp              | Required wrapper component for Toast, Tooltip, overlays    |
-| Tailwind Variants | Type-safe styling with slots, variants, compoundVariants   |
-| Semantic Colors   | primary, secondary, success, error, warning, info, neutral |
-| Reka UI           | Headless component primitives (accessibility built-in)     |
+Based on the task, load the relevant reference files **before writing any code**. Don't load everything — only what's needed.
 
-> For headless component primitives (API details, accessibility patterns, asChild): read the **reka-ui** skill
+### Reference files
 
-## Quick Reference
+**Guidelines** — design decisions and conventions:
+- [design-system](references/guidelines/design-system.md) — semantic colors, theming, brand customization, variants, the `ui` prop
+- [component-selection](references/guidelines/component-selection.md) — decision matrices: when to use Modal vs Slideover, Select vs SelectMenu, Toast vs Alert, etc.
+- [conventions](references/guidelines/conventions.md) — coding patterns, slot naming, items arrays, composables, keyboard shortcuts
+- [forms](references/guidelines/forms.md) — form validation, field layout, error handling, Standard Schema
+
+**Layouts** — full page structure patterns:
+- [landing](references/layouts/landing.md) — landing pages, blog, changelog, pricing
+- [dashboard](references/layouts/dashboard.md) — admin UI with sidebar and panels
+- [docs](references/layouts/docs.md) — documentation sites with navigation and TOC
+- [chat](references/layouts/chat.md) — AI chat with Vercel AI SDK
+- [editor](references/layouts/editor.md) — rich text editor with toolbars
+
+**Recipes** — complete patterns for common tasks:
+- [data-tables](references/recipes/data-tables.md) — tables with filters, pagination, sorting, selection
+- [auth](references/recipes/auth.md) — login, signup, forgot password forms
+- [overlays](references/recipes/overlays.md) — modals, slideovers, drawers, command palette
+- [navigation](references/recipes/navigation.md) — headers, sidebars, breadcrumbs, tabs
+
+**Quick reference:**
+- [components](references/components.md) — categorized component index for finding the right component name
+
+### Routing table
+
+| Task | Load these references |
+|---|---|
+| Build a landing page | design-system, conventions, landing |
+| Build a dashboard / admin UI | conventions, component-selection, dashboard |
+| Add a settings page | conventions, forms |
+| Create a login / signup form | conventions, forms, auth |
+| Display data in a table | conventions, component-selection, data-tables |
+| Customize theme / brand colors | design-system |
+| Add a chat interface | conventions, chat |
+| Add a modal, slideover, or drawer | conventions, component-selection, overlays |
+| Build site navigation | conventions, component-selection, navigation |
+| Build a documentation site | conventions, docs |
+| Add a rich text editor | conventions, editor |
+| General UI work | conventions, component-selection |
+
+## Installation
+
+### Nuxt
+
+```bash
+pnpm add @nuxt/ui tailwindcss
+```
 
 ```ts
 // nuxt.config.ts
@@ -70,13 +103,13 @@ export default defineNuxtConfig({
 ```
 
 ```css
-/* assets/css/main.css */
-@import 'tailwindcss';
-@import '@nuxt/ui';
+/* app/assets/css/main.css */
+@import "tailwindcss";
+@import "@nuxt/ui";
 ```
 
 ```vue
-<!-- app.vue - UApp wrapper required -->
+<!-- app.vue -->
 <template>
   <UApp>
     <NuxtPage />
@@ -84,12 +117,59 @@ export default defineNuxtConfig({
 </template>
 ```
 
-## Resources
+### Vue (Vite)
 
-- [Nuxt UI Docs](https://ui.nuxt.com)
-- [Component Reference](https://ui.nuxt.com/components)
-- [Theme Customization](https://ui.nuxt.com/getting-started/theme)
+```bash
+pnpm add @nuxt/ui tailwindcss
+```
 
----
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import ui from '@nuxt/ui/vite'
 
-_Token efficiency: Main skill ~300 tokens, each sub-file ~800-1200 tokens_
+export default defineConfig({
+  plugins: [
+    vue(),
+    ui()
+  ]
+})
+```
+
+```ts
+// src/main.ts
+import './assets/css/main.css'
+import { createApp } from 'vue'
+import { createRouter, createWebHistory } from 'vue-router'
+import ui from '@nuxt/ui/vue-plugin'
+import App from './App.vue'
+
+const app = createApp(App)
+const router = createRouter({
+  routes: [],
+  history: createWebHistory()
+})
+
+app.use(router)
+app.use(ui)
+app.mount('#app')
+```
+
+```css
+/* src/assets/css/main.css */
+@import "tailwindcss";
+@import "@nuxt/ui";
+```
+
+```vue
+<!-- src/App.vue -->
+<template>
+  <UApp>
+    <RouterView />
+  </UApp>
+</template>
+```
+
+> Add `class="isolate"` to your root `<div id="app">` in `index.html`.
+> For Inertia: use `ui({ router: 'inertia' })` in `vite.config.ts`.

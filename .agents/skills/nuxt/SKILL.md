@@ -1,12 +1,12 @@
 ---
 name: nuxt
-description: Use when working on Nuxt 4+ projects - provides server routes, file-based routing, middleware patterns, Nuxt-specific composables, and configuration with latest docs. Covers h3 v1 helpers (validation, WebSocket, SSE) and nitropack v2 patterns.
+description: Use when working on Nuxt 4+ projects - provides server routes, file-based routing, middleware patterns, Nuxt-specific composables, and configuration with latest docs. Covers h3 v1 helpers (validation, WebSocket, SSE) and nitropack v2 patterns. Updated for Nuxt 4.3+.
 license: MIT
 ---
 
 # Nuxt 4+ Development
 
-Progressive guidance for Nuxt 4+ projects with latest patterns and conventions.
+Progressive guidance for Nuxt 4+ projects (v4.3+) with latest patterns and conventions.
 
 ## When to Use
 
@@ -34,27 +34,35 @@ Read specific files based on current work:
 **For database/storage:** use `nuxthub` skill
 **For content-driven sites:** use `nuxt-content` skill
 **For creating modules:** use `nuxt-modules` skill
-**For project scaffolding/CI:** use `personal-ts-setup` skill
+**For project scaffolding/CI:** use `ts-library` skill
 
-## Usage Pattern
+## Loading Files
 
-**Progressive loading - only read what you need:**
+**Consider loading these reference files based on your task:**
 
-- Creating API endpoint? → [references/server.md](references/server.md)
-- Setting up pages/routing? → [references/routing.md](references/routing.md)
-- Using composables/data fetching? → [references/nuxt-composables.md](references/nuxt-composables.md)
-- Adding middleware/plugins? → [references/middleware-plugins.md](references/middleware-plugins.md)
-- Configuring Nuxt? → [references/nuxt-config.md](references/nuxt-config.md)
-- Setting up CI/ESLint? → [references/project-setup.md](references/project-setup.md)
+- [ ] [references/server.md](references/server.md) - if creating API endpoints or server middleware
+- [ ] [references/routing.md](references/routing.md) - if setting up pages, layouts, or route groups
+- [ ] [references/nuxt-composables.md](references/nuxt-composables.md) - if using Nuxt composables (useFetch, useRequestURL, etc.)
+- [ ] [references/middleware-plugins.md](references/middleware-plugins.md) - if working with middleware or plugins
+- [ ] [references/nuxt-components.md](references/nuxt-components.md) - if using Nuxt components (NuxtLink, NuxtImg, etc.)
+- [ ] [references/nuxt-config.md](references/nuxt-config.md) - if editing nuxt.config.ts
+- [ ] [references/project-setup.md](references/project-setup.md) - if setting up CI/ESLint/build tools
 
-**DO NOT read all files at once.** Load based on context:
+**DO NOT load all files at once.** Load only what's relevant to your current task.
 
-- Working in `server/` → read server.md
-- Working in `pages/` or `layouts/` → read routing.md
-- Using `useFetch`, `useRequestURL`, navigation → read nuxt-composables.md
-- Using `<a>`, `<img>`, `<time>` elements → read nuxt-components.md
-- Working in `middleware/` or `plugins/` → read middleware-plugins.md
-- Editing `nuxt.config.ts` → read nuxt-config.md
+## Quick Start
+
+```ts
+// server/api/hello.get.ts
+import { z } from 'zod'
+
+export default defineEventHandler(async (event) => {
+  const { name } = await getValidatedQuery(event, z.object({
+    name: z.string().default('world'),
+  }).parse)
+  return { message: `Hello ${name}` }
+})
+```
 
 ## Nuxt 4 vs Older Versions
 

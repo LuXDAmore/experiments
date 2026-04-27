@@ -1,0 +1,41 @@
+version: 2.1
+jobs:
+  build:
+    docker:
+      - image: circleci/node
+    steps:
+      # Checkout repository
+      - checkout
+
+      # Restore cache
+      - restore_cache:
+          key: pnpm-cache-{{ checksum "pnpm-lock.json" }}
+
+      # Install dependencies
+      - run:
+          name: Install Dependencies
+          command: NODE_ENV=production pnpm
+
+      # Keep cache
+      - save_cache:
+          key: pnpm-cache-{{ checksum "pnpm-lock.json" }}
+          paths:
+            - "node_modules"
+
+      # Lint
+      - run:
+          name: Lint
+          command: pnpm lint
+
+      # Tests
+      - run:
+          name: Tests
+          command: pnpm test
+
+      # Coverage
+      - run:
+          name: Coverage
+          command: pnpm codecov
+
+      - store_test_results:
+          path: test-results

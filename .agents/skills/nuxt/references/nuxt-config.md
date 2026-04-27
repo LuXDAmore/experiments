@@ -239,6 +239,90 @@ export default defineNuxtConfig({
 })
 ```
 
+### ISR Route Rules
+
+Use `isr` for incremental static regeneration:
+
+```ts
+export default defineNuxtConfig({
+  routeRules: {
+    '/': { prerender: true },        // Static at build time
+    '/**': { isr: 60 },              // Regenerate every 60s
+    '/package/**': { isr: 60 },      // ISR for dynamic routes
+    '/search': { isr: false, cache: false },  // No cache
+  }
+})
+```
+
+### Route Rule Layouts (Nuxt 4.3+)
+
+Apply layouts via route rules for centralized layout management:
+
+```ts
+export default defineNuxtConfig({
+  routeRules: {
+    '/admin/**': { appLayout: 'admin' },
+    '/docs/**': { appLayout: 'docs' },
+    '/': { appLayout: 'default' }
+  }
+})
+```
+
+**Benefits:** Centralized layout control, no need for `setPageLayout()` in every page.
+
+## Inline Modules
+
+Add conditional logic during nuxt prepare:
+
+```ts
+export default defineNuxtConfig({
+  modules: [
+    // Inline function module
+    function (_, nuxt) {
+      if (nuxt.options._prepare) {
+        // Disable expensive operations during prepare
+        nuxt.options.pwa ||= {}
+        nuxt.options.pwa.pwaAssets ||= { disabled: true }
+      }
+    },
+    '@nuxtjs/tailwindcss',
+  ]
+})
+```
+
+## Provider-Specific Modules
+
+Use `std-env` to detect platform and configure accordingly:
+
+```ts
+// modules/vercel-cache.ts
+import { defineNuxtModule } from 'nuxt/kit'
+import { provider } from 'std-env'
+
+export default defineNuxtModule({
+  meta: { name: 'vercel-cache' },
+  setup(_, nuxt) {
+    if (provider !== 'vercel') return
+
+    nuxt.hook('nitro:config', (nitroConfig) => {
+      nitroConfig.storage ||= {}
+      nitroConfig.storage.cache = {
+        driver: 'vercel-runtime-cache',
+        ...nitroConfig.storage.cache,
+      }
+    })
+  }
+})
+```
+
+Then register in nuxt.config.ts:
+
+```ts
+export default defineNuxtConfig({
+  modules: ['~/modules/vercel-cache']
+})
+```
+
 ## Experimental Features
 
 ```ts
@@ -249,10 +333,13 @@ export default defineNuxtConfig({
 
   experimental: {
     typedPages: true,
-    viewTransition: true
+    viewTransition: true,
+    payloadExtraction: true // Enable ISR/SWR payload extraction (Nuxt 4.3+)
   }
 })
 ```
+
+**Payload extraction** (Nuxt 4.3+): Enables cached payloads during client navigation for ISR/SWR routes, improving performance.
 
 ## Nitro Config
 
