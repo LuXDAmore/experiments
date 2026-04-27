@@ -1564,13 +1564,20 @@
       let isBreathing = false;
       let breathAnim  = null;
 
+      function setBreathText(text) {
+        if (!breathInstr) return;
+        /* Clear + re-insert to reliably trigger aria-live="polite" */
+        breathInstr.textContent = '';
+        breathInstr.textContent = text;
+      }
+
       async function runBreath() {
         isBreathing = true;
         breathSection.classList.add('is-breathing');
         if (breathBtn) breathBtn.setAttribute('aria-label', 'Interrompi la respirazione guidata');
         for (const step of STEPS) {
           if (!isBreathing) break;
-          if (breathInstr) breathInstr.textContent = step.text;
+          setBreathText(step.text);
           breathAnim = gsap.to(breathCircle, { scale: step.scale, duration: step.dur, ease: 'sine.inOut' });
           await new Promise(r => setTimeout(r, step.dur * 1000));
         }
@@ -1582,19 +1589,12 @@
         if (breathAnim) breathAnim.kill();
         breathSection.classList.remove('is-breathing');
         gsap.to(breathCircle, { scale: 1, duration: .6, ease: 'power2.out' });
-        if (breathInstr) breathInstr.textContent = 'Lascia andare';
+        setBreathText('Lascia andare');
         if (breathBtn) breathBtn.setAttribute('aria-label', 'Avvia la respirazione guidata');
       }
 
       if (breathBtn) {
         breathBtn.addEventListener('click', () => { if (isBreathing) stopBreath(); else runBreath(); });
-      }
-      /* Also allow clicking the circle area for ease-of-use */
-      if (breathSection) {
-        breathSection.addEventListener('click', e => {
-          if (e.target === breathBtn || breathBtn?.contains(e.target)) return;
-          if (isBreathing) stopBreath(); else runBreath();
-        });
       }
     }
 
