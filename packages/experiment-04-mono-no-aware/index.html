@@ -10,8 +10,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- Fonts: Shippori Mincho for Japanese aesthetic + Cormorant for elegant latin -->
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet" />
+  <!-- Fonts: Shippori Mincho for Japanese aesthetic + Cormorant for elegant latin + Space Mono for nav UI -->
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- TailwindCSS Play CDN v4 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-serif: "Cormorant Garamond", Georgia, serif;
+      --font-jp:    "Shippori Mincho", serif;
+      --font-body:  "Noto Sans JP", sans-serif;
+      --font-mono:  "Space Mono", monospace;
+    }
+  </style>
 
   <style>
     /* ============================================================
@@ -1196,6 +1207,36 @@
       background: linear-gradient(to right, transparent, var(--sakura-iro), transparent);
       transition: none;
     }
+
+    /* ── Nav ── */
+    .back-link {
+      position: fixed;
+      top: 28px;
+      left: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.4);
+      text-decoration: none;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .25s;
+    }
+    .back-link:hover { color: var(--koubai); }
+    .back-link::before { content: '←'; }
+
+    .exp-label {
+      position: fixed;
+      top: 28px;
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(255,255,255,.25);
+      z-index: 9000;
+    }
   </style>
 </head>
 <body>
@@ -1233,6 +1274,10 @@
        ============================================================ -->
   <div class="cursor-dot" aria-hidden="true"></div>
   <div class="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Navigation -->
+  <a href="../landing/index.html" class="back-link" aria-label="Back to all experiments">EXPERIMENTS</a>
+  <span class="exp-label" aria-hidden="true">EXP 04 / MONO NO AWARE</span>
 
   <!-- ============================================================
        THREE.JS CANVAS — Floating sakura petals
