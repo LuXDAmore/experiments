@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TABIBITO — Un viaggio scroll-driven attraverso quattro stagioni di campagna giapponese, ispirato alle illustrazioni di Ryo Takemasa.">
+  <meta name="theme-color" content="#0a0c10">
+  <title>TABIBITO 旅人 — Experiment 14</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Noto+Serif+JP:wght@300;400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <!-- Lenis smooth scroll -->
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --ink:    #07080a;
+      --fg:     #e8eaed;
+      --muted:  rgba(232,234,237,.4);
+      --accent: #e8b0c0;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; scroll-behavior: auto; }
+
+    body {
+      background: var(--ink);
+      color: var(--fg);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    @media (pointer: coarse) {
+      body { cursor: auto; }
+      #cursor-ring { display: none !important; }
+    }
+
+    /* ── Ring cursor ── */
+    #cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      width: 40px; height: 40px;
+      border: 1.5px solid rgba(232,234,237,.35);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+      transition: width .3s ease, height .3s ease, border-color .3s ease, background-color .3s ease;
+    }
+    body.is-hovering #cursor-ring {
+      width: 56px; height: 56px;
+      border-color: rgba(232,234,237,.75);
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar {
+      position: fixed;
+      top: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      z-index: 9100;
+      background: linear-gradient(to right, #e8b0c0, #c8c040, #6880b0, #d04828);
+      pointer-events: none;
+    }
+
+    /* ── Nav ── */
+    .back-link {
+      position: fixed;
+      top: 28px;
+      left: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(232,234,237,.35);
+      text-decoration: none;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: color .25s ease;
+    }
+    .back-link:hover { color: var(--fg); }
+    .back-link::before { content: '←'; }
+
+    .exp-label {
+      position: fixed;
+      top: 28px;
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .3em;
+      color: rgba(232,234,237,.2);
+      z-index: 9000;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 clamp(24px, 6vw, 80px);
+      position: relative;
+      background: var(--ink);
+      overflow: hidden;
+    }
+
+    #hero-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      opacity: 0.55;
+    }
+
+    .hero__eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: .4em;
+      color: rgba(232,234,237,.3);
+      margin-bottom: 28px;
+      opacity: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(72px, 16vw, 200px);
+      font-weight: 700;
+      line-height: .88;
+      letter-spacing: -.02em;
+      text-transform: uppercase;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      display: block;
+    }
+
+    .hero__title .char {
+      display: inline-block;
+      transform: translateY(110%);
+    }
+
+    .hero__kanji {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(13px, 1.5vw, 18px);
+      font-weight: 300;
+      color: rgba(232,234,237,.28);
+      letter-spacing: .22em;
+      margin-top: 16px;
+      margin-bottom: 18px;
+      opacity: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero__sub {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(15px, 1.8vw, 21px);
+      font-style: italic;
+      color: rgba(232,234,237,.42);
+      line-height: 1.8;
+      max-width: 460px;
+      opacity: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      color: rgba(232,234,237,.22);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      z-index: 1;
+    }
+    .hero__scroll-line {
+      width: 1px;
+      height: 52px;
+      background: linear-gradient(to bottom, rgba(232,234,237,.35), transparent);
+      animation: scrollPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes scrollPulse {
+      0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      65%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
+    }
+
+    /* ── SCENE WRAPPER ── */
+    .scene {
+      position: relative;
+      width: 100%;
+      height: 100svh;
+      overflow: hidden;
+    }
+
+    .scene-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Animated grain overlay */
+    .grain {
+      position: absolute;
+      inset: -40%;
+      width: 180%;
+      height: 180%;
+      z-index: 10;
+      pointer-events: none;
+      opacity: .14;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)'/%3E%3C/svg%3E");
+      animation: grain-shift .45s steps(1) infinite;
+    }
+    @keyframes grain-shift {
+      0%  { transform: translate(0, 0); }
+      11% { transform: translate(-4%, -8%); }
+      22% { transform: translate(-12%, 4%); }
+      33% { transform: translate(6%, -20%); }
+      44% { transform: translate(-4%, 22%); }
+      55% { transform: translate(-14%, 8%); }
+      66% { transform: translate(14%, 0); }
+      77% { transform: translate(0, 14%); }
+      88% { transform: translate(3%, 30%); }
+    }
+
+    /* ── SCENE INFO ── */
+    .scene-num {
+      position: absolute;
+      top: clamp(28px, 4vh, 56px);
+      right: clamp(24px, 4vw, 60px);
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .3em;
+      z-index: 20;
+      opacity: .3;
+    }
+
+    .scene-info {
+      position: absolute;
+      z-index: 20;
+      padding: clamp(24px, 4vw, 60px);
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    .scene-info--bl { bottom: clamp(36px,5vh,72px); left: 0; }
+    .scene-info--br { bottom: clamp(36px,5vh,72px); right: 0; text-align: right; }
+
+    .scene-info__season {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .4em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      opacity: .65;
+    }
+
+    .scene-info__title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(38px, 6.5vw, 88px);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.025em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .scene-info__jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(11px, 1.1vw, 14px);
+      font-weight: 300;
+      letter-spacing: .14em;
+      opacity: .4;
+      margin-bottom: 14px;
+    }
+
+    .scene-info__desc {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(13px, 1.3vw, 16px);
+      font-style: italic;
+      opacity: .52;
+      line-height: 1.8;
+      max-width: 300px;
+    }
+    .scene-info--br .scene-info__desc { margin-left: auto; }
+
+    /* ── INTERLUDE ── */
+    .interlude {
+      min-height: 55svh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--ink);
+      padding: 80px clamp(24px, 8vw, 120px);
+      text-align: center;
+    }
+
+    .interlude__poem {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(18px, 2.8vw, 36px);
+      font-style: italic;
+      color: rgba(232,234,237,.5);
+      line-height: 2;
+      max-width: 620px;
+      opacity: 0;
+      transform: translateY(14px);
+    }
+
+    .interlude__jp {
+      font-family: 'Noto Serif JP', serif;
+      font-size: clamp(10px, 1.1vw, 13px);
+      font-weight: 300;
+      color: rgba(232,234,237,.22);
+      letter-spacing: .15em;
+      margin-top: 16px;
+      opacity: 0;
+    }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      background: var(--ink);
+      padding: 60px clamp(24px, 6vw, 80px);
+      border-top: 1px solid rgba(232,234,237,.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .site-footer__brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(18px, 2.5vw, 28px);
+      font-weight: 700;
+      text-transform: uppercase;
+      color: rgba(232,234,237,.12);
+    }
+    .site-footer__meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .22em;
+      color: rgba(232,234,237,.12);
+    }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+      .hero__title .char { transform: none !important; }
+      .hero__eyebrow, .hero__kanji, .hero__sub,
+      .hero__scroll, .scene-info, .interlude__poem,
+      .interlude__jp { opacity: 1 !important; transform: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="cursor-ring" aria-hidden="true"></div>
+  <div id="progress-bar" aria-hidden="true"></div>
+  <a class="back-link" href="../landing/index.html">EXPERIMENTS</a>
+  <span class="exp-label" aria-hidden="true">EXP · 14</span>
+
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <canvas id="hero-canvas" aria-hidden="true"></canvas>
+    <p class="hero__eyebrow" aria-hidden="true">EXP · 14 · TABIBITO · 旅人</p>
+    <h1 class="hero__title" aria-label="Tabibito">
+      <span class="char">T</span><span class="char">A</span><span class="char">B</span><span class="char">I</span><span class="char">B</span><span class="char">I</span><span class="char">T</span><span class="char">O</span>
+    </h1>
+    <p class="hero__kanji" lang="ja">旅人 — Il Viaggiatore</p>
+    <p class="hero__sub">
+      Quattro stagioni di campagna giapponese.<br>
+      Ispirato alle illustrazioni di Ryo Takemasa.
+    </p>
+    <div class="hero__scroll" aria-hidden="true">
+      <span>SCROLL</span>
+      <div class="hero__scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ── SCENE 1 — SAKURA / SPRING ── -->
+  <section class="scene" id="scene-01" aria-label="Sakura — Primavera">
+    <canvas class="scene-canvas" id="canvas-sakura" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <span class="scene-num" aria-hidden="true">01 / 04</span>
+    <div class="scene-info scene-info--bl" style="color:#18181c">
+      <p class="scene-info__season">春 · Primavera</p>
+      <h2 class="scene-info__title">Sakura</h2>
+      <p class="scene-info__jp" lang="ja">桜 — I Ciliegi in Fiore</p>
+      <p class="scene-info__desc">I petali cadono come neve rosa. Sotto i ciliegi il tempo si ferma.</p>
+    </div>
+  </section>
+
+  <!-- INTERLUDE 1 -->
+  <div class="interlude">
+    <div>
+      <p class="interlude__poem">
+        "Flower petals fall<br>onto an indifferent path —<br>yet the child reaches up"
+      </p>
+      <p class="interlude__jp" lang="ja">花びらが 無関心な道に落ちる ── しかし子供は手を伸ばす</p>
+    </div>
+  </div>
+
+  <!-- ── SCENE 2 — NANOHANA / SUMMER ── -->
+  <section class="scene" id="scene-02" aria-label="Nanohana — Estate">
+    <canvas class="scene-canvas" id="canvas-nanohana" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <span class="scene-num" aria-hidden="true">02 / 04</span>
+    <div class="scene-info scene-info--br" style="color:#0a1820">
+      <p class="scene-info__season">夏 · Estate</p>
+      <h2 class="scene-info__title">Nanohana</h2>
+      <p class="scene-info__jp" lang="ja">菜の花 — Il Campo Giallo</p>
+      <p class="scene-info__desc">Un ciclista attraversa un mare di giallo infinito sotto un cielo aperto.</p>
+    </div>
+  </section>
+
+  <!-- INTERLUDE 2 -->
+  <div class="interlude">
+    <div>
+      <p class="interlude__poem">
+        "Pedaling through gold,<br>the horizon never nears —<br>clouds drift overhead"
+      </p>
+      <p class="interlude__jp" lang="ja">黄金を漕ぐ 地平線は近づかない ── 雲は頭上を漂う</p>
+    </div>
+  </div>
+
+  <!-- ── SCENE 3 — YAMANAMI / WINTER ── -->
+  <section class="scene" id="scene-03" aria-label="Yamanami — Inverno">
+    <canvas class="scene-canvas" id="canvas-yamanami" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <span class="scene-num" aria-hidden="true">03 / 04</span>
+    <div class="scene-info scene-info--bl" style="color:#d8e4f0">
+      <p class="scene-info__season">冬 · Inverno</p>
+      <h2 class="scene-info__title">Yama<br>nami</h2>
+      <p class="scene-info__jp" lang="ja">山並み — Le Montagne Riflesse</p>
+      <p class="scene-info__desc">Un furgone arancione solitario davanti a montagne che si riflettono nel ghiaccio.</p>
+    </div>
+  </section>
+
+  <!-- INTERLUDE 3 -->
+  <div class="interlude">
+    <div>
+      <p class="interlude__poem">
+        "Mountains above,<br>mountains below —<br>the van moves between two worlds"
+      </p>
+      <p class="interlude__jp" lang="ja">上にも山、下にも山 ── バンがふたつの世界の間を動く</p>
+    </div>
+  </div>
+
+  <!-- ── SCENE 4 — FUSEN / AUTUMN ── -->
+  <section class="scene" id="scene-04" aria-label="Fusen — Autunno">
+    <canvas class="scene-canvas" id="canvas-fusen" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <span class="scene-num" aria-hidden="true">04 / 04</span>
+    <div class="scene-info scene-info--br" style="color:#d8e4f0">
+      <p class="scene-info__season">秋 · Autunno</p>
+      <h2 class="scene-info__title">Fusen</h2>
+      <p class="scene-info__jp" lang="ja">風船 — La Mongolfiera</p>
+      <p class="scene-info__desc">Una mongolfiera si alza sopra campi arati verso le cime innevate.</p>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="site-footer">
+    <span class="site-footer__brand">Tabibito · XIV</span>
+    <span class="site-footer__meta">Ispirato a Ryo Takemasa · LuXDAmore · 2025</span>
+  </footer>
+
+  <script>
+  'use strict';
+
+  /* ─────────────────────────────────────────────
+     UTILITIES
+  ───────────────────────────────────────────── */
+
+  /** Seeded pseudo-random — keeps shapes deterministic across frames */
+  function mkRng(seed) {
+    let s = seed >>> 0 || 1;
+    return () => {
+      s = Math.imul(s, 48271) % 2147483647;
+      return (s - 1) / 2147483646;
+    };
+  }
+
+  /** Resize a canvas to match its CSS size */
+  function fitCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+      return true;
+    }
+    return false;
+  }
+
+  /* ─────────────────────────────────────────────
+     DRAWING HELPERS
+  ───────────────────────────────────────────── */
+
+  /**
+   * Draw a simplified tree trunk with two branches.
+   * cx/bottom/top are absolute pixel coords; hw = half-width.
+   */
+  function drawTrunk(ctx, cx, bottom, top, hw, color) {
+    ctx.save();
+    ctx.fillStyle   = color;
+    ctx.strokeStyle = color;
+    ctx.lineCap     = 'round';
+
+    /* --- trunk body (tapers slightly toward top) --- */
+    ctx.beginPath();
+    ctx.moveTo(cx - hw,        bottom);
+    ctx.bezierCurveTo(
+      cx - hw * 0.85, bottom * 0.65 + top * 0.35,
+      cx - hw * 0.4,  bottom * 0.3  + top * 0.7,
+      cx - hw * 0.15, top
+    );
+    ctx.lineTo(cx + hw * 0.15, top);
+    ctx.bezierCurveTo(
+      cx + hw * 0.4,  bottom * 0.3  + top * 0.7,
+      cx + hw * 0.85, bottom * 0.65 + top * 0.35,
+      cx + hw,        bottom
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    /* --- left branch --- */
+    const midY = bottom * 0.45 + top * 0.55;
+    ctx.lineWidth = hw * 0.65;
+    ctx.beginPath();
+    ctx.moveTo(cx - hw * 0.2, midY);
+    ctx.quadraticCurveTo(
+      cx - hw * 6, midY - hw * 5,
+      cx - hw * 9, midY - hw * 11
+    );
+    ctx.stroke();
+
+    /* --- right branch --- */
+    ctx.lineWidth = hw * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + hw * 0.2, midY * 0.9 + top * 0.1);
+    ctx.quadraticCurveTo(
+      cx + hw * 5, midY - hw * 3,
+      cx + hw * 7, midY - hw * 8
+    );
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /** Soft blossom cloud: overlapping translucent ellipses */
+  function drawBlossomCloud(ctx, cx, cy, rx, ry, color, seed) {
+    const rng = mkRng(seed);
+    ctx.save();
+    ctx.fillStyle = color;
+    /* outer ring of blobs */
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2;
+      const r     = 0.55 + 0.45 * rng();
+      const bx    = cx + Math.cos(angle) * rx * r;
+      const by    = cy + Math.sin(angle) * ry * r;
+      const br    = (rx * 0.22) * (0.55 + 0.45 * rng());
+      ctx.globalAlpha = 0.55 + 0.4 * rng();
+      ctx.beginPath();
+      ctx.ellipse(bx, by, br, br * (0.7 + 0.3 * rng()), rng() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    /* solid center fill */
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx * 0.65, ry * 0.65, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  /** Draw a petal (small tilted ellipse) */
+  function drawPetal(ctx, x, y, r, angle) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r, r * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** Draw a bare winter tree (recursive branches) */
+  function drawBareTree(ctx, x, y, h, color) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+
+    function branch(bx, by, angle, len, depth) {
+      if (depth === 0 || len < h * 0.015) return;
+      const ex = bx + Math.cos(angle) * len;
+      const ey = by + Math.sin(angle) * len;
+      ctx.lineWidth = Math.max(1, len * 0.18);
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      branch(ex, ey, angle - 0.42, len * 0.64, depth - 1);
+      branch(ex, ey, angle + 0.52, len * 0.60, depth - 1);
+    }
+    /* trunk */
+    ctx.lineWidth = h * 0.09;
+    ctx.beginPath();
+    ctx.moveTo(x, y + h);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    /* branches */
+    branch(x, y, -Math.PI / 2 - 0.15, h * 0.52, 4);
+    branch(x, y, -Math.PI / 2 + 0.18, h * 0.48, 4);
+
+    ctx.restore();
+  }
+
+  /** Draw the cyclist figure */
+  function drawCyclist(ctx, x, y, h) {
+    const w = h * 0.72;
+    ctx.save();
+
+    /* Wheels */
+    ctx.strokeStyle = '#282828';
+    ctx.lineWidth   = h * 0.09;
+    ctx.beginPath();
+    ctx.arc(x - w * 0.3, y + h * 0.58, h * 0.28, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x + w * 0.3, y + h * 0.58, h * 0.28, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* Wheel hubs */
+    ctx.fillStyle = '#484848';
+    ctx.beginPath(); ctx.arc(x - w * 0.3, y + h * 0.58, h * 0.06, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w * 0.3, y + h * 0.58, h * 0.06, 0, Math.PI * 2); ctx.fill();
+
+    /* Frame */
+    ctx.strokeStyle = '#d0d0d0';
+    ctx.lineWidth   = h * 0.07;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.3, y + h * 0.58);
+    ctx.lineTo(x,           y + h * 0.18);
+    ctx.lineTo(x + w * 0.3, y + h * 0.58);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x,           y + h * 0.18);
+    ctx.lineTo(x - w * 0.08, y + h * 0.58);
+    ctx.stroke();
+    /* handlebar */
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.02, y + h * 0.18);
+    ctx.lineTo(x + w * 0.18, y + h * 0.12);
+    ctx.stroke();
+
+    /* Body + jacket */
+    ctx.fillStyle = '#c07838';
+    ctx.beginPath();
+    ctx.ellipse(x - w * 0.04, y + h * 0.05, w * 0.2, h * 0.22, -0.28, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Helmet */
+    ctx.fillStyle = '#808898';
+    ctx.beginPath();
+    ctx.arc(x + w * 0.09, y - h * 0.06, h * 0.14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#9898a8';
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.09, y - h * 0.01, h * 0.17, h * 0.06, 0, 0, Math.PI);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /** Draw the orange van */
+  function drawVan(ctx, x, y, w, h) {
+    ctx.save();
+
+    /* Body */
+    ctx.fillStyle = '#d04828';
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y - h, w, h, [4, 4, 2, 2]);
+    ctx.fill();
+
+    /* Roof accent */
+    ctx.fillStyle = '#c03c1c';
+    ctx.fillRect(x - w / 2, y - h, w, h * 0.12);
+
+    /* Front window */
+    ctx.fillStyle = '#f0c8a0';
+    ctx.fillRect(x - w * 0.44, y - h * 0.88, w * 0.22, h * 0.42);
+
+    /* Side window */
+    ctx.fillStyle = '#e8b890';
+    ctx.fillRect(x + w * 0.06, y - h * 0.88, w * 0.2, h * 0.38);
+
+    /* Door line */
+    ctx.strokeStyle = '#b03818';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.04, y - h);
+    ctx.lineTo(x - w * 0.04, y - h * 0.1);
+    ctx.stroke();
+
+    /* Wheels */
+    ctx.fillStyle = '#202028';
+    ctx.beginPath(); ctx.arc(x - w * 0.28, y, h * 0.24, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w * 0.28, y, h * 0.24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#484858';
+    ctx.beginPath(); ctx.arc(x - w * 0.28, y, h * 0.12, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + w * 0.28, y, h * 0.12, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  /** Draw hot air balloon */
+  function drawBalloon(ctx, x, y, r) {
+    ctx.save();
+
+    /* Balloon envelope — stripes via pie segments */
+    const stripes = ['#cc3838','#e07828','#e0b828','#cc3838','#c84040'];
+    for (let i = 0; i < 5; i++) {
+      const a0 = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      const a1 = ((i + 1) / 5) * Math.PI * 2 - Math.PI / 2;
+      ctx.fillStyle = stripes[i];
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.arc(x, y, r * 0.78, a0, a1);
+      ctx.closePath();
+      ctx.fill();
+    }
+    /* Clip edges with bounding ellipse */
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 0.78, r, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+
+    /* Highlight */
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#fff8e8';
+    ctx.beginPath();
+    ctx.ellipse(x - r * 0.22, y - r * 0.28, r * 0.28, r * 0.38, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    /* Outline */
+    ctx.strokeStyle = 'rgba(0,0,0,.15)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 0.78, r, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    /* Ropes */
+    ctx.strokeStyle = '#705030';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.moveTo(x - r * 0.35, y + r * 0.9); ctx.lineTo(x - r * 0.12, y + r * 1.2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + r * 0.35, y + r * 0.9); ctx.lineTo(x + r * 0.12, y + r * 1.2); ctx.stroke();
+
+    /* Basket */
+    ctx.fillStyle = '#88603a';
+    ctx.beginPath();
+    ctx.roundRect(x - r * 0.14, y + r * 1.2, r * 0.28, r * 0.22, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#604020';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - r * 0.14, y + r * 1.2, r * 0.28, r * 0.22);
+
+    ctx.restore();
+  }
+
+  /** Draw child reaching toward tree */
+  function drawFigureChild(ctx, x, y, h, bodyColor, pantsColor) {
+    const w = h * 0.34;
+    ctx.save();
+    /* Body */
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.ellipse(x, y + h * 0.38, w * 0.33, h * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* Head */
+    ctx.beginPath();
+    ctx.arc(x, y, w * 0.36, 0, Math.PI * 2);
+    ctx.fill();
+    /* Legs */
+    ctx.fillStyle = pantsColor;
+    ctx.fillRect(x - w * 0.12, y + h * 0.6, w * 0.12, h * 0.4);
+    ctx.fillRect(x + w * 0.02, y + h * 0.6, w * 0.12, h * 0.4);
+    /* Arm reaching toward tree */
+    ctx.strokeStyle = bodyColor;
+    ctx.lineWidth   = w * 0.18;
+    ctx.lineCap     = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.26, y + h * 0.22);
+    ctx.lineTo(x + w * 0.7,  y - h * 0.1);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** Draw standing adult */
+  function drawFigureAdult(ctx, x, y, h, bodyColor, pantsColor) {
+    const w = h * 0.3;
+    ctx.save();
+    /* Body */
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.ellipse(x, y + h * 0.35, w * 0.28, h * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* Head */
+    ctx.beginPath();
+    ctx.arc(x, y, w * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    /* Arm on hip */
+    ctx.strokeStyle = bodyColor;
+    ctx.lineWidth   = w * 0.22;
+    ctx.lineCap     = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.25, y + h * 0.25);
+    ctx.lineTo(x - w * 0.5,  y + h * 0.48);
+    ctx.stroke();
+    /* Legs */
+    ctx.fillStyle = pantsColor;
+    ctx.fillRect(x - w * 0.1,  y + h * 0.58, w * 0.1, h * 0.42);
+    ctx.fillRect(x + w * 0.02, y + h * 0.58, w * 0.1, h * 0.42);
+    ctx.restore();
+  }
+
+  /** Draw toddler with both arms raised */
+  function drawFigureToddler(ctx, x, y, h, bodyColor, pantsColor) {
+    const w = h * 0.42;
+    ctx.save();
+    /* Chubby body */
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.ellipse(x, y + h * 0.42, w * 0.38, h * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* Big head */
+    ctx.beginPath();
+    ctx.arc(x, y + h * 0.1, w * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    /* Both arms raised */
+    ctx.strokeStyle = bodyColor;
+    ctx.lineWidth   = w * 0.2;
+    ctx.lineCap     = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.28, y + h * 0.32);
+    ctx.lineTo(x - w * 0.52, y + h * 0.02);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.28, y + h * 0.32);
+    ctx.lineTo(x + w * 0.52, y + h * 0.02);
+    ctx.stroke();
+    /* Legs */
+    ctx.fillStyle = pantsColor;
+    ctx.fillRect(x - w * 0.14, y + h * 0.66, w * 0.13, h * 0.34);
+    ctx.fillRect(x + w * 0.03, y + h * 0.66, w * 0.13, h * 0.34);
+    ctx.restore();
+  }
+
+  /* ─────────────────────────────────────────────
+     SCENE RENDERERS
+  ───────────────────────────────────────────── */
+
+  /* Petal particle system (shared, re-initialised on resize) */
+  const petals = [];
+  function initPetals(W, H) {
+    petals.length = 0;
+    for (let i = 0; i < 65; i++) {
+      petals.push({
+        x:      Math.random() * W,
+        y:      Math.random() * H,
+        vx:     (Math.random() - 0.5) * 0.55,
+        vy:     0.45 + Math.random() * 0.9,
+        r:      2 + Math.random() * 4.5,
+        angle:  Math.random() * Math.PI * 2,
+        vAngle: (Math.random() - 0.5) * 0.025,
+      });
+    }
+  }
+
+  /** SCENE 1 — Sakura (Spring cherry-blossom park) */
+  function renderSakura(canvas, t) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const rng = mkRng(42);
+
+    /* Sky */
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0,   '#8cb0c8');
+    sky.addColorStop(0.5, '#aec8d8');
+    sky.addColorStop(1,   '#bcd0de');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    /* Scattered sky-blue patches (visible through blossom gaps) */
+    ctx.fillStyle = '#98b8cc';
+    for (let i = 0; i < 9; i++) {
+      ctx.beginPath();
+      ctx.ellipse(rng() * W, rng() * H * 0.38, W * (0.05 + rng() * 0.1), H * (0.04 + rng() * 0.06), rng() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    /* Background distant white/pale blossoms */
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = '#f2e0e8';
+    ctx.beginPath(); ctx.ellipse(W * 0.88, H * 0.22, W * 0.14, H * 0.12, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(W * -0.02, H * 0.3,  W * 0.1,  H * 0.1,  0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
+    /* Background foliage / park greenery strip */
+    ctx.fillStyle = '#5e9030';
+    ctx.fillRect(0, H * 0.46, W * 0.35, H * 0.08);
+    ctx.fillStyle = '#4a8025';
+    ctx.fillRect(0, H * 0.48, W * 0.22, H * 0.05);
+
+    /* Background buildings (right mid) */
+    ctx.fillStyle = '#9aabba';
+    ctx.fillRect(W * 0.68, H * 0.44, W * 0.12, H * 0.08);
+    ctx.fillRect(W * 0.74, H * 0.42, W * 0.08, H * 0.10);
+    ctx.fillStyle = '#8898a8';
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 4; c++) {
+        ctx.fillRect(W * (0.695 + c * 0.025), H * (0.455 + r * 0.018), W * 0.012, H * 0.012);
+      }
+    }
+
+    /* Blossom clouds (back, then front) */
+    drawBlossomCloud(ctx, W * 0.52, H * 0.16, W * 0.38, H * 0.22, '#e0a4b8', 10);
+    drawBlossomCloud(ctx, W * 0.18, H * 0.13, W * 0.33, H * 0.28, '#e8b0c2', 20);
+    drawBlossomCloud(ctx, W * 0.78, H * 0.2,  W * 0.2,  H * 0.16, '#d8a0b2', 30);
+
+    /* Grass (left side) */
+    const grass = ctx.createLinearGradient(0, H * 0.52, 0, H);
+    grass.addColorStop(0, '#7ab040');
+    grass.addColorStop(1, '#62a030');
+    ctx.fillStyle = grass;
+    ctx.fillRect(0, H * 0.52, W * 0.57, H);
+
+    /* Bright grass edge */
+    ctx.fillStyle = '#90c048';
+    ctx.fillRect(0, H * 0.52, W * 0.57, H * 0.022);
+
+    /* Path / walkway (right half) */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(W * 0.42, H * 0.52);
+    ctx.lineTo(W,        H * 0.60);
+    ctx.lineTo(W,        H);
+    ctx.lineTo(W * 0.37, H);
+    ctx.closePath();
+    ctx.fillStyle = '#788498';
+    ctx.fill();
+    ctx.restore();
+
+    /* Path highlight strip */
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(W * 0.42, H * 0.52);
+    ctx.lineTo(W * 0.445, H * 0.52);
+    ctx.lineTo(W * 0.395, H);
+    ctx.lineTo(W * 0.37,  H);
+    ctx.closePath();
+    ctx.fillStyle = '#8898ac';
+    ctx.fill();
+    ctx.restore();
+
+    /* Dappled tree shadow on path */
+    ctx.save();
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = '#485060';
+    const rng2 = mkRng(77);
+    for (let i = 0; i < 16; i++) {
+      const px = W * 0.46 + rng2() * W * 0.47;
+      const py = H * 0.60 + rng2() * H * 0.32;
+      ctx.beginPath();
+      ctx.ellipse(px, py, W * (0.04 + rng2() * 0.06), H * (0.02 + rng2() * 0.04), rng2() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    /* Curb line */
+    ctx.fillStyle = '#606878';
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(W * 0.42,  H * 0.52);
+    ctx.lineTo(W * 0.432, H * 0.52);
+    ctx.lineTo(W * 0.382, H);
+    ctx.lineTo(W * 0.37,  H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    /* White petal dots scattered on ground */
+    ctx.fillStyle = '#f5e8ec';
+    ctx.globalAlpha = 0.7;
+    const rng3 = mkRng(55);
+    for (let i = 0; i < 30; i++) {
+      ctx.beginPath();
+      ctx.arc(rng3() * W * 0.58, H * 0.54 + rng3() * H * 0.46, 1.5 + rng3() * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    /* Tree trunks */
+    const tCol = '#181820';
+    drawTrunk(ctx, W * 0.07,  H,      H * (-0.08), W * 0.028, tCol); /* main large left */
+    drawTrunk(ctx, W * 0.385, H * 0.88, H * 0.36,  W * 0.013, tCol);
+    drawTrunk(ctx, W * 0.575, H * 0.84, H * 0.40,  W * 0.011, tCol);
+    drawTrunk(ctx, W * 0.82,  H * 0.82, H * 0.44,  W * 0.009, tCol);
+
+    /* Front blossom cloud layers (above trunks in z-order) */
+    drawBlossomCloud(ctx, W * 0.1,  H * 0.08, W * 0.28, H * 0.24, '#eab8c8', 40);
+    drawBlossomCloud(ctx, W * 0.35, H * 0.04, W * 0.24, H * 0.18, '#e0a8ba', 50);
+
+    /* Figures */
+    drawFigureChild(ctx,   W * 0.37, H * 0.77, H * 0.074, '#808040', '#507098');
+    drawFigureAdult(ctx,   W * 0.74, H * 0.78, H * 0.096, '#c83838', '#b09870');
+    drawFigureToddler(ctx, W * 0.67, H * 0.87, H * 0.068, '#4860b0', '#909ab0');
+
+    /* Falling petals */
+    if (petals.length === 0) initPetals(W, H);
+    ctx.fillStyle = '#f8d0dc';
+    ctx.globalAlpha = 0.82;
+    for (const p of petals) {
+      drawPetal(ctx, p.x, p.y, p.r, p.angle);
+      p.x += p.vx + Math.sin(t * 0.0014 + p.y * 0.018) * 0.4;
+      p.y += p.vy;
+      p.angle += p.vAngle;
+      if (p.y > H + 12) { p.y = -12; p.x = Math.random() * W; }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ─────── */
+
+  let cyclistXN = -0.18; /* normalised x position of cyclist */
+
+  /** SCENE 2 — Nanohana (Summer rapeseed field) */
+  function renderNanohana(canvas, t) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const rng = mkRng(12);
+
+    /* Sky */
+    const sky = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+    sky.addColorStop(0, '#4e88ba');
+    sky.addColorStop(1, '#6ca0cc');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    /* Clouds */
+    const rng2 = mkRng(33);
+    ctx.fillStyle = '#eef4fa';
+    const cloudData = [
+      [0.06, 0.12, 0.10, 0.06],
+      [0.28, 0.17, 0.09, 0.05],
+      [0.52, 0.14, 0.12, 0.055],
+      [0.78, 0.19, 0.08, 0.045],
+    ];
+    for (const [cx, cy, rw, rh] of cloudData) {
+      /* Each cloud = 4 overlapping ellipses */
+      for (let j = 0; j < 4; j++) {
+        ctx.globalAlpha = 0.75 + rng2() * 0.25;
+        ctx.beginPath();
+        ctx.ellipse(
+          W * cx + (rng2() - 0.5) * W * rw,
+          H * cy + (rng2() - 0.5) * H * rh * 0.5,
+          W * (rw * (0.35 + rng2() * 0.4)),
+          H * (rh * (0.45 + rng2() * 0.45)),
+          0, 0, Math.PI * 2
+        );
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    /* Dark forest strip */
+    ctx.fillStyle = '#1c2e1c';
+    ctx.fillRect(0, H * 0.42, W * 0.40, H * 0.05);
+    ctx.fillStyle = '#253525';
+    ctx.fillRect(W * 0.32, H * 0.42, W * 0.20, H * 0.04);
+    /* Jagged tree tops */
+    ctx.fillStyle = '#1c2e1c';
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.42);
+    for (let i = 0; i <= 40; i++) {
+      ctx.lineTo((i / 40) * W * 0.45, H * 0.42 - Math.abs(Math.sin(i * 0.9 + 0.5)) * H * 0.028);
+    }
+    ctx.lineTo(W * 0.45, H * 0.46);
+    ctx.lineTo(0, H * 0.46);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Yellow hill (main composition element) */
+    ctx.fillStyle = '#c8c030';
+    ctx.beginPath();
+    ctx.moveTo(-W * 0.02, H * 0.52);
+    ctx.bezierCurveTo(W * 0.1,  H * 0.38, W * 0.45, H * 0.42, W * 0.7,  H * 0.52);
+    ctx.bezierCurveTo(W * 0.85, H * 0.58, W * 0.94, H * 0.58, W * 1.02, H * 0.62);
+    ctx.lineTo(W * 1.02, H);
+    ctx.lineTo(-W * 0.02, H);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Darker field texture */
+    const rng3 = mkRng(55);
+    ctx.fillStyle = '#909010';
+    ctx.globalAlpha = 0.28;
+    for (let i = 0; i < 220; i++) {
+      const px = rng3() * W;
+      const py = H * 0.5 + rng3() * H * 0.5;
+      ctx.beginPath();
+      ctx.arc(px, py, 1 + rng3() * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    /* Lighter yellow highlight on hill crest */
+    ctx.fillStyle = '#e0d830';
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.moveTo(-W * 0.02, H * 0.52);
+    ctx.bezierCurveTo(W * 0.1,  H * 0.38, W * 0.45, H * 0.42, W * 0.7,  H * 0.52);
+    ctx.lineTo(W * 0.7, H * 0.56);
+    ctx.bezierCurveTo(W * 0.45, H * 0.46, W * 0.1, H * 0.42, -W * 0.02, H * 0.56);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    /* Bare tree on hilltop right */
+    drawBareTree(ctx, W * 0.83, H * 0.44, H * 0.13, '#242424');
+
+    /* Power pole */
+    const poleX = W * 0.32;
+    ctx.strokeStyle = '#a8acb0';
+    ctx.lineWidth   = W * 0.006;
+    ctx.lineCap     = 'butt';
+    ctx.beginPath();
+    ctx.moveTo(poleX, H * 0.06);
+    ctx.lineTo(poleX, H * 0.72);
+    ctx.stroke();
+    /* Crossbar */
+    ctx.lineWidth = W * 0.004;
+    ctx.beginPath();
+    ctx.moveTo(poleX - W * 0.022, H * 0.12);
+    ctx.lineTo(poleX + W * 0.022, H * 0.12);
+    ctx.stroke();
+    /* Insulators */
+    ctx.fillStyle = '#b8bcc0';
+    ctx.beginPath(); ctx.arc(poleX - W * 0.022, H * 0.12, W * 0.004, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(poleX + W * 0.022, H * 0.12, W * 0.004, 0, Math.PI * 2); ctx.fill();
+    /* Wires */
+    ctx.lineWidth   = 1.2;
+    ctx.strokeStyle = '#7888a0';
+    ctx.beginPath();
+    ctx.moveTo(-W * 0.02, H * 0.1);
+    ctx.quadraticCurveTo(poleX * 0.5, H * 0.125, poleX - W * 0.02, H * 0.12);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(W * 1.02, H * 0.095);
+    ctx.quadraticCurveTo((poleX + W) * 0.5, H * 0.115, poleX + W * 0.02, H * 0.12);
+    ctx.stroke();
+
+    /* Cyclist — animated x via ScrollTrigger → cyclistXN */
+    const cxPx = cyclistXN * W;
+    const hillSlope = 0.52 + 0.10 * (cxPx / W); /* rough hill-slope y */
+    const cyPx = H * hillSlope - H * 0.042;
+    if (cxPx > -W * 0.12 && cxPx < W * 1.12) {
+      drawCyclist(ctx, cxPx, cyPx, H * 0.052);
+    }
+  }
+
+  /* ─────── */
+
+  let vanXN = -0.22; /* normalised van x */
+
+  /** SCENE 3 — Yamanami (Winter mountain lake reflection) */
+  function renderYamanami(canvas, t) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const rng = mkRng(88);
+
+    /* Sky */
+    ctx.fillStyle = '#6878a8';
+    ctx.fillRect(0, 0, W, H * 0.48);
+
+    /* Back mountain layer */
+    const mtBackPts = [
+      0,        H * 0.32,
+      W * 0.05, H * 0.10,
+      W * 0.12, H * 0.20,
+      W * 0.20, H * 0.06,
+      W * 0.28, H * 0.17,
+      W * 0.38, H * 0.04,
+      W * 0.46, H * 0.14,
+      W * 0.55, H * 0.02,
+      W * 0.62, H * 0.11,
+      W * 0.72, H * 0.02,
+      W * 0.80, H * 0.10,
+      W * 0.90, H * 0.20,
+      W,        H * 0.30,
+      W,        H * 0.48,
+      0,        H * 0.48,
+    ];
+    ctx.fillStyle = '#7888a8';
+    ctx.beginPath();
+    ctx.moveTo(mtBackPts[0], mtBackPts[1]);
+    for (let i = 2; i < mtBackPts.length; i += 2) ctx.lineTo(mtBackPts[i], mtBackPts[i+1]);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Front mountain layer (darker) */
+    const mtFrontPts = [
+      0,        H * 0.40,
+      W * 0.08, H * 0.24,
+      W * 0.18, H * 0.30,
+      W * 0.30, H * 0.20,
+      W * 0.42, H * 0.28,
+      W * 0.52, H * 0.18,
+      W * 0.62, H * 0.26,
+      W * 0.74, H * 0.22,
+      W * 0.84, H * 0.32,
+      W,        H * 0.38,
+      W,        H * 0.48,
+      0,        H * 0.48,
+    ];
+    ctx.fillStyle = '#687898';
+    ctx.beginPath();
+    ctx.moveTo(mtFrontPts[0], mtFrontPts[1]);
+    for (let i = 2; i < mtFrontPts.length; i += 2) ctx.lineTo(mtFrontPts[i], mtFrontPts[i+1]);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Snow caps */
+    ctx.fillStyle = '#ccd8e8';
+    const peaks = [
+      [W * 0.05, H * 0.10],[W * 0.20, H * 0.06],[W * 0.38, H * 0.04],
+      [W * 0.55, H * 0.02],[W * 0.72, H * 0.02],[W * 0.90, H * 0.20],
+    ];
+    for (const [px, py] of peaks) {
+      ctx.beginPath();
+      ctx.moveTo(px - W * 0.07, py + H * 0.09);
+      ctx.lineTo(px, py);
+      ctx.lineTo(px + W * 0.07, py + H * 0.09);
+      ctx.closePath();
+      ctx.fill();
+    }
+    /* Snow texture dots */
+    ctx.fillStyle = '#e0ecf8';
+    ctx.globalAlpha = 0.35;
+    const rng2 = mkRng(44);
+    for (let i = 0; i < 80; i++) {
+      const px = rng2() * W;
+      const py = rng2() * H * 0.25;
+      if (py < H * 0.24) {
+        ctx.beginPath();
+        ctx.arc(px, py, 1 + rng2() * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    /* Dark forest strip */
+    ctx.fillStyle = '#282838';
+    ctx.fillRect(0, H * 0.40, W * 0.42, H * 0.08);
+    ctx.fillRect(W * 0.36, H * 0.42, W * 0.26, H * 0.06);
+
+    /* Sandy shore */
+    ctx.fillStyle = '#b89860';
+    ctx.fillRect(0, H * 0.465, W, H * 0.065);
+
+    /* Shore stripes */
+    const rng3 = mkRng(22);
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#9a7e48';
+    for (let i = 0; i < 7; i++) {
+      ctx.fillRect(0, H * (0.47 + rng3() * 0.04), W, 2 + rng3() * 5);
+    }
+    ctx.globalAlpha = 1;
+
+    /* Water surface */
+    ctx.fillStyle = '#5870a0';
+    ctx.fillRect(0, H * 0.53, W, H);
+
+    /* Water mountain reflections (horizontal bands) */
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = '#7888b0';
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(0, H * (0.55 + i * 0.062), W, H * 0.018);
+    }
+    ctx.fillStyle = '#ccd4e4';
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(W * (0.1 + i * 0.25), H * (0.58 + i * 0.04), W * 0.18, H * 0.007);
+    }
+    ctx.globalAlpha = 1;
+
+    /* Animated ripple lines */
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = '#303848';
+    ctx.lineCap = 'round';
+    const rng4 = mkRng(77);
+    for (let i = 0; i < 14; i++) {
+      const py  = H * 0.54 + rng4() * H * 0.44;
+      const px  = rng4() * W;
+      const len = W * (0.05 + rng4() * 0.18);
+      const off = Math.sin(t * 0.0012 + i * 0.65) * 5;
+      ctx.lineWidth = 1.5 + rng4();
+      ctx.beginPath();
+      ctx.moveTo(px + off,       py);
+      ctx.lineTo(px + len + off, py);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    /* Van — animated */
+    const vxPx = vanXN * W;
+    const vyPx = H * 0.478;
+    if (vxPx > -W * 0.12 && vxPx < W * 1.12) {
+      drawVan(ctx, vxPx, vyPx, W * 0.065, H * 0.042);
+
+      /* Van water reflection */
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.translate(vxPx, H * 0.53 * 2 - vyPx + H * 0.042 * 0.5);
+      ctx.scale(1, -0.4);
+      ctx.translate(-vxPx, -(H * 0.53 * 2 - vyPx + H * 0.042 * 0.5));
+      drawVan(ctx, vxPx, vyPx, W * 0.065, H * 0.042);
+      ctx.restore();
+    }
+  }
+
+  /* ─────── */
+
+  let balloonYN = 0.82; /* normalised balloon y */
+
+  /** SCENE 4 — Fusen (Autumn hot-air balloon over ploughed fields) */
+  function renderFusen(canvas, t) {
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const rng = mkRng(66);
+
+    /* Sky */
+    const sky = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+    sky.addColorStop(0, '#5c80c0');
+    sky.addColorStop(1, '#7898cc');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    /* Wind streaks */
+    ctx.save();
+    const rng2 = mkRng(11);
+    ctx.strokeStyle = '#b8cce8';
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 14; i++) {
+      const py  = rng2() * H * 0.5;
+      const px  = rng2() * W;
+      const len = W * (0.12 + rng2() * 0.3);
+      ctx.globalAlpha = 0.12 + rng2() * 0.12;
+      ctx.lineWidth   = 1 + rng2() * 2.5;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.bezierCurveTo(
+        px + len * 0.3, py - H * 0.008,
+        px + len * 0.7, py + H * 0.006,
+        px + len, py - H * 0.004
+      );
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    /* Back mountains */
+    const mtPts = [
+      0,        H * 0.46,
+      W * 0.06, H * 0.26,
+      W * 0.14, H * 0.36,
+      W * 0.24, H * 0.20,
+      W * 0.34, H * 0.30,
+      W * 0.44, H * 0.19,
+      W * 0.54, H * 0.26,
+      W * 0.64, H * 0.17,
+      W * 0.74, H * 0.25,
+      W * 0.84, H * 0.34,
+      W * 0.92, H * 0.40,
+      W,        H * 0.44,
+      W,        H * 0.55,
+      0,        H * 0.55,
+    ];
+    ctx.fillStyle = '#8898b8';
+    ctx.beginPath();
+    ctx.moveTo(mtPts[0], mtPts[1]);
+    for (let i = 2; i < mtPts.length; i += 2) ctx.lineTo(mtPts[i], mtPts[i+1]);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Snow caps */
+    ctx.fillStyle = '#dce8f4';
+    const fPeaks = [
+      [W * 0.06, H * 0.26],[W * 0.24, H * 0.20],[W * 0.44, H * 0.19],
+      [W * 0.64, H * 0.17],[W * 0.84, H * 0.34],
+    ];
+    for (const [px, py] of fPeaks) {
+      ctx.beginPath();
+      ctx.moveTo(px - W * 0.055, py + H * 0.075);
+      ctx.lineTo(px, py);
+      ctx.lineTo(px + W * 0.055, py + H * 0.075);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    /* Dark forest strip (jagged top) */
+    ctx.fillStyle = '#252838';
+    ctx.beginPath();
+    ctx.moveTo(0, H * 0.5);
+    for (let i = 0; i <= 35; i++) {
+      const px = (i / 35) * W;
+      const py = H * 0.5 - Math.abs(Math.sin(i * 0.85 + 1.2)) * H * 0.025;
+      ctx.lineTo(px, py);
+    }
+    ctx.lineTo(W, H * 0.57);
+    ctx.lineTo(0, H * 0.57);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Ploughed fields */
+    const fieldY = H * 0.54;
+    ctx.fillStyle = '#7a4030';
+    ctx.fillRect(0, fieldY, W, H);
+
+    /* Row stripes (diagonal furrows) */
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    ctx.fillStyle = '#582018';
+    for (let i = 0; i < 22; i++) {
+      const rowY  = fieldY + i * H * 0.032;
+      const slant = (i / 22) * W * 0.06;
+      ctx.beginPath();
+      ctx.moveTo(-slant,        rowY);
+      ctx.lineTo(W + slant,     rowY);
+      ctx.lineTo(W + slant + W * 0.008, rowY + H * 0.018);
+      ctx.lineTo(-slant + W * 0.008,    rowY + H * 0.018);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    /* Snow dusting on fields */
+    ctx.save();
+    ctx.globalAlpha = 0.1;
+    ctx.strokeStyle = '#e0d8d0';
+    ctx.lineCap = 'round';
+    const rng3 = mkRng(44);
+    for (let i = 0; i < 35; i++) {
+      const py  = fieldY + rng3() * (H - fieldY);
+      const px  = rng3() * W;
+      const len = W * (0.04 + rng3() * 0.1);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(px + len, py - H * 0.006);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    /* Lone tree */
+    drawBareTree(ctx, W * 0.82, H * 0.585, H * 0.082, '#3a2010');
+
+    /* Balloon */
+    const bxPx = W * 0.32;
+    const byPx = balloonYN * H;
+    drawBalloon(ctx, bxPx, byPx, H * 0.115);
+  }
+
+  /* ─────────────────────────────────────────────
+     HERO CANVAS — soft drifting petal particles
+  ───────────────────────────────────────────── */
+  function initHeroCanvas(canvas) {
+    fitCanvas(canvas);
+    const W = canvas.width, H = canvas.height;
+    const ctx = canvas.getContext('2d');
+    const particles = [];
+    for (let i = 0; i < 80; i++) {
+      particles.push({
+        x:   Math.random() * W,
+        y:   Math.random() * H,
+        r:   1 + Math.random() * 3.5,
+        vx:  (Math.random() - 0.5) * 0.45,
+        vy:  0.3 + Math.random() * 0.6,
+        a:   Math.random() * Math.PI * 2,
+        va:  (Math.random() - 0.5) * 0.02,
+        hue: 180 + Math.random() * 180,
+      });
+    }
+    let frame = 0;
+    function loop() {
+      fitCanvas(canvas);
+      const W2 = canvas.width, H2 = canvas.height;
+      ctx.clearRect(0, 0, W2, H2);
+      frame++;
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = 0.3 + Math.sin(frame * 0.02 + p.a) * 0.15;
+        ctx.fillStyle = `hsl(${p.hue}, 45%, 75%)`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        p.x += p.vx + Math.sin(frame * 0.01 + p.y * 0.02) * 0.3;
+        p.y += p.vy;
+        p.a += p.va;
+        if (p.y > H2 + 10) { p.y = -10; p.x = Math.random() * W2; }
+      }
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  /* ─────────────────────────────────────────────
+     MAIN — INIT
+  ───────────────────────────────────────────── */
+
+  /* Lenis smooth scroll */
+  const lenis = new Lenis({ lerp: 0.085 });
+  gsap.ticker.add((time) => lenis.raf(time * 1000));
+  gsap.ticker.lagSmoothing(0);
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* Custom cursor */
+  const ring = document.getElementById('cursor-ring');
+  document.addEventListener('mousemove', (e) => {
+    gsap.to(ring, { x: e.clientX, y: e.clientY, duration: 0.38, ease: 'power2.out' });
+  });
+  document.querySelectorAll('a, button').forEach((el) => {
+    el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
+    el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
+  });
+
+  /* Progress bar */
+  const progressBar = document.getElementById('progress-bar');
+  ScrollTrigger.create({
+    start: 0,
+    end: 'max',
+    onUpdate: (self) => gsap.set(progressBar, { width: `${self.progress * 100}%` }),
+  });
+
+  /* Hero canvas */
+  initHeroCanvas(document.getElementById('hero-canvas'));
+
+  /* Hero text reveal */
+  const tl = gsap.timeline({ delay: 0.25, defaults: { ease: 'power3.out' } });
+  tl
+    .to('.hero__title .char', { y: 0, duration: 1.05, stagger: 0.045 })
+    .to('.hero__eyebrow',     { opacity: 1, duration: 0.7 }, '-=0.7')
+    .to('.hero__kanji',       { opacity: 1, duration: 0.7 }, '-=0.5')
+    .to('.hero__sub',         { opacity: 1, duration: 0.7 }, '-=0.45')
+    .to('.hero__scroll',      { opacity: 1, duration: 0.5 }, '-=0.25');
+
+  /* Scene canvases */
+  const cvSakura   = document.getElementById('canvas-sakura');
+  const cvNanohana = document.getElementById('canvas-nanohana');
+  const cvYamanami = document.getElementById('canvas-yamanami');
+  const cvFusen    = document.getElementById('canvas-fusen');
+
+  function fitAll() {
+    fitCanvas(cvSakura);
+    fitCanvas(cvNanohana);
+    fitCanvas(cvYamanami);
+    fitCanvas(cvFusen);
+    petals.length = 0; /* re-init petals on resize */
+  }
+  fitAll();
+  window.addEventListener('resize', fitAll);
+
+  /* Scene-info text reveals */
+  document.querySelectorAll('.scene-info').forEach((el) => {
+    ScrollTrigger.create({
+      trigger: el.closest('.scene'),
+      start: 'top 75%',
+      onEnter: () => gsap.to(el, { opacity: 1, y: 0, duration: 1.1, ease: 'power3.out' }),
+    });
+  });
+
+  /* Interlude poem reveals */
+  document.querySelectorAll('.interlude__poem').forEach((el) => {
+    ScrollTrigger.create({
+      trigger: el,
+      start: 'top 80%',
+      onEnter: () => gsap.to(el, { opacity: 1, y: 0, duration: 1, ease: 'power2.out' }),
+    });
+  });
+  document.querySelectorAll('.interlude__jp').forEach((el) => {
+    ScrollTrigger.create({
+      trigger: el,
+      start: 'top 80%',
+      onEnter: () => gsap.to(el, { opacity: 1, duration: 1, delay: 0.4, ease: 'power2.out' }),
+    });
+  });
+
+  /* ── Scroll-driven scene animations ── */
+
+  /* Cyclist crosses the rapeseed field */
+  ScrollTrigger.create({
+    trigger: '#scene-02',
+    start: 'top bottom',
+    end: 'bottom top',
+    onUpdate: (self) => { cyclistXN = -0.18 + self.progress * 1.35; },
+  });
+
+  /* Van drives across the lake shore */
+  ScrollTrigger.create({
+    trigger: '#scene-03',
+    start: 'top bottom',
+    end: 'bottom top',
+    onUpdate: (self) => { vanXN = -0.22 + self.progress * 1.4; },
+  });
+
+  /* Balloon rises as scene 4 enters viewport */
+  ScrollTrigger.create({
+    trigger: '#scene-04',
+    start: 'top bottom',
+    end: 'center center',
+    onUpdate: (self) => { balloonYN = 0.82 - self.progress * 0.32; },
+  });
+  /* Gentle hover oscillation on balloon after it settles */
+  gsap.to({ v: 0 }, {
+    v: 1,
+    duration: 2.8,
+    ease: 'sine.inOut',
+    repeat: -1,
+    yoyo: true,
+    onUpdate: function () {
+      const settled = balloonYN < 0.7;
+      if (settled) balloonYN += Math.sin(Date.now() * 0.001) * 0.0012;
+    },
+  });
+
+  /* ── Master render loop ── */
+  let frameTime = 0;
+  (function renderLoop(ts) {
+    frameTime = ts || 0;
+    renderSakura(cvSakura,   frameTime);
+    renderNanohana(cvNanohana, frameTime);
+    renderYamanami(cvYamanami, frameTime);
+    renderFusen(cvFusen,     frameTime);
+    requestAnimationFrame(renderLoop);
+  })();
+
+  </script>
+</body>
+</html>
