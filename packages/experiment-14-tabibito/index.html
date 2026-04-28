@@ -304,6 +304,14 @@
   // Flash colors when passing through scene planes
   const FLASH_COL = ['#f0dce4','#f0edcc','#c8d8e8','#e0d0c0'];
 
+  // Camera horizontal weave parameters
+  const CAM_WEAVE_FREQUENCY  = 2.8;   // sine cycles over full journey
+  const CAM_WEAVE_AMPLITUDE  = 1.5;   // units left/right
+
+  // Flash portal effect thresholds
+  const FLASH_THRESHOLD    = 3.5;     // units from scene plane to start flash
+  const FLASH_MAX_OPACITY  = 0.18;    // peak flash opacity
+
   /* ═══════════════════════════════════════════════════════════════
      RENDERER + SCENE + CAMERA
   ═══════════════════════════════════════════════════════════════ */
@@ -712,7 +720,6 @@
 
       // Highlight spot
       const hl=sph(1.1,12,0xfff5e8);
-      new THREE.MeshBasicMaterial({color:0xfff5e8,transparent:true,opacity:.18});
       hl.material=new THREE.MeshBasicMaterial({color:0xfff8f0,transparent:true,opacity:.20});
       hl.position.set(-.8,1.1,1.2); bg.add(hl);
 
@@ -904,7 +911,7 @@
     const camZ = CAM_Z_S - sp * CAM_TRAVEL;
 
     // Camera X: gentle S-weave
-    const camX = Math.sin(sp * Math.PI * 2.8) * 1.5;
+    const camX = Math.sin(sp * Math.PI * CAM_WEAVE_FREQUENCY) * CAM_WEAVE_AMPLITUDE;
 
     // Camera Y: interpolated per scene zone
     const{a,b,blend}=zoneBlend(sp);
@@ -945,7 +952,10 @@
     let fo=0, fc=FLASH_COL[0];
     for(let i=0;i<SCENE_Z.length;i++){
       const d=Math.abs(camZ-SCENE_Z[i]);
-      if(d<3.5){ const o=Math.pow(Math.max(0,1-d/3.5),2)*.18; if(o>fo){fo=o;fc=FLASH_COL[i];} }
+      if(d<FLASH_THRESHOLD){
+        const o=Math.pow(Math.max(0,1-d/FLASH_THRESHOLD),2)*FLASH_MAX_OPACITY;
+        if(o>fo){fo=o;fc=FLASH_COL[i];}
+      }
     }
     $flash.style.backgroundColor=fc;
     $flash.style.opacity=fo.toString();
