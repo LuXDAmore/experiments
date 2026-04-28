@@ -3,1679 +3,971 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="TABIBITO — Un viaggio scroll-driven attraverso quattro stagioni di campagna giapponese, ispirato alle illustrazioni di Ryo Takemasa.">
-  <meta name="theme-color" content="#0a0c10">
+  <meta name="description" content="TABIBITO — Un viaggio immersivo attraverso quattro stagioni giapponesi. Camera-driven Three.js journey.">
   <title>TABIBITO 旅人 — Experiment 14</title>
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Noto+Serif+JP:wght@300;400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-  <!-- GSAP + ScrollTrigger -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-
-  <!-- Lenis smooth scroll -->
-  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
-
   <style>
-    /* ── Design tokens ── */
-    :root {
-      --ink:    #07080a;
-      --fg:     #e8eaed;
-      --muted:  rgba(232,234,237,.4);
-      --accent: #e8b0c0;
-    }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { overflow-x: hidden; scroll-behavior: auto; }
 
+    html { overflow-x: hidden; }
     body {
-      background: var(--ink);
-      color: var(--fg);
-      font-family: 'Cormorant Garamond', Georgia, serif;
+      overflow-y: scroll;
       overflow-x: hidden;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      background: #f5f0ec;
       cursor: none;
     }
+    @media (pointer: coarse) { body { cursor: auto; } #cursor { display: none; } }
 
-    @media (pointer: coarse) {
-      body { cursor: auto; }
-      #cursor-ring { display: none !important; }
-    }
-
-    /* ── Ring cursor ── */
-    #cursor-ring {
+    /* ── Fixed 3-D canvas ── */
+    #c {
       position: fixed;
-      top: 0; left: 0;
-      width: 40px; height: 40px;
-      border: 1.5px solid rgba(232,234,237,.35);
-      border-radius: 50%;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 0;
+    }
+
+    /* ── Animated grain overlay ── */
+    .grain {
+      position: fixed;
+      inset: -40%;
+      width: 180%; height: 180%;
+      z-index: 5;
       pointer-events: none;
-      z-index: 9999;
-      transform: translate(-50%, -50%);
-      will-change: transform;
-      transition: width .3s ease, height .3s ease, border-color .3s ease, background-color .3s ease;
+      opacity: .13;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+      animation: grain-drift .44s steps(1) infinite;
     }
-    body.is-hovering #cursor-ring {
-      width: 56px; height: 56px;
-      border-color: rgba(232,234,237,.75);
+    @keyframes grain-drift {
+      0%   { transform: translate(0,0) }
+      14%  { transform: translate(-5%,-8%) }
+      28%  { transform: translate(-12%,5%) }
+      42%  { transform: translate(7%,-18%) }
+      57%  { transform: translate(-4%,22%) }
+      71%  { transform: translate(-16%,7%) }
+      85%  { transform: translate(12%,-3%) }
     }
+
+    /* ── Flash portal overlay ── */
+    #flash { position: fixed; inset: 0; z-index: 8; pointer-events: none; opacity: 0; }
 
     /* ── Progress bar ── */
-    #progress-bar {
+    #progress {
       position: fixed;
       top: 0; left: 0;
       height: 2px;
-      width: 0%;
-      z-index: 9100;
-      background: linear-gradient(to right, #e8b0c0, #c8c040, #6880b0, #d04828);
+      width: 100%;
+      background: linear-gradient(90deg,#f0b8c8,#d0c028,#88a0b8,#f0d880);
+      transform: scaleX(0);
+      transform-origin: left;
+      z-index: 20;
       pointer-events: none;
     }
 
-    /* ── Nav ── */
+    /* ── Navigation ── */
     .back-link {
       position: fixed;
-      top: 28px;
-      left: clamp(24px, 4vw, 60px);
+      top: 28px; left: clamp(24px,4vw,60px);
       font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      letter-spacing: .3em;
-      color: rgba(232,234,237,.35);
+      font-size: 10px; letter-spacing: .3em;
+      color: rgba(20,15,10,.35);
       text-decoration: none;
-      z-index: 9000;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: color .25s ease;
+      z-index: 20;
+      display: flex; align-items: center; gap: 8px;
+      transition: color .25s;
     }
-    .back-link:hover { color: var(--fg); }
+    .back-link:hover { color: rgba(20,15,10,.8); }
     .back-link::before { content: '←'; }
 
     .exp-label {
       position: fixed;
-      top: 28px;
-      right: clamp(24px, 4vw, 60px);
+      top: 28px; right: clamp(24px,4vw,60px);
       font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      letter-spacing: .3em;
-      color: rgba(232,234,237,.2);
-      z-index: 9000;
+      font-size: 10px; letter-spacing: .3em;
+      color: rgba(20,15,10,.2);
+      z-index: 20; pointer-events: none;
     }
 
-    /* ── HERO ── */
-    .hero {
-      height: 100svh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+    /* ── Hero title (fades as user scrolls) ── */
+    #hero-title {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
       text-align: center;
-      padding: 0 clamp(24px, 6vw, 80px);
-      position: relative;
-      background: var(--ink);
-      overflow: hidden;
-    }
-
-    #hero-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%; height: 100%;
+      z-index: 10;
       pointer-events: none;
-      opacity: 0.55;
     }
-
-    .hero__eyebrow {
-      font-family: 'Space Mono', monospace;
-      font-size: 10px;
-      letter-spacing: .4em;
-      color: rgba(232,234,237,.3);
-      margin-bottom: 28px;
-      opacity: 0;
-      position: relative;
-      z-index: 1;
-    }
-
-    .hero__title {
+    #hero-title h1 {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(72px, 16vw, 200px);
+      font-size: clamp(80px,18vw,220px);
       font-weight: 700;
-      line-height: .88;
       letter-spacing: -.02em;
       text-transform: uppercase;
-      position: relative;
-      z-index: 1;
-      overflow: hidden;
-      display: block;
+      color: rgba(20,15,10,.07);
+      line-height: .9;
     }
-
-    .hero__title .char {
-      display: inline-block;
-      transform: translateY(110%);
-    }
-
-    .hero__kanji {
+    #hero-title .sub {
       font-family: 'Noto Serif JP', serif;
-      font-size: clamp(13px, 1.5vw, 18px);
-      font-weight: 300;
-      color: rgba(232,234,237,.28);
-      letter-spacing: .22em;
-      margin-top: 16px;
-      margin-bottom: 18px;
-      opacity: 0;
-      position: relative;
-      z-index: 1;
+      font-size: 13px; letter-spacing: .25em;
+      color: rgba(20,15,10,.25);
+      margin-top: 14px;
     }
 
-    .hero__sub {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(15px, 1.8vw, 21px);
-      font-style: italic;
-      color: rgba(232,234,237,.42);
-      line-height: 1.8;
-      max-width: 460px;
-      opacity: 0;
-      position: relative;
-      z-index: 1;
-    }
-
-    .hero__scroll {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
+    /* ── Scroll hint ── */
+    #scroll-hint {
+      position: fixed;
+      bottom: 40px; left: 50%;
       transform: translateX(-50%);
+      z-index: 20;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .8s ease;
+    }
+    #scroll-hint.visible { opacity: 1; }
+    #scroll-hint span {
       font-family: 'Space Mono', monospace;
-      font-size: 9px;
-      letter-spacing: .3em;
-      color: rgba(232,234,237,.22);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      opacity: 0;
-      z-index: 1;
+      font-size: 9px; letter-spacing: .35em;
+      color: rgba(20,15,10,.3);
     }
-    .hero__scroll-line {
-      width: 1px;
-      height: 52px;
-      background: linear-gradient(to bottom, rgba(232,234,237,.35), transparent);
-      animation: scrollPulse 2.4s ease-in-out infinite;
+    .hint-line {
+      width: 1px; height: 48px;
+      background: linear-gradient(to bottom, rgba(20,15,10,.3), transparent);
+      animation: pulse-line 2.5s ease-in-out infinite;
     }
-    @keyframes scrollPulse {
+    @keyframes pulse-line {
       0%   { transform: scaleY(0); transform-origin: top; opacity: 1; }
-      65%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      70%  { transform: scaleY(1); transform-origin: top; opacity: 1; }
       100% { transform: scaleY(1); transform-origin: top; opacity: 0; }
     }
 
-    /* ── SCENE WRAPPER ── */
-    .scene {
-      position: relative;
-      width: 100%;
-      height: 100svh;
-      overflow: hidden;
-    }
+    /* ── Scene HUD ── */
+    #hud { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
 
-    .scene-canvas {
+    .hud-panel {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* Animated grain overlay */
-    .grain {
-      position: absolute;
-      inset: -40%;
-      width: 180%;
-      height: 180%;
-      z-index: 10;
-      pointer-events: none;
-      opacity: .14;
-      mix-blend-mode: overlay;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)'/%3E%3C/svg%3E");
-      animation: grain-shift .45s steps(1) infinite;
-    }
-    @keyframes grain-shift {
-      0%  { transform: translate(0, 0); }
-      11% { transform: translate(-4%, -8%); }
-      22% { transform: translate(-12%, 4%); }
-      33% { transform: translate(6%, -20%); }
-      44% { transform: translate(-4%, 22%); }
-      55% { transform: translate(-14%, 8%); }
-      66% { transform: translate(14%, 0); }
-      77% { transform: translate(0, 14%); }
-      88% { transform: translate(3%, 30%); }
-    }
-
-    /* ── SCENE INFO ── */
-    .scene-num {
-      position: absolute;
-      top: clamp(28px, 4vh, 56px);
-      right: clamp(24px, 4vw, 60px);
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
-      letter-spacing: .3em;
-      z-index: 20;
-      opacity: .3;
-    }
-
-    .scene-info {
-      position: absolute;
-      z-index: 20;
-      padding: clamp(24px, 4vw, 60px);
+      bottom: clamp(40px,6vh,80px);
+      max-width: 320px;
       opacity: 0;
-      transform: translateY(18px);
+      transform: translateY(16px);
+      transition: opacity .55s ease, transform .55s ease;
     }
-    .scene-info--bl { bottom: clamp(36px,5vh,72px); left: 0; }
-    .scene-info--br { bottom: clamp(36px,5vh,72px); right: 0; text-align: right; }
+    .hud-panel.left  { left:  clamp(28px,5vw,70px); }
+    .hud-panel.right { right: clamp(28px,5vw,70px); text-align: right; }
+    .hud-panel.right .hud-desc { margin-left: auto; }
+    .hud-panel.vis { opacity: 1; transform: translateY(0); }
 
-    .scene-info__season {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
-      letter-spacing: .4em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      opacity: .65;
+    .hud-num    { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .45em; color: rgba(20,15,10,.4); margin-bottom: 6px; }
+    .hud-season { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: .38em; color: rgba(20,15,10,.5); margin-bottom: 8px; }
+    .hud-title  { font-family: 'Cormorant Garamond', serif; font-size: clamp(36px,7vw,82px); font-weight: 700; line-height: .88; letter-spacing: -.03em; text-transform: uppercase; color: rgba(20,15,10,.85); margin-bottom: 6px; }
+    .hud-jp     { font-family: 'Noto Serif JP', serif; font-size: clamp(11px,1.2vw,14px); font-weight: 300; letter-spacing: .15em; color: rgba(20,15,10,.4); margin-bottom: 12px; }
+    .hud-desc   { font-family: 'Cormorant Garamond', serif; font-size: clamp(13px,1.4vw,16px); font-style: italic; color: rgba(20,15,10,.5); line-height: 1.8; max-width: 280px; }
+
+    /* ── Loading ── */
+    #loader {
+      position: fixed; inset: 0; z-index: 100;
+      background: #f5f0ec;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+      transition: opacity 1.2s ease;
     }
+    #loader.hidden { opacity: 0; pointer-events: none; }
+    #loader-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(48px,10vw,120px); font-weight: 700; letter-spacing: -.02em; text-transform: uppercase; color: rgba(20,15,10,.08); }
+    #loader-jp    { font-family: 'Noto Serif JP', serif; font-size: 14px; letter-spacing: .25em; color: rgba(20,15,10,.3); }
+    #loader-bar-wrap { width: 140px; height: 1px; background: rgba(20,15,10,.1); position: relative; overflow: hidden; }
+    #loader-bar { position: absolute; left: 0; top: 0; height: 100%; background: rgba(20,15,10,.4); width: 0; transition: width .3s ease; }
 
-    .scene-info__title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(38px, 6.5vw, 88px);
-      font-weight: 700;
-      line-height: .9;
-      letter-spacing: -.025em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .scene-info__jp {
-      font-family: 'Noto Serif JP', serif;
-      font-size: clamp(11px, 1.1vw, 14px);
-      font-weight: 300;
-      letter-spacing: .14em;
-      opacity: .4;
-      margin-bottom: 14px;
-    }
-
-    .scene-info__desc {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(13px, 1.3vw, 16px);
-      font-style: italic;
-      opacity: .52;
-      line-height: 1.8;
-      max-width: 300px;
-    }
-    .scene-info--br .scene-info__desc { margin-left: auto; }
-
-    /* ── INTERLUDE ── */
-    .interlude {
-      min-height: 55svh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--ink);
-      padding: 80px clamp(24px, 8vw, 120px);
-      text-align: center;
+    /* ── Cursor ring ── */
+    #cursor {
+      position: fixed; width: 36px; height: 36px;
+      border: 1.5px solid rgba(20,15,10,.28);
+      border-radius: 50%;
+      pointer-events: none; z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: width .25s, height .25s, border-color .25s;
+      mix-blend-mode: multiply;
     }
 
-    .interlude__poem {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(18px, 2.8vw, 36px);
-      font-style: italic;
-      color: rgba(232,234,237,.5);
-      line-height: 2;
-      max-width: 620px;
-      opacity: 0;
-      transform: translateY(14px);
-    }
-
-    .interlude__jp {
-      font-family: 'Noto Serif JP', serif;
-      font-size: clamp(10px, 1.1vw, 13px);
-      font-weight: 300;
-      color: rgba(232,234,237,.22);
-      letter-spacing: .15em;
-      margin-top: 16px;
-      opacity: 0;
-    }
-
-    /* ── FOOTER ── */
-    .site-footer {
-      background: var(--ink);
-      padding: 60px clamp(24px, 6vw, 80px);
-      border-top: 1px solid rgba(232,234,237,.07);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-    .site-footer__brand {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(18px, 2.5vw, 28px);
-      font-weight: 700;
-      text-transform: uppercase;
-      color: rgba(232,234,237,.12);
-    }
-    .site-footer__meta {
-      font-family: 'Space Mono', monospace;
-      font-size: 9px;
-      letter-spacing: .22em;
-      color: rgba(232,234,237,.12);
-    }
+    /* ── Scroll driver ── */
+    #scroll-space { height: 700vh; position: relative; }
 
     /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: .01ms !important;
-        transition-duration: .01ms !important;
-      }
-      .hero__title .char { transform: none !important; }
-      .hero__eyebrow, .hero__kanji, .hero__sub,
-      .hero__scroll, .scene-info, .interlude__poem,
-      .interlude__jp { opacity: 1 !important; transform: none !important; }
+      .grain, .hint-line { animation: none; }
+      .hud-panel, #hero-title, #scroll-hint { transition: none; }
     }
   </style>
 </head>
-
 <body>
-  <div id="cursor-ring" aria-hidden="true"></div>
-  <div id="progress-bar" aria-hidden="true"></div>
+
+  <canvas id="c" aria-hidden="true"></canvas>
+  <div class="grain"  aria-hidden="true"></div>
+  <div id="flash"    aria-hidden="true"></div>
+  <div id="progress" aria-hidden="true"></div>
+  <div id="cursor"   aria-hidden="true"></div>
+
   <a class="back-link" href="../landing/index.html">EXPERIMENTS</a>
   <span class="exp-label" aria-hidden="true">EXP · 14</span>
 
-  <!-- ── HERO ── -->
-  <section class="hero">
-    <canvas id="hero-canvas" aria-hidden="true"></canvas>
-    <p class="hero__eyebrow" aria-hidden="true">EXP · 14 · TABIBITO · 旅人</p>
-    <h1 class="hero__title" aria-label="Tabibito">
-      <span class="char">T</span><span class="char">A</span><span class="char">B</span><span class="char">I</span><span class="char">B</span><span class="char">I</span><span class="char">T</span><span class="char">O</span>
-    </h1>
-    <p class="hero__kanji" lang="ja">旅人 — Il Viaggiatore</p>
-    <p class="hero__sub">
-      Quattro stagioni di campagna giapponese.<br>
-      Ispirato alle illustrazioni di Ryo Takemasa.
-    </p>
-    <div class="hero__scroll" aria-hidden="true">
-      <span>SCROLL</span>
-      <div class="hero__scroll-line"></div>
-    </div>
-  </section>
+  <div id="hero-title" aria-hidden="true">
+    <h1>TABIBITO</h1>
+    <p class="sub">旅人 — Il Viaggiatore</p>
+  </div>
 
-  <!-- ── SCENE 1 — SAKURA / SPRING ── -->
-  <section class="scene" id="scene-01" aria-label="Sakura — Primavera">
-    <canvas class="scene-canvas" id="canvas-sakura" aria-hidden="true"></canvas>
-    <div class="grain" aria-hidden="true"></div>
-    <span class="scene-num" aria-hidden="true">01 / 04</span>
-    <div class="scene-info scene-info--bl" style="color:#18181c">
-      <p class="scene-info__season">春 · Primavera</p>
-      <h2 class="scene-info__title">Sakura</h2>
-      <p class="scene-info__jp" lang="ja">桜 — I Ciliegi in Fiore</p>
-      <p class="scene-info__desc">I petali cadono come neve rosa. Sotto i ciliegi il tempo si ferma.</p>
+  <div id="hud" role="region" aria-label="Scene information">
+    <div class="hud-panel left"  id="hud-0" aria-hidden="true">
+      <p class="hud-num">01 / 04</p>
+      <p class="hud-season">春 · Primavera</p>
+      <h2 class="hud-title">Sakura</h2>
+      <p class="hud-jp" lang="ja">桜 — I Ciliegi in Fiore</p>
+      <p class="hud-desc">I petali cadono come neve rosa. Sotto i ciliegi il tempo si ferma.</p>
     </div>
-  </section>
-
-  <!-- INTERLUDE 1 -->
-  <div class="interlude">
-    <div>
-      <p class="interlude__poem">
-        "Flower petals fall<br>onto an indifferent path —<br>yet the child reaches up"
-      </p>
-      <p class="interlude__jp" lang="ja">花びらが 無関心な道に落ちる ── しかし子供は手を伸ばす</p>
+    <div class="hud-panel right" id="hud-1" aria-hidden="true">
+      <p class="hud-num">02 / 04</p>
+      <p class="hud-season">夏 · Estate</p>
+      <h2 class="hud-title">Nanohana</h2>
+      <p class="hud-jp" lang="ja">菜の花 — Il Campo Giallo</p>
+      <p class="hud-desc">Un ciclista attraversa un mare di giallo infinito sotto un cielo aperto.</p>
+    </div>
+    <div class="hud-panel left"  id="hud-2" aria-hidden="true">
+      <p class="hud-num">03 / 04</p>
+      <p class="hud-season">冬 · Inverno</p>
+      <h2 class="hud-title">Yama<br>nami</h2>
+      <p class="hud-jp" lang="ja">山並み — Le Montagne Riflesse</p>
+      <p class="hud-desc">Un furgone solitario tra le montagne riflesse nel ghiaccio.</p>
+    </div>
+    <div class="hud-panel right" id="hud-3" aria-hidden="true">
+      <p class="hud-num">04 / 04</p>
+      <p class="hud-season">秋 · Autunno</p>
+      <h2 class="hud-title">Fusen</h2>
+      <p class="hud-jp" lang="ja">風船 — La Mongolfiera</p>
+      <p class="hud-desc">Una mongolfiera si alza sopra campi arati verso le cime innevate.</p>
     </div>
   </div>
 
-  <!-- ── SCENE 2 — NANOHANA / SUMMER ── -->
-  <section class="scene" id="scene-02" aria-label="Nanohana — Estate">
-    <canvas class="scene-canvas" id="canvas-nanohana" aria-hidden="true"></canvas>
-    <div class="grain" aria-hidden="true"></div>
-    <span class="scene-num" aria-hidden="true">02 / 04</span>
-    <div class="scene-info scene-info--br" style="color:#0a1820">
-      <p class="scene-info__season">夏 · Estate</p>
-      <h2 class="scene-info__title">Nanohana</h2>
-      <p class="scene-info__jp" lang="ja">菜の花 — Il Campo Giallo</p>
-      <p class="scene-info__desc">Un ciclista attraversa un mare di giallo infinito sotto un cielo aperto.</p>
-    </div>
-  </section>
-
-  <!-- INTERLUDE 2 -->
-  <div class="interlude">
-    <div>
-      <p class="interlude__poem">
-        "Pedaling through gold,<br>the horizon never nears —<br>clouds drift overhead"
-      </p>
-      <p class="interlude__jp" lang="ja">黄金を漕ぐ 地平線は近づかない ── 雲は頭上を漂う</p>
-    </div>
+  <div id="scroll-hint" aria-hidden="true">
+    <span>SCROLL</span>
+    <div class="hint-line"></div>
   </div>
 
-  <!-- ── SCENE 3 — YAMANAMI / WINTER ── -->
-  <section class="scene" id="scene-03" aria-label="Yamanami — Inverno">
-    <canvas class="scene-canvas" id="canvas-yamanami" aria-hidden="true"></canvas>
-    <div class="grain" aria-hidden="true"></div>
-    <span class="scene-num" aria-hidden="true">03 / 04</span>
-    <div class="scene-info scene-info--bl" style="color:#d8e4f0">
-      <p class="scene-info__season">冬 · Inverno</p>
-      <h2 class="scene-info__title">Yama<br>nami</h2>
-      <p class="scene-info__jp" lang="ja">山並み — Le Montagne Riflesse</p>
-      <p class="scene-info__desc">Un furgone arancione solitario davanti a montagne che si riflettono nel ghiaccio.</p>
-    </div>
-  </section>
-
-  <!-- INTERLUDE 3 -->
-  <div class="interlude">
-    <div>
-      <p class="interlude__poem">
-        "Mountains above,<br>mountains below —<br>the van moves between two worlds"
-      </p>
-      <p class="interlude__jp" lang="ja">上にも山、下にも山 ── バンがふたつの世界の間を動く</p>
-    </div>
+  <div id="loader" role="status" aria-live="polite">
+    <div id="loader-title" aria-hidden="true">TABIBITO</div>
+    <div id="loader-jp">旅人 — Caricamento</div>
+    <div id="loader-bar-wrap"><div id="loader-bar"></div></div>
   </div>
 
-  <!-- ── SCENE 4 — FUSEN / AUTUMN ── -->
-  <section class="scene" id="scene-04" aria-label="Fusen — Autunno">
-    <canvas class="scene-canvas" id="canvas-fusen" aria-hidden="true"></canvas>
-    <div class="grain" aria-hidden="true"></div>
-    <span class="scene-num" aria-hidden="true">04 / 04</span>
-    <div class="scene-info scene-info--br" style="color:#d8e4f0">
-      <p class="scene-info__season">秋 · Autunno</p>
-      <h2 class="scene-info__title">Fusen</h2>
-      <p class="scene-info__jp" lang="ja">風船 — La Mongolfiera</p>
-      <p class="scene-info__desc">Una mongolfiera si alza sopra campi arati verso le cime innevate.</p>
-    </div>
-  </section>
+  <!-- Scroll driver -->
+  <div id="scroll-space" aria-hidden="true"></div>
 
-  <!-- ── FOOTER ── -->
-  <footer class="site-footer">
-    <span class="site-footer__brand">Tabibito · XIV</span>
-    <span class="site-footer__meta">Ispirato a Ryo Takemasa · LuXDAmore · 2025</span>
-  </footer>
+  <!-- Three.js r167 via importmap -->
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.167.1/build/three.module.js" } }
+  </script>
 
-  <script>
+  <script type="module">
+  import * as THREE from 'three';
   'use strict';
 
-  /* ─────────────────────────────────────────────
-     UTILITIES
-  ───────────────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════════════
+     CONSTANTS
+  ═══════════════════════════════════════════════════════════════ */
+  const SCENE_Z     = [0, -22, -44, -66];   // world-Z centre of each scene
+  const CAM_Z_S     =  18;                  // camera start Z
+  const CAM_Z_E     = -76;                  // camera end Z
+  const CAM_TRAVEL  = CAM_Z_S - CAM_Z_E;   // 94 units
 
-  /** Seeded pseudo-random — keeps shapes deterministic across frames */
-  function mkRng(seed) {
-    let s = seed >>> 0 || 1;
-    return () => {
-      s = Math.imul(s, 48271) % 2147483647;
-      return (s - 1) / 2147483646;
-    };
+  // Atmosphere per scene: fog RGB, sky-top RGB, sky-bottom RGB
+  const ATMO = [
+    { fog:[.95,.88,.90], top:[.60,.75,.88], bot:[.97,.91,.93] }, // sakura
+    { fog:[.95,.93,.82], top:[.47,.70,.82], bot:[.97,.95,.82] }, // nanohana
+    { fog:[.80,.87,.93], top:[.60,.70,.82], bot:[.86,.91,.95] }, // yamanami
+    { fog:[.88,.82,.76], top:[.60,.67,.78], bot:[.91,.87,.80] }, // fusen
+  ];
+
+  // Scene zone boundaries (midpoints between plane-crossings)
+  // plane crossings at t = 0.191, 0.426, 0.660, 0.894
+  const ZONE_BOUNDS = [0, .308, .543, .777, 1.0];
+
+  // Camera Y heights per scene
+  const CAM_Y  = [2.2, 1.8, 1.5, 2.8];
+  // Look-at Y per scene
+  const LOOK_Y = [2.8, 2.0, 1.0, 4.2];
+
+  // HUD visibility windows
+  const HUD_WIN = [[.04,.28],[.29,.52],[.53,.76],[.77,1.0]];
+
+  // Flash colors when passing through scene planes
+  const FLASH_COL = ['#f0dce4','#f0edcc','#c8d8e8','#e0d0c0'];
+
+  // Camera horizontal weave parameters
+  const CAM_WEAVE_FREQUENCY  = 2.8;   // sine cycles over full journey
+  const CAM_WEAVE_AMPLITUDE  = 1.5;   // units left/right
+
+  // Flash portal effect thresholds
+  const FLASH_THRESHOLD    = 3.5;     // units from scene plane to start flash
+  const FLASH_MAX_OPACITY  = 0.18;    // peak flash opacity
+
+  /* ═══════════════════════════════════════════════════════════════
+     RENDERER + SCENE + CAMERA
+  ═══════════════════════════════════════════════════════════════ */
+  const canvas   = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.setClearColor(0xf5f0ec);
+
+  const scene  = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 120);
+  camera.position.set(0, 2, CAM_Z_S);
+
+  scene.fog = new THREE.Fog(0xf5ece8, 12, 55);
+
+  // Lights (MeshBasicMaterial ignores them, but MeshLambertMaterial uses them)
+  scene.add(new THREE.AmbientLight(0xfff5ee, 1.8));
+  const sun = new THREE.DirectionalLight(0xfff0e0, 0.5);
+  sun.position.set(5, 10, 4);
+  scene.add(sun);
+
+  /* ═══════════════════════════════════════════════════════════════
+     SKY SPHERE  (gradient background, moves with camera)
+  ═══════════════════════════════════════════════════════════════ */
+  const skyUni = {
+    uTop: { value: new THREE.Color().setRGB(...ATMO[0].top) },
+    uBot: { value: new THREE.Color().setRGB(...ATMO[0].bot) },
+  };
+  const skyMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(90, 32, 16),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false,
+      uniforms: skyUni,
+      vertexShader: `varying float vY;
+        void main(){ vY=normalize(position).y; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader: `uniform vec3 uTop,uBot; varying float vY;
+        void main(){ float t=clamp(vY*.8+.5,0.,1.); gl_FragColor=vec4(mix(uBot,uTop,t*t),1.); }`,
+    })
+  );
+  scene.add(skyMesh);
+
+  /* ═══════════════════════════════════════════════════════════════
+     GEOMETRY HELPERS
+  ═══════════════════════════════════════════════════════════════ */
+  const _mats = {};
+  function mat(hex){
+    if(!_mats[hex]) _mats[hex] = new THREE.MeshBasicMaterial({ color: hex });
+    return _mats[hex];
+  }
+  function matNew(hex){ return new THREE.MeshBasicMaterial({ color: hex }); }
+
+  function box(w,h,d,col){ return new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat(col)); }
+  function cyl(r1,r2,h,seg,col){ return new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,seg), mat(col)); }
+  function sph(r,seg,col){ return new THREE.Mesh(new THREE.SphereGeometry(r,seg,Math.ceil(seg*0.6)), mat(col)); }
+  function cone(r,h,seg,col){ return new THREE.Mesh(new THREE.ConeGeometry(r,h,seg), mat(col)); }
+  function disc(r,seg,col){
+    const m = new THREE.Mesh(new THREE.CircleGeometry(r,seg), mat(col));
+    m.rotation.x = -Math.PI/2; return m;
+  }
+  function flatPlane(w,d,col,ox,oy,oz){
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w,d), mat(col));
+    m.rotation.x = -Math.PI/2;
+    m.position.set(ox,oy,oz);
+    return m;
   }
 
-  /** Resize a canvas to match its CSS size */
-  function fitCanvas(canvas) {
-    const rect = canvas.getBoundingClientRect();
-    const w = Math.round(rect.width);
-    const h = Math.round(rect.height);
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width  = w;
-      canvas.height = h;
-      return true;
-    }
-    return false;
+  /* mountain peak: 4-sided pyramid with snow cap */
+  function mountainPeak(h, r){
+    const g = new THREE.Group();
+    const body = cone(r, h*.65, 4, 0x5a6878);
+    body.position.y = h*.325; g.add(body);
+    const cap  = cone(r*.5, h*.42, 4, 0xe8ecf0);
+    cap.position.y = h*.65 + h*.21; g.add(cap);
+    return g;
   }
 
-  /* ─────────────────────────────────────────────
-     DRAWING HELPERS
-  ───────────────────────────────────────────── */
-
-  /**
-   * Draw a simplified tree trunk with two branches.
-   * cx/bottom/top are absolute pixel coords; hw = half-width.
-   */
-  function drawTrunk(ctx, cx, bottom, top, hw, color) {
-    ctx.save();
-    ctx.fillStyle   = color;
-    ctx.strokeStyle = color;
-    ctx.lineCap     = 'round';
-
-    /* --- trunk body (tapers slightly toward top) --- */
-    ctx.beginPath();
-    ctx.moveTo(cx - hw,        bottom);
-    ctx.bezierCurveTo(
-      cx - hw * 0.85, bottom * 0.65 + top * 0.35,
-      cx - hw * 0.4,  bottom * 0.3  + top * 0.7,
-      cx - hw * 0.15, top
-    );
-    ctx.lineTo(cx + hw * 0.15, top);
-    ctx.bezierCurveTo(
-      cx + hw * 0.4,  bottom * 0.3  + top * 0.7,
-      cx + hw * 0.85, bottom * 0.65 + top * 0.35,
-      cx + hw,        bottom
-    );
-    ctx.closePath();
-    ctx.fill();
-
-    /* --- left branch --- */
-    const midY = bottom * 0.45 + top * 0.55;
-    ctx.lineWidth = hw * 0.65;
-    ctx.beginPath();
-    ctx.moveTo(cx - hw * 0.2, midY);
-    ctx.quadraticCurveTo(
-      cx - hw * 6, midY - hw * 5,
-      cx - hw * 9, midY - hw * 11
-    );
-    ctx.stroke();
-
-    /* --- right branch --- */
-    ctx.lineWidth = hw * 0.5;
-    ctx.beginPath();
-    ctx.moveTo(cx + hw * 0.2, midY * 0.9 + top * 0.1);
-    ctx.quadraticCurveTo(
-      cx + hw * 5, midY - hw * 3,
-      cx + hw * 7, midY - hw * 8
-    );
-    ctx.stroke();
-
-    ctx.restore();
+  /* simple stick figure */
+  function figure(x,y,z, h, bodyCol, legCol){
+    const g = new THREE.Group();
+    g.position.set(x,y,z);
+    const head = sph(h*.22, 7, bodyCol); head.position.y = h*.9; g.add(head);
+    const body = box(h*.3,h*.38,h*.2, bodyCol); body.position.y = h*.5; g.add(body);
+    const lL = box(h*.13,h*.36,h*.13, legCol); lL.position.set(-h*.09,h*.18,0); g.add(lL);
+    const lR = box(h*.13,h*.36,h*.13, legCol); lR.position.set( h*.09,h*.18,0); g.add(lR);
+    return g;
   }
 
-  /** Soft blossom cloud: overlapping translucent ellipses */
-  function drawBlossomCloud(ctx, cx, cy, rx, ry, color, seed) {
-    const rng = mkRng(seed);
-    ctx.save();
-    ctx.fillStyle = color;
-    /* outer ring of blobs */
-    for (let i = 0; i < 18; i++) {
-      const angle = (i / 18) * Math.PI * 2;
-      const r     = 0.55 + 0.45 * rng();
-      const bx    = cx + Math.cos(angle) * rx * r;
-      const by    = cy + Math.sin(angle) * ry * r;
-      const br    = (rx * 0.22) * (0.55 + 0.45 * rng());
-      ctx.globalAlpha = 0.55 + 0.4 * rng();
-      ctx.beginPath();
-      ctx.ellipse(bx, by, br, br * (0.7 + 0.3 * rng()), rng() * Math.PI, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    /* solid center fill */
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx * 0.65, ry * 0.65, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  /** Draw a petal (small tilted ellipse) */
-  function drawPetal(ctx, x, y, r, angle) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, r, r * 0.45, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  /** Draw a bare winter tree (recursive branches) */
-  function drawBareTree(ctx, x, y, h, color) {
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineCap = 'round';
-
-    function branch(bx, by, angle, len, depth) {
-      if (depth === 0 || len < h * 0.015) return;
-      const ex = bx + Math.cos(angle) * len;
-      const ey = by + Math.sin(angle) * len;
-      ctx.lineWidth = Math.max(1, len * 0.18);
-      ctx.beginPath();
-      ctx.moveTo(bx, by);
-      ctx.lineTo(ex, ey);
-      ctx.stroke();
-      branch(ex, ey, angle - 0.42, len * 0.64, depth - 1);
-      branch(ex, ey, angle + 0.52, len * 0.60, depth - 1);
-    }
-    /* trunk */
-    ctx.lineWidth = h * 0.09;
-    ctx.beginPath();
-    ctx.moveTo(x, y + h);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    /* branches */
-    branch(x, y, -Math.PI / 2 - 0.15, h * 0.52, 4);
-    branch(x, y, -Math.PI / 2 + 0.18, h * 0.48, 4);
-
-    ctx.restore();
-  }
-
-  /** Draw the cyclist figure */
-  function drawCyclist(ctx, x, y, h) {
-    const w = h * 0.72;
-    ctx.save();
-
-    /* Wheels */
-    ctx.strokeStyle = '#282828';
-    ctx.lineWidth   = h * 0.09;
-    ctx.beginPath();
-    ctx.arc(x - w * 0.3, y + h * 0.58, h * 0.28, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(x + w * 0.3, y + h * 0.58, h * 0.28, 0, Math.PI * 2);
-    ctx.stroke();
-
-    /* Wheel hubs */
-    ctx.fillStyle = '#484848';
-    ctx.beginPath(); ctx.arc(x - w * 0.3, y + h * 0.58, h * 0.06, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + w * 0.3, y + h * 0.58, h * 0.06, 0, Math.PI * 2); ctx.fill();
-
-    /* Frame */
-    ctx.strokeStyle = '#d0d0d0';
-    ctx.lineWidth   = h * 0.07;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x - w * 0.3, y + h * 0.58);
-    ctx.lineTo(x,           y + h * 0.18);
-    ctx.lineTo(x + w * 0.3, y + h * 0.58);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x,           y + h * 0.18);
-    ctx.lineTo(x - w * 0.08, y + h * 0.58);
-    ctx.stroke();
-    /* handlebar */
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.02, y + h * 0.18);
-    ctx.lineTo(x + w * 0.18, y + h * 0.12);
-    ctx.stroke();
-
-    /* Body + jacket */
-    ctx.fillStyle = '#c07838';
-    ctx.beginPath();
-    ctx.ellipse(x - w * 0.04, y + h * 0.05, w * 0.2, h * 0.22, -0.28, 0, Math.PI * 2);
-    ctx.fill();
-
-    /* Helmet */
-    ctx.fillStyle = '#808898';
-    ctx.beginPath();
-    ctx.arc(x + w * 0.09, y - h * 0.06, h * 0.14, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#9898a8';
-    ctx.beginPath();
-    ctx.ellipse(x + w * 0.09, y - h * 0.01, h * 0.17, h * 0.06, 0, 0, Math.PI);
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  /** Draw the orange van */
-  function drawVan(ctx, x, y, w, h) {
-    ctx.save();
-
-    /* Body */
-    ctx.fillStyle = '#d04828';
-    ctx.beginPath();
-    ctx.roundRect(x - w / 2, y - h, w, h, [4, 4, 2, 2]);
-    ctx.fill();
-
-    /* Roof accent */
-    ctx.fillStyle = '#c03c1c';
-    ctx.fillRect(x - w / 2, y - h, w, h * 0.12);
-
-    /* Front window */
-    ctx.fillStyle = '#f0c8a0';
-    ctx.fillRect(x - w * 0.44, y - h * 0.88, w * 0.22, h * 0.42);
-
-    /* Side window */
-    ctx.fillStyle = '#e8b890';
-    ctx.fillRect(x + w * 0.06, y - h * 0.88, w * 0.2, h * 0.38);
-
-    /* Door line */
-    ctx.strokeStyle = '#b03818';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x - w * 0.04, y - h);
-    ctx.lineTo(x - w * 0.04, y - h * 0.1);
-    ctx.stroke();
-
-    /* Wheels */
-    ctx.fillStyle = '#202028';
-    ctx.beginPath(); ctx.arc(x - w * 0.28, y, h * 0.24, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + w * 0.28, y, h * 0.24, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#484858';
-    ctx.beginPath(); ctx.arc(x - w * 0.28, y, h * 0.12, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + w * 0.28, y, h * 0.12, 0, Math.PI * 2); ctx.fill();
-
-    ctx.restore();
-  }
-
-  /** Draw hot air balloon */
-  function drawBalloon(ctx, x, y, r) {
-    ctx.save();
-
-    /* Balloon envelope — stripes via pie segments */
-    const stripes = ['#cc3838','#e07828','#e0b828','#cc3838','#c84040'];
-    for (let i = 0; i < 5; i++) {
-      const a0 = (i / 5) * Math.PI * 2 - Math.PI / 2;
-      const a1 = ((i + 1) / 5) * Math.PI * 2 - Math.PI / 2;
-      ctx.fillStyle = stripes[i];
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.arc(x, y, r * 0.78, a0, a1);
-      ctx.closePath();
-      ctx.fill();
-    }
-    /* Clip edges with bounding ellipse */
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.beginPath();
-    ctx.ellipse(x, y, r * 0.78, r, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-
-    /* Highlight */
-    ctx.globalAlpha = 0.22;
-    ctx.fillStyle = '#fff8e8';
-    ctx.beginPath();
-    ctx.ellipse(x - r * 0.22, y - r * 0.28, r * 0.28, r * 0.38, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    /* Outline */
-    ctx.strokeStyle = 'rgba(0,0,0,.15)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(x, y, r * 0.78, r, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    /* Ropes */
-    ctx.strokeStyle = '#705030';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath(); ctx.moveTo(x - r * 0.35, y + r * 0.9); ctx.lineTo(x - r * 0.12, y + r * 1.2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x + r * 0.35, y + r * 0.9); ctx.lineTo(x + r * 0.12, y + r * 1.2); ctx.stroke();
-
-    /* Basket */
-    ctx.fillStyle = '#88603a';
-    ctx.beginPath();
-    ctx.roundRect(x - r * 0.14, y + r * 1.2, r * 0.28, r * 0.22, 3);
-    ctx.fill();
-    ctx.strokeStyle = '#604020';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x - r * 0.14, y + r * 1.2, r * 0.28, r * 0.22);
-
-    ctx.restore();
-  }
-
-  /** Draw child reaching toward tree */
-  function drawFigureChild(ctx, x, y, h, bodyColor, pantsColor) {
-    const w = h * 0.34;
-    ctx.save();
-    /* Body */
-    ctx.fillStyle = bodyColor;
-    ctx.beginPath();
-    ctx.ellipse(x, y + h * 0.38, w * 0.33, h * 0.28, 0, 0, Math.PI * 2);
-    ctx.fill();
-    /* Head */
-    ctx.beginPath();
-    ctx.arc(x, y, w * 0.36, 0, Math.PI * 2);
-    ctx.fill();
-    /* Legs */
-    ctx.fillStyle = pantsColor;
-    ctx.fillRect(x - w * 0.12, y + h * 0.6, w * 0.12, h * 0.4);
-    ctx.fillRect(x + w * 0.02, y + h * 0.6, w * 0.12, h * 0.4);
-    /* Arm reaching toward tree */
-    ctx.strokeStyle = bodyColor;
-    ctx.lineWidth   = w * 0.18;
-    ctx.lineCap     = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.26, y + h * 0.22);
-    ctx.lineTo(x + w * 0.7,  y - h * 0.1);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  /** Draw standing adult */
-  function drawFigureAdult(ctx, x, y, h, bodyColor, pantsColor) {
-    const w = h * 0.3;
-    ctx.save();
-    /* Body */
-    ctx.fillStyle = bodyColor;
-    ctx.beginPath();
-    ctx.ellipse(x, y + h * 0.35, w * 0.28, h * 0.3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    /* Head */
-    ctx.beginPath();
-    ctx.arc(x, y, w * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    /* Arm on hip */
-    ctx.strokeStyle = bodyColor;
-    ctx.lineWidth   = w * 0.22;
-    ctx.lineCap     = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x - w * 0.25, y + h * 0.25);
-    ctx.lineTo(x - w * 0.5,  y + h * 0.48);
-    ctx.stroke();
-    /* Legs */
-    ctx.fillStyle = pantsColor;
-    ctx.fillRect(x - w * 0.1,  y + h * 0.58, w * 0.1, h * 0.42);
-    ctx.fillRect(x + w * 0.02, y + h * 0.58, w * 0.1, h * 0.42);
-    ctx.restore();
-  }
-
-  /** Draw toddler with both arms raised */
-  function drawFigureToddler(ctx, x, y, h, bodyColor, pantsColor) {
-    const w = h * 0.42;
-    ctx.save();
-    /* Chubby body */
-    ctx.fillStyle = bodyColor;
-    ctx.beginPath();
-    ctx.ellipse(x, y + h * 0.42, w * 0.38, h * 0.28, 0, 0, Math.PI * 2);
-    ctx.fill();
-    /* Big head */
-    ctx.beginPath();
-    ctx.arc(x, y + h * 0.1, w * 0.4, 0, Math.PI * 2);
-    ctx.fill();
-    /* Both arms raised */
-    ctx.strokeStyle = bodyColor;
-    ctx.lineWidth   = w * 0.2;
-    ctx.lineCap     = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x - w * 0.28, y + h * 0.32);
-    ctx.lineTo(x - w * 0.52, y + h * 0.02);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x + w * 0.28, y + h * 0.32);
-    ctx.lineTo(x + w * 0.52, y + h * 0.02);
-    ctx.stroke();
-    /* Legs */
-    ctx.fillStyle = pantsColor;
-    ctx.fillRect(x - w * 0.14, y + h * 0.66, w * 0.13, h * 0.34);
-    ctx.fillRect(x + w * 0.03, y + h * 0.66, w * 0.13, h * 0.34);
-    ctx.restore();
-  }
-
-  /* ─────────────────────────────────────────────
-     SCENE RENDERERS
-  ───────────────────────────────────────────── */
-
-  /* Petal particle system (shared, re-initialised on resize) */
-  const petals = [];
-  function initPetals(W, H) {
-    petals.length = 0;
-    for (let i = 0; i < 65; i++) {
-      petals.push({
-        x:      Math.random() * W,
-        y:      Math.random() * H,
-        vx:     (Math.random() - 0.5) * 0.55,
-        vy:     0.45 + Math.random() * 0.9,
-        r:      2 + Math.random() * 4.5,
-        angle:  Math.random() * Math.PI * 2,
-        vAngle: (Math.random() - 0.5) * 0.025,
-      });
-    }
-  }
-
-  /** SCENE 1 — Sakura (Spring cherry-blossom park) */
-  function renderSakura(canvas, t) {
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    const rng = mkRng(42);
-
-    /* Sky */
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0,   '#8cb0c8');
-    sky.addColorStop(0.5, '#aec8d8');
-    sky.addColorStop(1,   '#bcd0de');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
-
-    /* Scattered sky-blue patches (visible through blossom gaps) */
-    ctx.fillStyle = '#98b8cc';
-    for (let i = 0; i < 9; i++) {
-      ctx.beginPath();
-      ctx.ellipse(rng() * W, rng() * H * 0.38, W * (0.05 + rng() * 0.1), H * (0.04 + rng() * 0.06), rng() * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    /* Background distant white/pale blossoms */
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = '#f2e0e8';
-    ctx.beginPath(); ctx.ellipse(W * 0.88, H * 0.22, W * 0.14, H * 0.12, 0.2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(W * -0.02, H * 0.3,  W * 0.1,  H * 0.1,  0.3, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
-
-    /* Background foliage / park greenery strip */
-    ctx.fillStyle = '#5e9030';
-    ctx.fillRect(0, H * 0.46, W * 0.35, H * 0.08);
-    ctx.fillStyle = '#4a8025';
-    ctx.fillRect(0, H * 0.48, W * 0.22, H * 0.05);
-
-    /* Background buildings (right mid) */
-    ctx.fillStyle = '#9aabba';
-    ctx.fillRect(W * 0.68, H * 0.44, W * 0.12, H * 0.08);
-    ctx.fillRect(W * 0.74, H * 0.42, W * 0.08, H * 0.10);
-    ctx.fillStyle = '#8898a8';
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 4; c++) {
-        ctx.fillRect(W * (0.695 + c * 0.025), H * (0.455 + r * 0.018), W * 0.012, H * 0.012);
-      }
-    }
-
-    /* Blossom clouds (back, then front) */
-    drawBlossomCloud(ctx, W * 0.52, H * 0.16, W * 0.38, H * 0.22, '#e0a4b8', 10);
-    drawBlossomCloud(ctx, W * 0.18, H * 0.13, W * 0.33, H * 0.28, '#e8b0c2', 20);
-    drawBlossomCloud(ctx, W * 0.78, H * 0.2,  W * 0.2,  H * 0.16, '#d8a0b2', 30);
-
-    /* Grass (left side) */
-    const grass = ctx.createLinearGradient(0, H * 0.52, 0, H);
-    grass.addColorStop(0, '#7ab040');
-    grass.addColorStop(1, '#62a030');
-    ctx.fillStyle = grass;
-    ctx.fillRect(0, H * 0.52, W * 0.57, H);
-
-    /* Bright grass edge */
-    ctx.fillStyle = '#90c048';
-    ctx.fillRect(0, H * 0.52, W * 0.57, H * 0.022);
-
-    /* Path / walkway (right half) */
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(W * 0.42, H * 0.52);
-    ctx.lineTo(W,        H * 0.60);
-    ctx.lineTo(W,        H);
-    ctx.lineTo(W * 0.37, H);
-    ctx.closePath();
-    ctx.fillStyle = '#788498';
-    ctx.fill();
-    ctx.restore();
-
-    /* Path highlight strip */
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(W * 0.42, H * 0.52);
-    ctx.lineTo(W * 0.445, H * 0.52);
-    ctx.lineTo(W * 0.395, H);
-    ctx.lineTo(W * 0.37,  H);
-    ctx.closePath();
-    ctx.fillStyle = '#8898ac';
-    ctx.fill();
-    ctx.restore();
-
-    /* Dappled tree shadow on path */
-    ctx.save();
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = '#485060';
-    const rng2 = mkRng(77);
-    for (let i = 0; i < 16; i++) {
-      const px = W * 0.46 + rng2() * W * 0.47;
-      const py = H * 0.60 + rng2() * H * 0.32;
-      ctx.beginPath();
-      ctx.ellipse(px, py, W * (0.04 + rng2() * 0.06), H * (0.02 + rng2() * 0.04), rng2() * Math.PI, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    /* Curb line */
-    ctx.fillStyle = '#606878';
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(W * 0.42,  H * 0.52);
-    ctx.lineTo(W * 0.432, H * 0.52);
-    ctx.lineTo(W * 0.382, H);
-    ctx.lineTo(W * 0.37,  H);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    /* White petal dots scattered on ground */
-    ctx.fillStyle = '#f5e8ec';
-    ctx.globalAlpha = 0.7;
-    const rng3 = mkRng(55);
-    for (let i = 0; i < 30; i++) {
-      ctx.beginPath();
-      ctx.arc(rng3() * W * 0.58, H * 0.54 + rng3() * H * 0.46, 1.5 + rng3() * 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    /* Tree trunks */
-    const tCol = '#181820';
-    drawTrunk(ctx, W * 0.07,  H,      H * (-0.08), W * 0.028, tCol); /* main large left */
-    drawTrunk(ctx, W * 0.385, H * 0.88, H * 0.36,  W * 0.013, tCol);
-    drawTrunk(ctx, W * 0.575, H * 0.84, H * 0.40,  W * 0.011, tCol);
-    drawTrunk(ctx, W * 0.82,  H * 0.82, H * 0.44,  W * 0.009, tCol);
-
-    /* Front blossom cloud layers (above trunks in z-order) */
-    drawBlossomCloud(ctx, W * 0.1,  H * 0.08, W * 0.28, H * 0.24, '#eab8c8', 40);
-    drawBlossomCloud(ctx, W * 0.35, H * 0.04, W * 0.24, H * 0.18, '#e0a8ba', 50);
-
-    /* Figures */
-    drawFigureChild(ctx,   W * 0.37, H * 0.77, H * 0.074, '#808040', '#507098');
-    drawFigureAdult(ctx,   W * 0.74, H * 0.78, H * 0.096, '#c83838', '#b09870');
-    drawFigureToddler(ctx, W * 0.67, H * 0.87, H * 0.068, '#4860b0', '#909ab0');
-
-    /* Falling petals */
-    if (petals.length === 0) initPetals(W, H);
-    ctx.fillStyle = '#f8d0dc';
-    ctx.globalAlpha = 0.82;
-    for (const p of petals) {
-      drawPetal(ctx, p.x, p.y, p.r, p.angle);
-      p.x += p.vx + Math.sin(t * 0.0014 + p.y * 0.018) * 0.4;
-      p.y += p.vy;
-      p.angle += p.vAngle;
-      if (p.y > H + 12) { p.y = -12; p.x = Math.random() * W; }
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  /* ─────── */
-
-  let cyclistXN = -0.18; /* normalised x position of cyclist */
-
-  /** SCENE 2 — Nanohana (Summer rapeseed field) */
-  function renderNanohana(canvas, t) {
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    const rng = mkRng(12);
-
-    /* Sky */
-    const sky = ctx.createLinearGradient(0, 0, 0, H * 0.5);
-    sky.addColorStop(0, '#4e88ba');
-    sky.addColorStop(1, '#6ca0cc');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
-
-    /* Clouds */
-    const rng2 = mkRng(33);
-    ctx.fillStyle = '#eef4fa';
-    const cloudData = [
-      [0.06, 0.12, 0.10, 0.06],
-      [0.28, 0.17, 0.09, 0.05],
-      [0.52, 0.14, 0.12, 0.055],
-      [0.78, 0.19, 0.08, 0.045],
-    ];
-    for (const [cx, cy, rw, rh] of cloudData) {
-      /* Each cloud = 4 overlapping ellipses */
-      for (let j = 0; j < 4; j++) {
-        ctx.globalAlpha = 0.75 + rng2() * 0.25;
-        ctx.beginPath();
-        ctx.ellipse(
-          W * cx + (rng2() - 0.5) * W * rw,
-          H * cy + (rng2() - 0.5) * H * rh * 0.5,
-          W * (rw * (0.35 + rng2() * 0.4)),
-          H * (rh * (0.45 + rng2() * 0.45)),
-          0, 0, Math.PI * 2
-        );
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    /* Dark forest strip */
-    ctx.fillStyle = '#1c2e1c';
-    ctx.fillRect(0, H * 0.42, W * 0.40, H * 0.05);
-    ctx.fillStyle = '#253525';
-    ctx.fillRect(W * 0.32, H * 0.42, W * 0.20, H * 0.04);
-    /* Jagged tree tops */
-    ctx.fillStyle = '#1c2e1c';
-    ctx.beginPath();
-    ctx.moveTo(0, H * 0.42);
-    for (let i = 0; i <= 40; i++) {
-      ctx.lineTo((i / 40) * W * 0.45, H * 0.42 - Math.abs(Math.sin(i * 0.9 + 0.5)) * H * 0.028);
-    }
-    ctx.lineTo(W * 0.45, H * 0.46);
-    ctx.lineTo(0, H * 0.46);
-    ctx.closePath();
-    ctx.fill();
-
-    /* Yellow hill (main composition element) */
-    ctx.fillStyle = '#c8c030';
-    ctx.beginPath();
-    ctx.moveTo(-W * 0.02, H * 0.52);
-    ctx.bezierCurveTo(W * 0.1,  H * 0.38, W * 0.45, H * 0.42, W * 0.7,  H * 0.52);
-    ctx.bezierCurveTo(W * 0.85, H * 0.58, W * 0.94, H * 0.58, W * 1.02, H * 0.62);
-    ctx.lineTo(W * 1.02, H);
-    ctx.lineTo(-W * 0.02, H);
-    ctx.closePath();
-    ctx.fill();
-
-    /* Darker field texture */
-    const rng3 = mkRng(55);
-    ctx.fillStyle = '#909010';
-    ctx.globalAlpha = 0.28;
-    for (let i = 0; i < 220; i++) {
-      const px = rng3() * W;
-      const py = H * 0.5 + rng3() * H * 0.5;
-      ctx.beginPath();
-      ctx.arc(px, py, 1 + rng3() * 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    /* Lighter yellow highlight on hill crest */
-    ctx.fillStyle = '#e0d830';
-    ctx.globalAlpha = 0.25;
-    ctx.beginPath();
-    ctx.moveTo(-W * 0.02, H * 0.52);
-    ctx.bezierCurveTo(W * 0.1,  H * 0.38, W * 0.45, H * 0.42, W * 0.7,  H * 0.52);
-    ctx.lineTo(W * 0.7, H * 0.56);
-    ctx.bezierCurveTo(W * 0.45, H * 0.46, W * 0.1, H * 0.42, -W * 0.02, H * 0.56);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    /* Bare tree on hilltop right */
-    drawBareTree(ctx, W * 0.83, H * 0.44, H * 0.13, '#242424');
-
-    /* Power pole */
-    const poleX = W * 0.32;
-    ctx.strokeStyle = '#a8acb0';
-    ctx.lineWidth   = W * 0.006;
-    ctx.lineCap     = 'butt';
-    ctx.beginPath();
-    ctx.moveTo(poleX, H * 0.06);
-    ctx.lineTo(poleX, H * 0.72);
-    ctx.stroke();
-    /* Crossbar */
-    ctx.lineWidth = W * 0.004;
-    ctx.beginPath();
-    ctx.moveTo(poleX - W * 0.022, H * 0.12);
-    ctx.lineTo(poleX + W * 0.022, H * 0.12);
-    ctx.stroke();
-    /* Insulators */
-    ctx.fillStyle = '#b8bcc0';
-    ctx.beginPath(); ctx.arc(poleX - W * 0.022, H * 0.12, W * 0.004, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(poleX + W * 0.022, H * 0.12, W * 0.004, 0, Math.PI * 2); ctx.fill();
-    /* Wires */
-    ctx.lineWidth   = 1.2;
-    ctx.strokeStyle = '#7888a0';
-    ctx.beginPath();
-    ctx.moveTo(-W * 0.02, H * 0.1);
-    ctx.quadraticCurveTo(poleX * 0.5, H * 0.125, poleX - W * 0.02, H * 0.12);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(W * 1.02, H * 0.095);
-    ctx.quadraticCurveTo((poleX + W) * 0.5, H * 0.115, poleX + W * 0.02, H * 0.12);
-    ctx.stroke();
-
-    /* Cyclist — animated x via ScrollTrigger → cyclistXN */
-    const cxPx = cyclistXN * W;
-    const hillSlope = 0.52 + 0.10 * (cxPx / W); /* rough hill-slope y */
-    const cyPx = H * hillSlope - H * 0.042;
-    if (cxPx > -W * 0.12 && cxPx < W * 1.12) {
-      drawCyclist(ctx, cxPx, cyPx, H * 0.052);
-    }
-  }
-
-  /* ─────── */
-
-  let vanXN = -0.22; /* normalised van x */
-
-  /** SCENE 3 — Yamanami (Winter mountain lake reflection) */
-  function renderYamanami(canvas, t) {
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    const rng = mkRng(88);
-
-    /* Sky */
-    ctx.fillStyle = '#6878a8';
-    ctx.fillRect(0, 0, W, H * 0.48);
-
-    /* Back mountain layer */
-    const mtBackPts = [
-      0,        H * 0.32,
-      W * 0.05, H * 0.10,
-      W * 0.12, H * 0.20,
-      W * 0.20, H * 0.06,
-      W * 0.28, H * 0.17,
-      W * 0.38, H * 0.04,
-      W * 0.46, H * 0.14,
-      W * 0.55, H * 0.02,
-      W * 0.62, H * 0.11,
-      W * 0.72, H * 0.02,
-      W * 0.80, H * 0.10,
-      W * 0.90, H * 0.20,
-      W,        H * 0.30,
-      W,        H * 0.48,
-      0,        H * 0.48,
-    ];
-    ctx.fillStyle = '#7888a8';
-    ctx.beginPath();
-    ctx.moveTo(mtBackPts[0], mtBackPts[1]);
-    for (let i = 2; i < mtBackPts.length; i += 2) ctx.lineTo(mtBackPts[i], mtBackPts[i+1]);
-    ctx.closePath();
-    ctx.fill();
-
-    /* Front mountain layer (darker) */
-    const mtFrontPts = [
-      0,        H * 0.40,
-      W * 0.08, H * 0.24,
-      W * 0.18, H * 0.30,
-      W * 0.30, H * 0.20,
-      W * 0.42, H * 0.28,
-      W * 0.52, H * 0.18,
-      W * 0.62, H * 0.26,
-      W * 0.74, H * 0.22,
-      W * 0.84, H * 0.32,
-      W,        H * 0.38,
-      W,        H * 0.48,
-      0,        H * 0.48,
-    ];
-    ctx.fillStyle = '#687898';
-    ctx.beginPath();
-    ctx.moveTo(mtFrontPts[0], mtFrontPts[1]);
-    for (let i = 2; i < mtFrontPts.length; i += 2) ctx.lineTo(mtFrontPts[i], mtFrontPts[i+1]);
-    ctx.closePath();
-    ctx.fill();
-
-    /* Snow caps */
-    ctx.fillStyle = '#ccd8e8';
-    const peaks = [
-      [W * 0.05, H * 0.10],[W * 0.20, H * 0.06],[W * 0.38, H * 0.04],
-      [W * 0.55, H * 0.02],[W * 0.72, H * 0.02],[W * 0.90, H * 0.20],
-    ];
-    for (const [px, py] of peaks) {
-      ctx.beginPath();
-      ctx.moveTo(px - W * 0.07, py + H * 0.09);
-      ctx.lineTo(px, py);
-      ctx.lineTo(px + W * 0.07, py + H * 0.09);
-      ctx.closePath();
-      ctx.fill();
-    }
-    /* Snow texture dots */
-    ctx.fillStyle = '#e0ecf8';
-    ctx.globalAlpha = 0.35;
-    const rng2 = mkRng(44);
-    for (let i = 0; i < 80; i++) {
-      const px = rng2() * W;
-      const py = rng2() * H * 0.25;
-      if (py < H * 0.24) {
-        ctx.beginPath();
-        ctx.arc(px, py, 1 + rng2() * 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-
-    /* Dark forest strip */
-    ctx.fillStyle = '#282838';
-    ctx.fillRect(0, H * 0.40, W * 0.42, H * 0.08);
-    ctx.fillRect(W * 0.36, H * 0.42, W * 0.26, H * 0.06);
-
-    /* Sandy shore */
-    ctx.fillStyle = '#b89860';
-    ctx.fillRect(0, H * 0.465, W, H * 0.065);
-
-    /* Shore stripes */
-    const rng3 = mkRng(22);
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = '#9a7e48';
-    for (let i = 0; i < 7; i++) {
-      ctx.fillRect(0, H * (0.47 + rng3() * 0.04), W, 2 + rng3() * 5);
-    }
-    ctx.globalAlpha = 1;
-
-    /* Water surface */
-    ctx.fillStyle = '#5870a0';
-    ctx.fillRect(0, H * 0.53, W, H);
-
-    /* Water mountain reflections (horizontal bands) */
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = '#7888b0';
-    for (let i = 0; i < 5; i++) {
-      ctx.fillRect(0, H * (0.55 + i * 0.062), W, H * 0.018);
-    }
-    ctx.fillStyle = '#ccd4e4';
-    for (let i = 0; i < 3; i++) {
-      ctx.fillRect(W * (0.1 + i * 0.25), H * (0.58 + i * 0.04), W * 0.18, H * 0.007);
-    }
-    ctx.globalAlpha = 1;
-
-    /* Animated ripple lines */
-    ctx.save();
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = '#303848';
-    ctx.lineCap = 'round';
-    const rng4 = mkRng(77);
-    for (let i = 0; i < 14; i++) {
-      const py  = H * 0.54 + rng4() * H * 0.44;
-      const px  = rng4() * W;
-      const len = W * (0.05 + rng4() * 0.18);
-      const off = Math.sin(t * 0.0012 + i * 0.65) * 5;
-      ctx.lineWidth = 1.5 + rng4();
-      ctx.beginPath();
-      ctx.moveTo(px + off,       py);
-      ctx.lineTo(px + len + off, py);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    /* Van — animated */
-    const vxPx = vanXN * W;
-    const vyPx = H * 0.478;
-    if (vxPx > -W * 0.12 && vxPx < W * 1.12) {
-      drawVan(ctx, vxPx, vyPx, W * 0.065, H * 0.042);
-
-      /* Van water reflection */
-      ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.translate(vxPx, H * 0.53 * 2 - vyPx + H * 0.042 * 0.5);
-      ctx.scale(1, -0.4);
-      ctx.translate(-vxPx, -(H * 0.53 * 2 - vyPx + H * 0.042 * 0.5));
-      drawVan(ctx, vxPx, vyPx, W * 0.065, H * 0.042);
-      ctx.restore();
-    }
-  }
-
-  /* ─────── */
-
-  let balloonYN = 0.82; /* normalised balloon y */
-
-  /** SCENE 4 — Fusen (Autumn hot-air balloon over ploughed fields) */
-  function renderFusen(canvas, t) {
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
-    const rng = mkRng(66);
-
-    /* Sky */
-    const sky = ctx.createLinearGradient(0, 0, 0, H * 0.55);
-    sky.addColorStop(0, '#5c80c0');
-    sky.addColorStop(1, '#7898cc');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, W, H);
-
-    /* Wind streaks */
-    ctx.save();
-    const rng2 = mkRng(11);
-    ctx.strokeStyle = '#b8cce8';
-    ctx.lineCap = 'round';
-    for (let i = 0; i < 14; i++) {
-      const py  = rng2() * H * 0.5;
-      const px  = rng2() * W;
-      const len = W * (0.12 + rng2() * 0.3);
-      ctx.globalAlpha = 0.12 + rng2() * 0.12;
-      ctx.lineWidth   = 1 + rng2() * 2.5;
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.bezierCurveTo(
-        px + len * 0.3, py - H * 0.008,
-        px + len * 0.7, py + H * 0.006,
-        px + len, py - H * 0.004
+  /* cherry blossom tree */
+  function cherryTree(x, z, s=1){
+    const g = new THREE.Group();
+    g.position.set(x,0,z);
+    const trunk = cyl(.12*s,.22*s,4.8*s,6,0x1a1018);
+    trunk.position.y = 2.4*s; g.add(trunk);
+    // left branch
+    const bL = cyl(.06*s,.10*s,3*s,5,0x1a1018);
+    bL.rotation.z = Math.PI/3.5; bL.position.set(-1.6*s,3.8*s,0); g.add(bL);
+    // right branch
+    const bR = cyl(.05*s,.09*s,2.4*s,5,0x1a1018);
+    bR.rotation.z = -Math.PI/4; bR.position.set(1.4*s,4.2*s,.3*s); g.add(bR);
+    // blossom blobs
+    const bCols = [0xf0b8c8,0xf8c4d0,0xe8a8b8,0xfcd8e0,0xfbbccc];
+    const n = 5 + Math.floor(s*2.5);
+    for(let i=0;i<n;i++){
+      const r = (1.1+(i%3)*.3)*s;
+      const b = sph(r,8, bCols[i%bCols.length]);
+      b.scale.y = .68;
+      b.position.set(
+        (Math.cos(i/n*Math.PI*2)*1.8+(i%2?.3:-.2))*s,
+        (4.8+(i/n)*1.6)*s,
+        (Math.sin(i/n*Math.PI*2)*1.4+(i%3?.2:-.3))*s
       );
-      ctx.stroke();
+      g.add(b);
     }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-
-    /* Back mountains */
-    const mtPts = [
-      0,        H * 0.46,
-      W * 0.06, H * 0.26,
-      W * 0.14, H * 0.36,
-      W * 0.24, H * 0.20,
-      W * 0.34, H * 0.30,
-      W * 0.44, H * 0.19,
-      W * 0.54, H * 0.26,
-      W * 0.64, H * 0.17,
-      W * 0.74, H * 0.25,
-      W * 0.84, H * 0.34,
-      W * 0.92, H * 0.40,
-      W,        H * 0.44,
-      W,        H * 0.55,
-      0,        H * 0.55,
-    ];
-    ctx.fillStyle = '#8898b8';
-    ctx.beginPath();
-    ctx.moveTo(mtPts[0], mtPts[1]);
-    for (let i = 2; i < mtPts.length; i += 2) ctx.lineTo(mtPts[i], mtPts[i+1]);
-    ctx.closePath();
-    ctx.fill();
-
-    /* Snow caps */
-    ctx.fillStyle = '#dce8f4';
-    const fPeaks = [
-      [W * 0.06, H * 0.26],[W * 0.24, H * 0.20],[W * 0.44, H * 0.19],
-      [W * 0.64, H * 0.17],[W * 0.84, H * 0.34],
-    ];
-    for (const [px, py] of fPeaks) {
-      ctx.beginPath();
-      ctx.moveTo(px - W * 0.055, py + H * 0.075);
-      ctx.lineTo(px, py);
-      ctx.lineTo(px + W * 0.055, py + H * 0.075);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    /* Dark forest strip (jagged top) */
-    ctx.fillStyle = '#252838';
-    ctx.beginPath();
-    ctx.moveTo(0, H * 0.5);
-    for (let i = 0; i <= 35; i++) {
-      const px = (i / 35) * W;
-      const py = H * 0.5 - Math.abs(Math.sin(i * 0.85 + 1.2)) * H * 0.025;
-      ctx.lineTo(px, py);
-    }
-    ctx.lineTo(W, H * 0.57);
-    ctx.lineTo(0, H * 0.57);
-    ctx.closePath();
-    ctx.fill();
-
-    /* Ploughed fields */
-    const fieldY = H * 0.54;
-    ctx.fillStyle = '#7a4030';
-    ctx.fillRect(0, fieldY, W, H);
-
-    /* Row stripes (diagonal furrows) */
-    ctx.save();
-    ctx.globalAlpha = 0.32;
-    ctx.fillStyle = '#582018';
-    for (let i = 0; i < 22; i++) {
-      const rowY  = fieldY + i * H * 0.032;
-      const slant = (i / 22) * W * 0.06;
-      ctx.beginPath();
-      ctx.moveTo(-slant,        rowY);
-      ctx.lineTo(W + slant,     rowY);
-      ctx.lineTo(W + slant + W * 0.008, rowY + H * 0.018);
-      ctx.lineTo(-slant + W * 0.008,    rowY + H * 0.018);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-
-    /* Snow dusting on fields */
-    ctx.save();
-    ctx.globalAlpha = 0.1;
-    ctx.strokeStyle = '#e0d8d0';
-    ctx.lineCap = 'round';
-    const rng3 = mkRng(44);
-    for (let i = 0; i < 35; i++) {
-      const py  = fieldY + rng3() * (H - fieldY);
-      const px  = rng3() * W;
-      const len = W * (0.04 + rng3() * 0.1);
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px + len, py - H * 0.006);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    /* Lone tree */
-    drawBareTree(ctx, W * 0.82, H * 0.585, H * 0.082, '#3a2010');
-
-    /* Balloon */
-    const bxPx = W * 0.32;
-    const byPx = balloonYN * H;
-    drawBalloon(ctx, bxPx, byPx, H * 0.115);
+    return g;
   }
 
-  /* ─────────────────────────────────────────────
-     HERO CANVAS — soft drifting petal particles
-  ───────────────────────────────────────────── */
-  function initHeroCanvas(canvas) {
-    fitCanvas(canvas);
-    const W = canvas.width, H = canvas.height;
-    const ctx = canvas.getContext('2d');
-    const particles = [];
-    for (let i = 0; i < 80; i++) {
-      particles.push({
-        x:   Math.random() * W,
-        y:   Math.random() * H,
-        r:   1 + Math.random() * 3.5,
-        vx:  (Math.random() - 0.5) * 0.45,
-        vy:  0.3 + Math.random() * 0.6,
-        a:   Math.random() * Math.PI * 2,
-        va:  (Math.random() - 0.5) * 0.02,
-        hue: 180 + Math.random() * 180,
-      });
+  /* bare winter tree */
+  function bareTree(x, y, z, s=1){
+    const g = new THREE.Group();
+    g.position.set(x,y,z);
+    const trunk = cyl(.08*s,.14*s,4*s,5,0x4a3828);
+    trunk.position.y = 2*s; g.add(trunk);
+    const brData=[
+      [-.5,3.2,0, 0,.60],[.6,3.8,0,0,-.50],
+      [-.3,4.2,.2,.2,.45],[.3,4.6,0,0,-.42],
+      [-.5,4.8,0,.1,.55],[.4,5.1,0,0,-.38],
+    ];
+    for(const [bx,by,bz,rx,rz] of brData){
+      const b = cyl(.022*s,.05*s,1.1*s,4,0x4a3828);
+      b.position.set(bx*s,by*s,bz*s);
+      b.rotation.set(rx,0,rz); g.add(b);
     }
-    let frame = 0;
-    function loop() {
-      fitCanvas(canvas);
-      const W2 = canvas.width, H2 = canvas.height;
-      ctx.clearRect(0, 0, W2, H2);
-      frame++;
-      for (const p of particles) {
-        ctx.save();
-        ctx.globalAlpha = 0.3 + Math.sin(frame * 0.02 + p.a) * 0.15;
-        ctx.fillStyle = `hsl(${p.hue}, 45%, 75%)`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        p.x += p.vx + Math.sin(frame * 0.01 + p.y * 0.02) * 0.3;
-        p.y += p.vy;
-        p.a += p.va;
-        if (p.y > H2 + 10) { p.y = -10; p.x = Math.random() * W2; }
+    return g;
+  }
+
+  /* cloud blob */
+  function cloudBlob(x,y,z){
+    const g = new THREE.Group(); g.position.set(x,y,z);
+    const shapes=[[0,0,0,1.5],[-1.4,.2,0,1.1],[1.3,.3,0,1.0],[-.5,.6,0,.9],[.6,.7,0,.85]];
+    for(const[sx,sy,sz,sr] of shapes){
+      const s = sph(sr,8,0xf0f4f8); s.scale.set(1.4,.6,.8); s.position.set(sx,sy,sz); g.add(s);
+    }
+    return g;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     SCENE 1 — SAKURA  (spring cherry blossom park)
+  ═══════════════════════════════════════════════════════════════ */
+  function buildSakura(){
+    const g = new THREE.Group(); g.position.z = SCENE_Z[0];
+
+    g.add(flatPlane(80,80,0x7ab840, 0,0,0));
+
+    // Stone walking path
+    const path = box(2.6,.05,42,0x8898a8); path.position.set(1,.02,0); g.add(path);
+    // Darker path shadow stripe
+    const ps = box(2.2,.06,42,0x7888a0); ps.position.set(1,.03,0); g.add(ps);
+
+    // Dappled shadows on ground
+    const dMat = matNew(0x68a030);
+    for(let i=0;i<20;i++){
+      const d = new THREE.Mesh(new THREE.CircleGeometry(.5+Math.random()*.9,8), dMat);
+      d.rotation.x = -Math.PI/2;
+      d.position.set(-10+Math.random()*20,.04,-16+Math.random()*22); g.add(d);
+    }
+
+    // Cherry trees (main)
+    const trees=[
+      {x:-4.5,z: 3,  s:1.6},{x:-8,  z:-3,  s:1.3},
+      {x:-6,  z:-8,  s:1.1},{x: 7,  z:-4,  s:1.0},
+      {x: 5,  z:-11, s:.9}, {x:-2,  z:-15, s:.85},
+      {x:-10, z:-12, s:1.0},{x: 10, z:-7,  s:.8},
+    ];
+    for(const t of trees) g.add(cherryTree(t.x,t.z,t.s));
+
+    // Distant white-blossom trees (further back)
+    for(let i=0;i<7;i++) g.add(cherryTree(-20+i*6,-20,.55));
+
+    // Background buildings
+    const bCols=[0x909898,0x848c94,0x9aa0a4,0x8890a0];
+    for(let i=0;i<6;i++){
+      const bh=2+Math.random()*4;
+      const b=box(2.5+Math.random()*2,bh,1.5,bCols[i%4]);
+      b.position.set(-15+i*7,bh/2,-22); g.add(b);
+    }
+    // Windows on buildings (lighter squares)
+    for(let i=0;i<6;i++){
+      const bh=2+Math.random()*4;
+      for(let j=0;j<3;j++){
+        const w=box(.4,.35,.1,0xd8dce0);
+        w.position.set(-15+i*7+(-0.5+Math.random()),.8+j*.8,-21.4); g.add(w);
       }
-      requestAnimationFrame(loop);
     }
-    loop();
+
+    // Figures near path
+    g.add(figure(.8,0,-2, .45, 0xc87840,0x4870a8));
+    g.add(figure(-1,0,-4, .55, 0xd08858,0x6888a0));
+    g.add(figure(3.5,0,-6,.42, 0x8090c0,0x485080));
+
+    // Foreground grass patches
+    const gMat = matNew(0x8ac850);
+    for(let i=0;i<8;i++){
+      const gp = new THREE.Mesh(new THREE.CircleGeometry(1+Math.random(),7),gMat);
+      gp.rotation.x=-Math.PI/2; gp.position.set(-15+Math.random()*10,.05,8-Math.random()*6); g.add(gp);
+    }
+
+    return g;
   }
 
-  /* ─────────────────────────────────────────────
-     MAIN — INIT
-  ───────────────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════════════
+     SCENE 2 — NANOHANA  (summer rapeseed field)
+  ═══════════════════════════════════════════════════════════════ */
+  function buildNanohana(){
+    const g = new THREE.Group(); g.position.z = SCENE_Z[1];
 
-  /* Lenis smooth scroll */
-  const lenis = new Lenis({ lerp: 0.085 });
-  gsap.ticker.add((time) => lenis.raf(time * 1000));
-  gsap.ticker.lagSmoothing(0);
-  gsap.registerPlugin(ScrollTrigger);
+    g.add(flatPlane(80,80,0xd0c028, 0,0,0));
 
-  /* Custom cursor */
-  const ring = document.getElementById('cursor-ring');
-  document.addEventListener('mousemove', (e) => {
-    gsap.to(ring, { x: e.clientX, y: e.clientY, duration: 0.38, ease: 'power2.out' });
-  });
-  document.querySelectorAll('a, button').forEach((el) => {
-    el.addEventListener('mouseenter', () => document.body.classList.add('is-hovering'));
-    el.addEventListener('mouseleave', () => document.body.classList.remove('is-hovering'));
-  });
+    // Slightly darker foreground strip
+    g.add(flatPlane(40,12,0xb8a818, 5,.01,10));
 
-  /* Progress bar */
-  const progressBar = document.getElementById('progress-bar');
-  ScrollTrigger.create({
-    start: 0,
-    end: 'max',
-    onUpdate: (self) => gsap.set(progressBar, { width: `${self.progress * 100}%` }),
-  });
+    // Hill (tilted plane further back)
+    const hill = new THREE.Mesh(new THREE.PlaneGeometry(55,32), matNew(0xc8b820));
+    hill.rotation.x = -Math.PI/2+.2; hill.position.set(0,.6,-12); g.add(hill);
 
-  /* Hero canvas */
-  initHeroCanvas(document.getElementById('hero-canvas'));
+    // White clouds
+    const cPos=[[-6,8,-18],[5,7,-22],[-12,6,-26],[10,9,-20],[1,10,-32]];
+    for(const[cx,cy,cz] of cPos) g.add(cloudBlob(cx,cy,cz));
 
-  /* Hero text reveal */
-  const tl = gsap.timeline({ delay: 0.25, defaults: { ease: 'power3.out' } });
-  tl
-    .to('.hero__title .char', { y: 0, duration: 1.05, stagger: 0.045 })
-    .to('.hero__eyebrow',     { opacity: 1, duration: 0.7 }, '-=0.7')
-    .to('.hero__kanji',       { opacity: 1, duration: 0.7 }, '-=0.5')
-    .to('.hero__sub',         { opacity: 1, duration: 0.7 }, '-=0.45')
-    .to('.hero__scroll',      { opacity: 1, duration: 0.5 }, '-=0.25');
+    // Power transmission pole
+    const pg = new THREE.Group(); pg.position.set(-6,0,-5);
+    const pole = cyl(.07,.09,13,6,0xc4beb0); pole.position.y=6.5; pg.add(pole);
+    const xbar = box(2.4,.10,.10,0xbcb8a8); xbar.position.y=12.5; pg.add(xbar);
+    // Insulators
+    for(let i=-1;i<=1;i++){
+      const ins=cyl(.03,.03,.2,4,0xc0bab0); ins.position.set(i*.8,12.7,0); pg.add(ins);
+    }
+    // Wires (very thin long cylinders)
+    for(let i=-1;i<=1;i++){
+      const wire=cyl(.012,.012,65,3,0xa0a090); wire.rotation.z=Math.PI/2;
+      wire.position.set(0,12.72+i*.08,i*1.8); pg.add(wire);
+    }
+    g.add(pg);
 
-  /* Scene canvases */
-  const cvSakura   = document.getElementById('canvas-sakura');
-  const cvNanohana = document.getElementById('canvas-nanohana');
-  const cvYamanami = document.getElementById('canvas-yamanami');
-  const cvFusen    = document.getElementById('canvas-fusen');
+    // Dark pine forest strip (far left background)
+    for(let i=0;i<20;i++){
+      const h=2.5+Math.random()*2;
+      const t=cone(.55+Math.random()*.2,h,5,0x1a2818); t.position.set(-22+i*1.9,h/2,-21); g.add(t);
+    }
 
-  function fitAll() {
-    fitCanvas(cvSakura);
-    fitCanvas(cvNanohana);
-    fitCanvas(cvYamanami);
-    fitCanvas(cvFusen);
-    petals.length = 0; /* re-init petals on resize */
+    // Bare tree on hill (right)
+    g.add(bareTree(9,6,-19,.85));
+
+    // Cyclist
+    (() => {
+      const cg = new THREE.Group(); cg.position.set(2,0,-8);
+      const s=.62;
+      // Wheels
+      for(const wx of [-.45,.45]){
+        const w=cyl(.36,.36,.06,12,0x303030); w.rotation.x=Math.PI/2; w.position.set(wx*s,.36*s,0); cg.add(w);
+        const hub=cyl(.13,.13,.09,8,0x585860); hub.rotation.x=Math.PI/2; hub.position.copy(w.position); cg.add(hub);
+      }
+      // Frame
+      const fr=box(.92*s,.07*s,.04*s,0xd0d0d8); fr.position.set(0,.52*s,0); cg.add(fr);
+      const fr2=box(.06*s,.55*s,.04*s,0xd0d0d8); fr2.position.set(.12*s,.68*s,0); cg.add(fr2);
+      // Handlebar
+      const hb=box(.22*s,.06*s,.06*s,0xd0d0d8); hb.position.set(.28*s,.98*s,0); cg.add(hb);
+      // Rider
+      const body=box(.22*s,.34*s,.18*s,0xc07838); body.rotation.x=.38; body.position.set(.1*s,.86*s,0); cg.add(body);
+      const helmet=sph(.18*s,8,0x808898); helmet.position.set(.26*s,1.1*s,0); cg.add(helmet);
+      g.add(cg);
+    })();
+
+    return g;
   }
-  fitAll();
-  window.addEventListener('resize', fitAll);
 
-  /* Scene-info text reveals */
-  document.querySelectorAll('.scene-info').forEach((el) => {
-    ScrollTrigger.create({
-      trigger: el.closest('.scene'),
-      start: 'top 75%',
-      onEnter: () => gsap.to(el, { opacity: 1, y: 0, duration: 1.1, ease: 'power3.out' }),
-    });
+  /* ═══════════════════════════════════════════════════════════════
+     SCENE 3 — YAMANAMI  (winter mountain reflection)
+  ═══════════════════════════════════════════════════════════════ */
+  function buildYamanami(){
+    const g = new THREE.Group(); g.position.z = SCENE_Z[2];
+
+    // Sandy/tan ground
+    g.add(flatPlane(80,80,0xc8b880, 0,0,0));
+
+    // Ice/water plane
+    const iceMat = new THREE.MeshBasicMaterial({ color:0x88a0b8, transparent:true, opacity:.86 });
+    const ice = new THREE.Mesh(new THREE.PlaneGeometry(55,32),iceMat);
+    ice.rotation.x=-Math.PI/2; ice.position.set(0,.04,6); g.add(ice);
+
+    // Ice cracks/streaks
+    const crackMat = matNew(0x6888a8);
+    for(let i=0;i<14;i++){
+      const crack=new THREE.Mesh(new THREE.PlaneGeometry(12+Math.random()*12,.07+Math.random()*.10),crackMat);
+      crack.rotation.x=-Math.PI/2; crack.rotation.z=(Math.random()-.5)*.5;
+      crack.position.set(-16+Math.random()*32,.06,2+Math.random()*14); g.add(crack);
+    }
+
+    // Sandy strip between water and forest
+    g.add(flatPlane(65,6,0xd0c090, 0,.01,-9));
+
+    // Pine forest strip
+    for(let i=0;i<26;i++){
+      const h=1.8+Math.random()*1.6;
+      const t=cone(.48+Math.random()*.15,h,5,0x1a2830); t.position.set(-23+i*1.9,h/2,-14); g.add(t);
+    }
+
+    // Background mountains (main row)
+    for(let i=0;i<11;i++){
+      const h=7+Math.random()*6; const r=h*.38;
+      const mp=mountainPeak(h,r); mp.position.set(-24+i*5,0,-26); g.add(mp);
+    }
+    // Second mountain layer (slightly offset, partially hidden)
+    for(let i=0;i<8;i++){
+      const h=5+Math.random()*4; const r=h*.36;
+      const mp=mountainPeak(h,r); mp.position.set(-20+i*6,.5,-30); g.add(mp);
+    }
+
+    // Mountain reflections in ice (inverted, darker, smaller)
+    const refMat = matNew(0x6080a0);
+    for(let i=0;i<9;i++){
+      const h=3+Math.random()*2.5; const r=h*.32;
+      const ref=cone(r,h,4,0x6080a0); ref.scale.y=-.4;
+      ref.position.set(-20+i*5.5,-.02+.08,10+Math.random()*5); g.add(ref);
+    }
+
+    // Orange van
+    (() => {
+      const vg=new THREE.Group(); vg.position.set(4,0,-6); const s=.95;
+      const vbody=box(2.2*s,1.2*s,1.0*s,0xc84818); vbody.position.set(0,.6*s,0); vg.add(vbody);
+      const roof=box(2.0*s,.14*s,.9*s,0xb83c14); roof.position.set(0,1.27*s,0); vg.add(roof);
+      const win1=box(.5*s,.42*s,.96*s,0xf0c8a0); win1.position.set(-.82*s,.72*s,0); vg.add(win1);
+      const win2=box(.44*s,.38*s,.04*s,0xe8b890); win2.position.set(.3*s,.72*s,.52*s); vg.add(win2);
+      const doorline=box(.015*s,1.1*s,.015*s,0xb03818); doorline.position.set(-.04*s,.65*s,.5*s); vg.add(doorline);
+      for(const[wx,wz] of [[-.65,.4],[.65,.4],[-.65,-.4],[.65,-.4]]){
+        const w=cyl(.28*s,.28*s,.12*s,10,0x202028); w.rotation.x=Math.PI/2; w.position.set(wx*s,.28*s,wz*s); vg.add(w);
+        const hub=cyl(.12*s,.12*s,.14*s,8,0x585868); hub.rotation.x=Math.PI/2; hub.position.copy(w.position); vg.add(hub);
+      }
+      g.add(vg);
+    })();
+
+    return g;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     SCENE 4 — FUSEN  (autumn hot-air balloon)
+  ═══════════════════════════════════════════════════════════════ */
+  function buildFusen(){
+    const g = new THREE.Group(); g.position.z = SCENE_Z[3];
+
+    // Brown earth ground
+    g.add(flatPlane(80,80,0x9a6040, 0,0,0));
+
+    // Plowed field rows (alternating brown strips)
+    const rL = matNew(0xa86848), rD = matNew(0x784830);
+    for(let i=0;i<32;i++){
+      const row=new THREE.Mesh(new THREE.PlaneGeometry(42,.52), i%2===0?rL:rD);
+      row.rotation.x=-Math.PI/2; row.position.set(-5,.02,-15+i*.9); g.add(row);
+    }
+    // Slight snow dust over field
+    const snow=new THREE.Mesh(new THREE.PlaneGeometry(50,30), new THREE.MeshBasicMaterial({color:0xf0ece8,transparent:true,opacity:.22}));
+    snow.rotation.x=-Math.PI/2; snow.position.set(0,.025,0); g.add(snow);
+
+    // Background mountains (smaller than yamanami)
+    for(let i=0;i<9;i++){
+      const h=4.5+Math.random()*3.5; const r=h*.4;
+      const mp=mountainPeak(h,r); mp.position.set(-20+i*5.5,0,-22); g.add(mp);
+    }
+
+    // Forest strip
+    for(let i=0;i<22;i++){
+      const h=1.4+Math.random()*1.2;
+      const t=cone(.4+Math.random()*.1,h,5,0x2a3830); t.position.set(-20+i*2,h/2,-14); g.add(t);
+    }
+
+    // Lone bare tree (right side)
+    g.add(bareTree(8,0,-10,1.15));
+
+    // Wispy sky clouds (horizontal stripes)
+    const cloudMat=new THREE.MeshBasicMaterial({color:0xe8ecf4,transparent:true,opacity:.45});
+    for(let i=0;i<6;i++){
+      const stripe=new THREE.Mesh(new THREE.PlaneGeometry(28+Math.random()*10,.28+Math.random()*.28),cloudMat);
+      stripe.position.set(-4+i*1.5,13+i*1.4,-16); g.add(stripe);
+    }
+
+    // ── HOT AIR BALLOON (hero element) ──
+    (() => {
+      const bg=new THREE.Group(); bg.position.set(-3,10,-11);
+
+      // Balloon envelope with vertex-colored stripes
+      const ballGeo=new THREE.SphereGeometry(2.4,64,32);
+      const pos=ballGeo.attributes.position;
+      const cols=new Float32Array(pos.count*3);
+      const stripes=[
+        [.78,.22,.22],[.86,.46,.14],[.86,.70,.14],[.86,.46,.14],[.72,.22,.25]
+      ];
+      for(let i=0;i<pos.count;i++){
+        const px=pos.getX(i), pz=pos.getZ(i);
+        const ang=(Math.atan2(px,pz)+Math.PI)/(Math.PI*2);
+        const si=Math.floor(ang*5)%5;
+        cols[i*3]=stripes[si][0]; cols[i*3+1]=stripes[si][1]; cols[i*3+2]=stripes[si][2];
+      }
+      ballGeo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+      const balloon=new THREE.Mesh(ballGeo, new THREE.MeshBasicMaterial({vertexColors:true}));
+      balloon.scale.y=1.28; bg.add(balloon);
+
+      // Highlight spot
+      const hl=sph(1.1,12,0xfff5e8);
+      hl.material=new THREE.MeshBasicMaterial({color:0xfff8f0,transparent:true,opacity:.20});
+      hl.position.set(-.8,1.1,1.2); bg.add(hl);
+
+      // Basket
+      const basket=box(.92,.56,.92,0x906845); basket.position.y=-3.7; bg.add(basket);
+
+      // Ropes
+      const ropeMat=new THREE.LineBasicMaterial({color:0x786050});
+      for(const[rx,rz] of [[.38,.38],[-.38,.38],[.38,-.38],[-.38,-.38]]){
+        const pts=[new THREE.Vector3(rx*2.2,-2.2,rz*2.2),new THREE.Vector3(rx*.35,-3.45,rz*.35)];
+        const lg=new THREE.BufferGeometry().setFromPoints(pts);
+        bg.add(new THREE.Line(lg,ropeMat));
+      }
+
+      g.add(bg);
+    })();
+
+    return g;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     BUILD ALL 4 SCENE WORLDS
+  ═══════════════════════════════════════════════════════════════ */
+  scene.add(buildSakura());
+  scene.add(buildNanohana());
+  scene.add(buildYamanami());
+  scene.add(buildFusen());
+
+  /* ═══════════════════════════════════════════════════════════════
+     PARTICLE SYSTEMS (type: 0=petals,1=pollen,2=snow,3=dust)
+  ═══════════════════════════════════════════════════════════════ */
+  const PVERT = `
+    attribute float aRand, aSpd;
+    uniform float uTime, uType;
+    void main(){
+      vec3 p = position;
+      float phi = aRand*6.2832;
+      if(uType<.5){
+        p.y -= mod(uTime*(0.5+aSpd*0.4)+aRand*12.,12.);
+        p.x += sin(uTime*0.75+phi)*0.55;
+        p.z += cos(uTime*0.55+phi)*0.28;
+      } else if(uType<1.5){
+        p.y += sin(uTime*0.4+phi)*0.35;
+        p.x += cos(uTime*0.3+phi)*0.5;
+        p.z += sin(uTime*0.25+phi*.7)*0.3;
+      } else if(uType<2.5){
+        p.y -= mod(uTime*(0.7+aSpd*0.5)+aRand*14.,14.);
+        p.x += uTime*0.12 + sin(uTime*0.5+phi)*0.22;
+      } else {
+        p.y = mod(p.y+uTime*0.12+aRand*8.,8.)-1.;
+        p.x += sin(uTime*0.5+phi)*0.3;
+        p.z += cos(uTime*0.4+phi)*0.25;
+      }
+      vec4 mv = modelViewMatrix*vec4(p,1.0);
+      gl_PointSize = (2.5+aRand*2.5)*(200./max(-mv.z,1.));
+      gl_Position  = projectionMatrix*mv;
+    }`;
+  const PFRAG = `
+    uniform vec3 uColor;
+    void main(){
+      vec2 c=gl_PointCoord*2.-1.; float d=dot(c,c);
+      if(d>1.)discard;
+      gl_FragColor=vec4(uColor,(1.-d*d)*0.72);
+    }`;
+
+  function makeParticles(count, szZ, type, hexColor, rx, ry, rz){
+    const pos=new Float32Array(count*3), rnd=new Float32Array(count), spd=new Float32Array(count);
+    for(let i=0;i<count;i++){
+      pos[i*3  ]=(Math.random()-.5)*rx;
+      pos[i*3+1]=Math.random()*ry;
+      pos[i*3+2]=szZ+(Math.random()-.5)*rz;
+      rnd[i]=Math.random(); spd[i]=Math.random();
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    geo.setAttribute('aRand',   new THREE.Float32BufferAttribute(rnd,1));
+    geo.setAttribute('aSpd',    new THREE.Float32BufferAttribute(spd,1));
+    const uni={ uTime:{value:0}, uType:{value:type}, uColor:{value:new THREE.Color(hexColor)} };
+    const pts=new THREE.Points(geo,new THREE.ShaderMaterial({
+      uniforms:uni, vertexShader:PVERT, fragmentShader:PFRAG,
+      transparent:true, depthWrite:false,
+    }));
+    scene.add(pts);
+    return uni;
+  }
+
+  const pUnis=[
+    makeParticles(200, SCENE_Z[0], 0, 0xffb0c8, 22,10,22),
+    makeParticles(280, SCENE_Z[1], 1, 0xf0e840, 24, 8,22),
+    makeParticles(350, SCENE_Z[2], 2, 0xd8e8f8, 26,13,24),
+    makeParticles(150, SCENE_Z[3], 3, 0xf0d080, 20, 8,20),
+  ];
+
+  /* ═══════════════════════════════════════════════════════════════
+     DOM REFERENCES
+  ═══════════════════════════════════════════════════════════════ */
+  const $loader   = document.getElementById('loader');
+  const $loaderB  = document.getElementById('loader-bar');
+  const $progress = document.getElementById('progress');
+  const $flash    = document.getElementById('flash');
+  const $hero     = document.getElementById('hero-title');
+  const $hint     = document.getElementById('scroll-hint');
+  const $huds     = [0,1,2,3].map(i=>document.getElementById(`hud-${i}`));
+  const $cursor   = document.getElementById('cursor');
+
+  /* ═══════════════════════════════════════════════════════════════
+     STATE
+  ═══════════════════════════════════════════════════════════════ */
+  let scrollProg = 0, targetProg = 0;
+  let mouseX = 0, mouseY = 0, curX = 0, curY = 0;
+
+  /* ═══════════════════════════════════════════════════════════════
+     LOADING  (short simulated bar – no heavy assets)
+  ═══════════════════════════════════════════════════════════════ */
+  let fake = 0;
+  const loadTick = setInterval(()=>{
+    fake = Math.min(fake + .04 + Math.random()*.05, 1);
+    $loaderB.style.width = (fake*100)+'%';
+    if(fake>=1){
+      clearInterval(loadTick);
+      setTimeout(()=>{
+        $loader.classList.add('hidden');
+        $hint.classList.add('visible');
+        setTimeout(()=>{ $loader.style.display='none'; }, 1400);
+      }, 380);
+    }
+  }, 70);
+
+  /* ═══════════════════════════════════════════════════════════════
+     EVENTS
+  ═══════════════════════════════════════════════════════════════ */
+  window.addEventListener('scroll',()=>{
+    const mx=document.body.scrollHeight-innerHeight;
+    targetProg = mx>0 ? window.scrollY/mx : 0;
+  },{passive:true});
+
+  window.addEventListener('mousemove',e=>{ mouseX=e.clientX; mouseY=e.clientY; });
+
+  window.addEventListener('resize',()=>{
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
   });
 
-  /* Interlude poem reveals */
-  document.querySelectorAll('.interlude__poem').forEach((el) => {
-    ScrollTrigger.create({
-      trigger: el,
-      start: 'top 80%',
-      onEnter: () => gsap.to(el, { opacity: 1, y: 0, duration: 1, ease: 'power2.out' }),
-    });
-  });
-  document.querySelectorAll('.interlude__jp').forEach((el) => {
-    ScrollTrigger.create({
-      trigger: el,
-      start: 'top 80%',
-      onEnter: () => gsap.to(el, { opacity: 1, duration: 1, delay: 0.4, ease: 'power2.out' }),
-    });
-  });
+  /* ═══════════════════════════════════════════════════════════════
+     ATMOSPHERE  (lerp fog + sky per zone)
+  ═══════════════════════════════════════════════════════════════ */
+  const _fcA=new THREE.Color(), _fcB=new THREE.Color();
+  const _stA=new THREE.Color(), _stB=new THREE.Color();
+  const _sbA=new THREE.Color(), _sbB=new THREE.Color();
 
-  /* ── Scroll-driven scene animations ── */
+  function zoneBlend(t){
+    for(let i=0;i<4;i++){
+      if(t<=ZONE_BOUNDS[i+1]){
+        const blend=(t-ZONE_BOUNDS[i])/(ZONE_BOUNDS[i+1]-ZONE_BOUNDS[i]);
+        return{a:i, b:Math.min(i+1,3), blend:Math.max(0,Math.min(1,blend))};
+      }
+    }
+    return{a:3,b:3,blend:0};
+  }
 
-  /* Cyclist crosses the rapeseed field */
-  ScrollTrigger.create({
-    trigger: '#scene-02',
-    start: 'top bottom',
-    end: 'bottom top',
-    onUpdate: (self) => { cyclistXN = -0.18 + self.progress * 1.35; },
-  });
+  function updateAtmo(t){
+    const{a,b,blend}=zoneBlend(t);
+    const mA=ATMO[a], mB=ATMO[b];
+    _fcA.setRGB(...mA.fog); _fcB.setRGB(...mB.fog);
+    scene.fog.color.copy(_fcA.lerp(_fcB,blend));
+    renderer.setClearColor(scene.fog.color);
+    _stA.setRGB(...mA.top).lerp(_stB.setRGB(...mB.top),blend);
+    _sbA.setRGB(...mA.bot).lerp(_sbB.setRGB(...mB.bot),blend);
+    skyUni.uTop.value.copy(_stA);
+    skyUni.uBot.value.copy(_sbA);
+    scene.fog.near=12; scene.fog.far=52+blend*5;
+  }
 
-  /* Van drives across the lake shore */
-  ScrollTrigger.create({
-    trigger: '#scene-03',
-    start: 'top bottom',
-    end: 'bottom top',
-    onUpdate: (self) => { vanXN = -0.22 + self.progress * 1.4; },
-  });
+  /* ═══════════════════════════════════════════════════════════════
+     ANIMATION LOOP
+  ═══════════════════════════════════════════════════════════════ */
+  const clock = new THREE.Clock();
 
-  /* Balloon rises as scene 4 enters viewport */
-  ScrollTrigger.create({
-    trigger: '#scene-04',
-    start: 'top bottom',
-    end: 'center center',
-    onUpdate: (self) => { balloonYN = 0.82 - self.progress * 0.32; },
-  });
-  /* Gentle hover oscillation on balloon after it settles */
-  gsap.to({ v: 0 }, {
-    v: 1,
-    duration: 2.8,
-    ease: 'sine.inOut',
-    repeat: -1,
-    yoyo: true,
-    onUpdate: function () {
-      const settled = balloonYN < 0.7;
-      if (settled) balloonYN += Math.sin(Date.now() * 0.001) * 0.0012;
-    },
-  });
+  function animate(){
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
 
-  /* ── Master render loop ── */
-  let frameTime = 0;
-  (function renderLoop(ts) {
-    frameTime = ts || 0;
-    renderSakura(cvSakura,   frameTime);
-    renderNanohana(cvNanohana, frameTime);
-    renderYamanami(cvYamanami, frameTime);
-    renderFusen(cvFusen,     frameTime);
-    requestAnimationFrame(renderLoop);
-  })();
+    // Lerp scroll progress (smooth camera)
+    scrollProg += (targetProg - scrollProg) * .055;
+    const sp = Math.max(0, Math.min(1, scrollProg));
 
+    // Camera Z (main travel)
+    const camZ = CAM_Z_S - sp * CAM_TRAVEL;
+
+    // Camera X: gentle S-weave
+    const camX = Math.sin(sp * Math.PI * CAM_WEAVE_FREQUENCY) * CAM_WEAVE_AMPLITUDE;
+
+    // Camera Y: interpolated per scene zone
+    const{a,b,blend}=zoneBlend(sp);
+    const camY = CAM_Y[a]  + (CAM_Y[b]  - CAM_Y[a])  * blend;
+    const lkY  = LOOK_Y[a] + (LOOK_Y[b] - LOOK_Y[a]) * blend;
+
+    camera.position.set(camX, camY, camZ);
+    camera.lookAt(camX*.2, lkY, camZ-9);
+
+    // Sky sphere tracks camera
+    skyMesh.position.set(camX,0,camZ);
+
+    // Atmosphere
+    updateAtmo(sp);
+
+    // Particles
+    for(const u of pUnis) u.uTime.value = t;
+
+    // Progress bar
+    $progress.style.transform = `scaleX(${sp})`;
+
+    // Hero title fades quickly on scroll
+    $hero.style.opacity = Math.max(0,1-sp*7).toString();
+
+    // Scroll hint hides after first scroll
+    if(sp>.05) $hint.classList.remove('visible');
+
+    // HUD panels
+    for(let i=0;i<4;i++){
+      const[lo,hi]=HUD_WIN[i];
+      const centre=(lo+hi)/2, half=(hi-lo)/2;
+      const op=Math.max(0,1-Math.abs(sp-centre)/(half*1.05));
+      if(op>.03){ $huds[i].classList.add('vis');   $huds[i].style.opacity=op.toString(); }
+      else       { $huds[i].classList.remove('vis'); $huds[i].style.opacity='0'; }
+    }
+
+    // Flash overlay when camera crosses a scene plane
+    let fo=0, fc=FLASH_COL[0];
+    for(let i=0;i<SCENE_Z.length;i++){
+      const d=Math.abs(camZ-SCENE_Z[i]);
+      if(d<FLASH_THRESHOLD){
+        const o=Math.pow(Math.max(0,1-d/FLASH_THRESHOLD),2)*FLASH_MAX_OPACITY;
+        if(o>fo){fo=o;fc=FLASH_COL[i];}
+      }
+    }
+    $flash.style.backgroundColor=fc;
+    $flash.style.opacity=fo.toString();
+
+    // Cursor
+    curX+=(mouseX-curX)*.12; curY+=(mouseY-curY)*.12;
+    $cursor.style.transform=`translate(${curX-18}px,${curY-18}px)`;
+
+    renderer.render(scene,camera);
+  }
+
+  animate();
   </script>
 </body>
 </html>
