@@ -41,6 +41,7 @@ jobs:
           cp -r packages/experiment-11-natsukashii _site/
           cp -r packages/experiment-12-kokoro _site/
           cp -r packages/experiment-13-shoganai _site/
+          cp -r packages/experiment-14-tabibito _site/
           cp -r packages/landing _site/
           cat > _site/index.html << 'EOF'
           <!DOCTYPE html>

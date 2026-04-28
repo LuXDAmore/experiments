@@ -1,0 +1,10 @@
+{
+  "name": "@experiments/experiment-14-tabibito",
+  "version": "1.0.0",
+  "description": "TABIBITO — A scroll-driven journey through four illustrated seasons of Japanese countryside, inspired by Ryo Takemasa.",
+  "main": "index.html",
+  "scripts": {"serve":"npx serve . -p 3014 --no-clipboard","dev":"npx serve . -p 3014 --no-clipboard","preview":"npx serve . -p 3014 --no-clipboard"},
+  "keywords": ["gsap","lenis","canvas","scroll","animation","japanese","tabibito","traveler","seasons","illustration","ryo-takemasa","sakura","nanohana"],
+  "author": "LuXDAmore",
+  "license": "MIT"
+}
