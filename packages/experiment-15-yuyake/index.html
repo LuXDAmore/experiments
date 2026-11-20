@@ -135,12 +135,13 @@
     <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener">CC BY-NC-SA 3.0</a>
   </p>
 
-  <!-- Three.js r167 via importmap (same version as experiment 14) -->
+  <!-- Three.js r167 via importmap (same version as experiment 14), from jsDelivr
+       like experiments 01–02: unpkg failed to load on some phones -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.167.1/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.167.1/examples/jsm/"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
     }
   }
   </script>
@@ -272,8 +273,13 @@
       #define CLUSTERS ${CLOUD_CLUSTERS.length}
       #define PUFFS ${PUFFS_PER_CLUSTER}
       uniform float uTime, uAspect, uTanHalf, uPitch, uBase;
-      uniform int   uSteps;                    // march steps: a uniform, so mobile compilers can't unroll the loop
+      uniform int   uSteps;                    // march steps: a uniform, so compilers can't unroll the loop
       uniform vec3  uSunDir;
+      // Always 0, but not a constant to the compiler: loops starting at ZERO are
+      // neither unrolled nor inlined. Without it Windows (Direct3D) and mobile
+      // compilers expand the cloud loops into a huge shader whose compile
+      // outlasts the GPU watchdog, and the browser resets the GPU.
+      #define ZERO min(uSteps, 0)
       uniform vec4  uClusters[CLUSTERS];       // camera-relative bounding sphere: xyz centre, w radius
       uniform float uFade[CLUSTERS];           // 0 = dissolved, 1 = fully formed
       uniform vec4  uPuffs[CLUSTERS * PUFFS];  // camera-relative puff spheres: xyz centre, w radius
@@ -312,12 +318,12 @@
       // mask: the clusters this ray crosses (bit c = cluster c); the others are skipped.
       float cloudSDF(vec3 p, int mask) {
         float d = 1e9;
-        for (int c = 0; c < CLUSTERS; c++) {
+        for (int c = ZERO; c < CLUSTERS; c++) {
           if ((mask & (1 << c)) == 0) continue;                    // this ray never meets cluster c
           float bound = length(p - uClusters[c].xyz) - uClusters[c].w;
           if (bound > 300.0) { d = min(d, bound); continue; }   // far away: the bound is a safe step
           float k = 1e9;
-          for (int j = 0; j < PUFFS; j++) {
+          for (int j = ZERO; j < PUFFS; j++) {
             vec4 s = uPuffs[c * PUFFS + j];
             k = smin(k, length(p - s.xyz) - s.w, s.w * 0.45);
           }
@@ -332,10 +338,15 @@
         return max(d, uBase - p.y);                                 // flat cloud base
       }
 
-      vec3 cloudNormal(vec3 p, float e, int mask) {                 // tetrahedral gradient
-        vec2 k = vec2(1.0, -1.0);
-        return normalize(k.xyy * cloudSDF(p + k.xyy * e, mask) + k.yyx * cloudSDF(p + k.yyx * e, mask) +
-                         k.yxy * cloudSDF(p + k.yxy * e, mask) + k.xxx * cloudSDF(p + k.xxx * e, mask));
+      // Tetrahedral gradient, written as a loop so the SDF is compiled once, not four times.
+      // i = 0..3 → k = (1,-1,-1), (-1,-1,1), (-1,1,-1), (1,1,1)
+      vec3 cloudNormal(vec3 p, float e, int mask) {
+        vec3 n = vec3(0.0);
+        for (int i = ZERO; i < 4; i++) {
+          vec3 k = 2.0 * vec3(((i + 3) >> 1) & 1, (i >> 1) & 1, i & 1) - 1.0;
+          n += k * cloudSDF(p + k * e, mask);
+        }
+        return normalize(n);
       }
 
       // Returns premultiplied colour + alpha of the clouds along this ray
@@ -346,7 +357,7 @@
         // (ray vs bounding sphere) Most sky pixels cross none and skip the march.
         int   mask = 0;
         float tIn = FAR, tOut = 0.0;
-        for (int c = 0; c < CLUSTERS; c++) {
+        for (int c = ZERO; c < CLUSTERS; c++) {
           vec3  C = uClusters[c].xyz;
           float R = uClusters[c].w + MARGIN;
           float b = dot(C, rd);                                     // distance to the closest approach
@@ -694,7 +705,9 @@
         renderer.setSize(w, h, false);
         const res = renderer.getDrawingBufferSize(screenMat.uniforms.uRes.value);
         worldRT.setSize(res.x, res.y);
-        skyRT.setSize(Math.ceil(res.x / 2), Math.ceil(res.y / 2)); // soft clouds don't need full res
+        // Soft clouds don't need full res: half, and at most 1280 px wide (big screens, weak GPUs)
+        const skyScale = Math.min(0.5, 1280 / res.x);
+        skyRT.setSize(Math.ceil(res.x * skyScale), Math.ceil(res.y * skyScale));
         screenMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
         screenMat.uniforms.uAspect.value = skyMat.uniforms.uAspect.value = aspect;
         camera.aspect = aspect;
