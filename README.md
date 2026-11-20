@@ -94,14 +94,15 @@ experiments/
 - Custom leaf cursor, lightbox, `prefers-reduced-motion` guard
 
 ### 15 · YŪYAKE 夕焼け
-*The glow of sunset — a flock of pink flamingos gliding over a mirror sea.*
+*L'ora rosa — a flock of flamingos flying toward a pastel sunset over a mirror sea, drawn in coloured pencil.*
 
-- **ThreeJS** two-pass render: the world (sky + flock) goes to a render target, then one fullscreen shader composes it
-- **Mirror sea**: the world texture read flipped around the horizon, with perspective noise ripples flowing toward the camera and a sun glitter path
-- Cel-shaded **cumulus** built from round puffs (sunlit tops, violet undersides, gold rim), perspective cirrus streaks
-- **Flamingos** drawn procedurally in Canvas 2D (4-frame flap atlas animated "on threes"), one instanced draw call, flying in a loose diagonal formation
-- **Coloured-pencil** post effect: Sobel outlines with a hand-drawn wobble, shadow hatching, paper grain
-- Ambient loop, no scroll; `prefers-reduced-motion` shows a single still frame
+- **ThreeJS** three-pass render: sky (half resolution, every other frame) → world (sky + flock, MSAA + mipmaps) → one fullscreen screen shader
+- **Cumulus** as sphere-traced signed distance fields: soft unions of puffs with flat bases and billowed surfaces; they glide toward the camera in true perspective, dissolve when close and re-form far away
+- **Flamingos**: 3D model with its wingbeat morph animation, smooth normals computed per pose, pastel toon shading, flying with the camera in a loose diagonal formation
+- **Liquid mirror sea**: the world flipped around the horizon and pushed by domain-warped noise into soft islands, fine ripples near the horizon, sun glints
+- **Coloured pencil on paper**: outlines from the bird mask, diagonal lilac hatching, paper tooth, dreamy mip-level glow
+- **Drawn intro**: a pencil line traces the horizon, colour spreads from it, then the title rises; `prefers-reduced-motion` shows one still frame
+- Flamingo model by [mirada](https://mirada.com/) from [ro.me](http://www.ro.me), licensed [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) (the model file only; the rest of the repo is MIT)
 
 ---
 
