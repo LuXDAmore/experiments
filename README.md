@@ -97,10 +97,10 @@ experiments/
 *L'ora rosa — a flock of flamingos flying toward a pastel sunset over a mirror sea, drawn in coloured pencil.*
 
 - **ThreeJS** three-pass render: sky (half resolution, every other frame) → world (sky + flock, MSAA + mipmaps) → one fullscreen screen shader
-- **Cumulus** as sphere-traced signed distance fields: soft unions of puffs with flat bases and billowed surfaces; they glide toward the camera in true perspective, dissolve when close and re-form far away
-- **Flamingos**: 3D model with its wingbeat morph animation, smooth normals computed per pose, pastel toon shading, flying with the camera in a loose diagonal formation
-- **Liquid mirror sea**: the world flipped around the horizon and pushed by domain-warped noise into soft islands, fine ripples near the horizon, sun glints
-- **Coloured pencil on paper**: outlines from the bird mask, diagonal lilac hatching, paper tooth, dreamy mip-level glow
+- **Cumulus** as sphere-traced signed distance fields: soft unions of puffs with flat bases and cauliflower lumps, cel-shaded in three flat tones like anime clouds; they glide toward the camera in true perspective, dissolve when close and re-form far away
+- **Flamingos**: 3D model with its wingbeat morph animation, smooth normals computed per pose, pastel toon shading, black flight feathers with light gaps, black beak tip and eyes; they fly with the camera in a loose diagonal formation, while a few small strays cross the sky on their own
+- **Liquid mirror sea**: the world flipped around the horizon and pushed by domain-warped noise into soft islands, thin horizontal streaks near the horizon, sun glints
+- **Coloured pencil on paper**: outlines and inner lines from a per-part bird mask (wings vs body), diagonal lilac hatching, paper tooth, dreamy mip-level glow
 - **Drawn intro**: a pencil line traces the horizon, colour spreads from it, then the title rises; `prefers-reduced-motion` shows one still frame
 - Flamingo model by [mirada](https://mirada.com/) from [ro.me](http://www.ro.me), licensed [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) (the model file only; the rest of the repo is MIT)
 
