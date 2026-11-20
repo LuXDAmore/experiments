@@ -40,6 +40,7 @@
 
     /* Paper until the first frame is drawn (no flash of the fallback gradient) */
     #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: var(--paper); }
+    .gl-lost #c { visibility: hidden; }        /* GPU context lost: the gradient shows through */
 
     /* ── Chrome ── */
     .back-link, .exp-label, .credit {
@@ -208,6 +209,13 @@
     let renderer = null;
     try {
       renderer = new THREE.WebGLRenderer({ canvas });
+      // If the GPU drops the context (driver reset, app sent to background on
+      // Android), show the CSS gradient until three.js restores it.
+      canvas.addEventListener('webglcontextlost', () => {
+        console.warn('[YUYAKE] WebGL context lost, showing CSS fallback.');
+        document.body.classList.add('gl-lost');
+      });
+      canvas.addEventListener('webglcontextrestored', () => document.body.classList.remove('gl-lost'));
     } catch (err) {
       console.warn('[YUYAKE] WebGL unavailable, showing CSS fallback.', err);
       canvas.remove();
@@ -248,11 +256,6 @@
         for (int i = 0; i < 3; i++) { v += a * noise(p); p = p * 2.03 + 7.1; a *= 0.5; }
         return v;
       }
-      float fbm3(vec3 p) {
-        float v = 0.0, a = 0.5;
-        for (int i = 0; i < 4; i++) { v += a * noise3(p); p = p * 2.02 + vec3(1.7, 9.2, 3.1); a *= 0.5; }
-        return v;
-      }
     `;
 
     // Fullscreen quad: positions are already in clip space
@@ -269,6 +272,7 @@
       #define CLUSTERS ${CLOUD_CLUSTERS.length}
       #define PUFFS ${PUFFS_PER_CLUSTER}
       uniform float uTime, uAspect, uTanHalf, uPitch, uBase;
+      uniform int   uSteps;                    // march steps: a uniform, so mobile compilers can't unroll the loop
       uniform vec3  uSunDir;
       uniform vec4  uClusters[CLUSTERS];       // camera-relative bounding sphere: xyz centre, w radius
       uniform float uFade[CLUSTERS];           // 0 = dissolved, 1 = fully formed
@@ -276,7 +280,8 @@
       varying vec2  vUv;
       ${NOISE_GLSL}
 
-      const float FAR = 14000.0;
+      const float FAR    = 14000.0;
+      const float MARGIN = 150.0;                // billows and halo reach a little beyond a cluster's bound
 
       // Pastel palette
       const vec3 LIT    = vec3(1.00, 0.92, 0.86);  // pearl-peach, sunlit
@@ -303,10 +308,12 @@
         return mix(b, a, h) - k * h * (1.0 - h);
       }
 
-      // Distance from p to the nearest cloud surface (< 0 inside)
-      float cloudSDF(vec3 p) {
+      // Distance from p to the nearest cloud surface (< 0 inside).
+      // mask: the clusters this ray crosses (bit c = cluster c); the others are skipped.
+      float cloudSDF(vec3 p, int mask) {
         float d = 1e9;
         for (int c = 0; c < CLUSTERS; c++) {
+          if ((mask & (1 << c)) == 0) continue;                    // this ray never meets cluster c
           float bound = length(p - uClusters[c].xyz) - uClusters[c].w;
           if (bound > 300.0) { d = min(d, bound); continue; }   // far away: the bound is a safe step
           float k = 1e9;
@@ -325,25 +332,45 @@
         return max(d, uBase - p.y);                                 // flat cloud base
       }
 
-      vec3 cloudNormal(vec3 p, float e) {                           // tetrahedral gradient
+      vec3 cloudNormal(vec3 p, float e, int mask) {                 // tetrahedral gradient
         vec2 k = vec2(1.0, -1.0);
-        return normalize(k.xyy * cloudSDF(p + k.xyy * e) + k.yyx * cloudSDF(p + k.yyx * e) +
-                         k.yxy * cloudSDF(p + k.yxy * e) + k.xxx * cloudSDF(p + k.xxx * e));
+        return normalize(k.xyy * cloudSDF(p + k.xyy * e, mask) + k.yyx * cloudSDF(p + k.yyx * e, mask) +
+                         k.yxy * cloudSDF(p + k.yxy * e, mask) + k.xxx * cloudSDF(p + k.xxx * e, mask));
       }
 
       // Returns premultiplied colour + alpha of the clouds along this ray
       vec4 clouds(vec3 rd) {
         if (rd.y <= 0.0) return vec4(0.0);
-        float t = uBase / rd.y;                                     // rays only meet clouds above the base
-        if (t > FAR) return vec4(0.0);
+
+        // Which clusters does this ray cross, and between which distances?
+        // (ray vs bounding sphere) Most sky pixels cross none and skip the march.
+        int   mask = 0;
+        float tIn = FAR, tOut = 0.0;
+        for (int c = 0; c < CLUSTERS; c++) {
+          vec3  C = uClusters[c].xyz;
+          float R = uClusters[c].w + MARGIN;
+          float b = dot(C, rd);                                     // distance to the closest approach
+          vec3  q = C - rd * b;
+          float h = R * R - dot(q, q);
+          if (h <= 0.0) continue;                                   // the ray passes beside it
+          h = sqrt(h);
+          mask |= 1 << c;
+          tIn  = min(tIn, b - h);
+          tOut = max(tOut, b + h);
+        }
+        if (mask == 0) return vec4(0.0);
+
+        float t    = max(uBase / rd.y, tIn);                        // rays only meet clouds above the base
+        float tEnd = min(tOut, FAR);
+        if (t > tEnd) return vec4(0.0);
         float dmin = 1e9, tmin = t;
         bool  hit  = false;
-        for (int i = 0; i < 64; i++) {
-          float d = cloudSDF(rd * t);
+        for (int i = 0; i < uSteps; i++) {
+          float d = cloudSDF(rd * t, mask);
           if (d < dmin) { dmin = d; tmin = t; }
           if (d < t * 0.0012) { hit = true; break; }
           t += d * 0.8;                                             // billows bend distances: step cautiously
-          if (t > FAR) break;
+          if (t > tEnd) break;
         }
         float sunward = max(dot(rd, uSunDir), 0.0);
         if (!hit) {
@@ -352,7 +379,7 @@
           return vec4(mix(HAZE, RIM, pow(sunward, 6.0)) * halo, halo);
         }
         vec3  p   = rd * t;
-        vec3  n   = cloudNormal(p, t * 0.003);
+        vec3  n   = cloudNormal(p, t * 0.003, mask);
         // Light = low sun (wrapped) or the bright sky above, whichever is stronger
         float sun   = clamp((dot(n, uSunDir) + 0.35) / 1.35, 0.0, 1.0);
         float light = max(sun, n.y * 0.75);
@@ -541,6 +568,7 @@
         uniforms: {
           uTime: { value: 0 }, uAspect: { value: 1 }, uTanHalf: { value: tanHalf },
           uPitch: { value: PITCH }, uSunDir: { value: sunDir }, uBase: { value: CLOUD.base - CLOUD.camHeight },
+          uSteps: { value: 64 },
           uClusters: { value: uClusters }, uFade: { value: clouds.map(() => 1) }, uPuffs: { value: uPuffs },
         },
       });
