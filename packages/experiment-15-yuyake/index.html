@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>YŪYAKE 夕焼け — Experiment 15</title>
+  <meta name="theme-color" content="#f6ece2">
   <meta name="description" content="YŪYAKE — L'ora rosa: uno stormo di fenicotteri vola verso il sole su un mare-specchio, disegnato a matite colorate pastello.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,13 +18,12 @@
       --paper:  #f6ece2;   /* warm drawing paper */
       --ink:    #4a2f4f;   /* plum pencil */
       --ink-60: rgba(74, 47, 79, .6);
-      --peach:  #f7c1a6;
       --rose:   #eea6bb;
       --lilac:  #c4b3e0;
       --font-display: 'Fraunces', 'Cormorant Garamond', Georgia, serif;
       --font-jp:      'Shippori Mincho', 'Noto Serif JP', serif;
       --font-mono:    'Space Mono', ui-monospace, monospace;
-      --intro: 2.6s;       /* when the colour wash has filled the page */
+      --intro: 2.6s;       /* the title rises as the colour wash ends (JS INTRO.washTo) */
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,14 +32,16 @@
     html, body { height: 100%; overflow: hidden; }
     body {
       background: linear-gradient(to bottom,
-        #a9b4e6 0%, #c4b3e0 30%, #eea6bb 52%, #ffd8c2 64%,
+        #a9b4e6 0%, var(--lilac) 30%, var(--rose) 52%, #ffd8c2 64%,
         #b9b2df 64%, #9ea6d8 100%);
       color: var(--ink);
       font-family: var(--font-display);
     }
 
-    /* Paper until the first frame is drawn (no flash of the fallback gradient) */
-    #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: var(--paper); }
+    /* Paper until the first frame is drawn (no flash of the fallback gradient).
+       Only once the scene starts (.gl): if three.js can't load, the gradient stays. */
+    #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    .gl #c { background: var(--paper); }
     .gl-lost #c { visibility: hidden; }        /* GPU context lost: the gradient shows through */
 
     /* ── Chrome ── */
@@ -135,13 +137,12 @@
     <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener">CC BY-NC-SA 3.0</a>
   </p>
 
-  <!-- Three.js r167 via importmap (same version as experiment 14), from jsDelivr
-       like experiments 01–02: unpkg failed to load on some phones -->
+  <!-- Three.js r169 via importmap from jsDelivr, same as experiments 01–13 -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
     }
   }
   </script>
@@ -151,10 +152,14 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     /* ================================================================
+       Inspired by "Feather" (akella, Codevember): white birds flying over a
+       sea that mirrors everything. Here: flamingos at sunset, in coloured pencil.
+       "The reel" in the comments below refers to it.
+
        HOW IT WORKS — three passes per frame
        1. SKY    → half-resolution render target: pastel gradient, sun and
-                   volumetric cumulus (raymarched). Clouds change slowly,
-                   so this pass only runs every other frame.
+                   sphere-traced cumulus (signed distance fields). Clouds
+                   change slowly, so this pass only runs every other frame.
        2. WORLD  → full-resolution target (MSAA + mipmaps): the sky, then
                    the 3D flamingos (toon-shaded, flying with the camera).
        3. SCREEN → fullscreen shader: the world above the horizon, the
@@ -170,12 +175,12 @@
     const SUN_SCREEN_X = 0.7;                        // sun at 70% of the screen width
     const TRAVEL_SPEED = 10;                         // camera glide toward the clouds (units/s)
     const BIRD_LENGTH  = 1.5;                        // flamingo length in world units
-    const MODEL_LENGTH = 176;                        // Flamingo.glb is ~176 units nose to toes (nose toward +z)
+    const MODEL_LENGTH = 176;                        // flamingo.glb is ~176 units nose to toes (nose toward +z)
     const FLAP_SECONDS = 0.9;                        // one wingbeat: flamingos flap steadily and rarely glide
     const WAVE_LAG     = 0.9;                        // s: a position change reaches the next bird back this much later
     const FLAP_LAG     = 0.16;                       // s: each bird flaps a little after the one ahead of it
     const SPREAD_POSE  = 5;                          // wingbeat frame with the wings fully spread (feather zones)
-    const INTRO = { lineFrom: 0.2, lineTo: 1.4, washFrom: 1.0, washTo: 2.8 }; // seconds (CSS --intro matches)
+    const INTRO = { lineFrom: 0.2, lineTo: 1.4, washFrom: 1.0, washTo: 2.8 }; // seconds (CSS --intro: title near washTo)
     const STILL_TIME   = 12;                         // frozen moment shown with prefers-reduced-motion
     const MAX_DPR      = 1.5;
 
@@ -234,18 +239,14 @@
     }
 
     /* ================================================================
-       GLSL — shared noise. The hashes avoid sin(): coordinates grow with
+       GLSL — 2D noise for the screen pass. The hashes (here and hash13 in
+       the sky, both by Dave Hoskins) avoid sin(): coordinates grow with
        time and sin() of large values loses precision on mobile GPUs.
        ================================================================ */
     const NOISE_GLSL = /* glsl */`
-      float hash12(vec2 p) {                                 // "hash12/13" by Dave Hoskins
+      float hash12(vec2 p) {
         vec3 p3 = fract(vec3(p.xyx) * 0.1031);
         p3 += dot(p3, p3.yzx + 33.33);
-        return fract((p3.x + p3.y) * p3.z);
-      }
-      float hash13(vec3 p3) {
-        p3 = fract(p3 * 0.1031);
-        p3 += dot(p3, p3.zyx + 31.32);
         return fract((p3.x + p3.y) * p3.z);
       }
       float noise(vec2 p) {
@@ -269,8 +270,8 @@
     `;
 
     /* ================================================================
-       1. SKY — pastel gradient, sun, volumetric cumulus
-       Output is display-space colour (what you see).
+       1. SKY — pastel gradient, sun, sphere-traced cumulus
+       Output is display-space colour (what you see); alpha = cloud cover.
        ================================================================ */
     const SKY_FRAG = /* glsl */`
       #define CLUSTERS ${CLOUD_CLUSTERS.length}
@@ -287,7 +288,12 @@
       uniform float uFade[CLUSTERS];           // 0 = dissolved, 1 = fully formed
       uniform vec4  uPuffs[CLUSTERS * PUFFS];  // camera-relative puff spheres: xyz centre, w radius
       varying vec2  vUv;
-      ${NOISE_GLSL}
+
+      float hash13(vec3 p3) {
+        p3 = fract(p3 * 0.1031);
+        p3 += dot(p3, p3.zyx + 31.32);
+        return fract((p3.x + p3.y) * p3.z);
+      }
 
       const float FAR    = 14000.0;
       const float MARGIN = 150.0;                // lumps and halo reach a little beyond a cluster's bound
@@ -531,6 +537,7 @@
         vec2  uv    = vUv;
         vec2  src   = uv;                                  // where the world is read
         float water = step(uv.y, uHorizon);
+        float depth = (uHorizon - uv.y) / uHorizon;        // on the water: 0 at the horizon → 1 at the bottom
         vec2  fc    = gl_FragCoord.xy / uPixelRatio;       // CSS pixels → same grain on every screen
         float glint = 0.0, crest = 0.0;
 
@@ -539,7 +546,6 @@
           // Each pixel is a point on a flat sea at distance z. A domain-warped,
           // low-frequency noise pushes the reflection around in big soft
           // islands; fine ripples only near the horizon.
-          float depth = (uHorizon - uv.y) / uHorizon;      // 0 at the horizon → 1 at the bottom
           float z     = 1.0 / (uHorizon - uv.y + 0.012);
           vec2  sea   = vec2((uv.x - 0.5) * uAspect * z * 0.55, z * 1.1 + uTravel * 0.02);
           vec2  warp  = vec2(fbm(sea * 0.35), fbm(sea * 0.35 + 9.2));
@@ -563,7 +569,6 @@
         vec3 col = w.rgb;
 
         if (water > 0.5) {
-          float depth = (uHorizon - uv.y) / uHorizon;
           col = mix(col * 0.88, vec3(0.52, 0.53, 0.84), 0.22 + 0.32 * depth);  // periwinkle water, a bit deeper than the sky
           col = mix(col, vec3(1.0, 0.96, 0.92), crest * 0.55);
           col = mix(col, vec3(1.0, 0.95, 0.82), glint * 0.8);
@@ -578,7 +583,8 @@
         col = mix(col, vec3(1.0, 0.93, 0.86), (1.0 - smoothstep(0.0, 1.5 / uRes.y * uPixelRatio, abs(uv.y - uHorizon))) * 0.6);
 
         // ── Coloured pencil on paper ──
-        // Outlines: crisp around the birds (alpha mask), faint on cloud edges (luma)
+        // Outlines from the alpha ids: strong around the birds, lighter on the
+        // cloud silhouettes; plus a faint line where the tone changes (luma)
         vec2  px   = 1.0 / uRes;
         vec2  wob  = (vec2(noise(fc * 0.06), noise(fc * 0.06 + 5.0)) - 0.5) * 2.5 * px;
         float aC   = world(src + wob, 0.0).a;
@@ -630,12 +636,12 @@
       const clock = new THREE.Clock(false);
       let started = false;                                 // true once the flamingos are ready
       let frameCount = 0;                                  // the sky pass runs on even frames
-      let introStart = reduceMotion ? -Infinity : null;    // reduced motion: the intro is already over
+      document.body.classList.add('gl');                   // the canvas shows paper until the first frame
       if (!reduceMotion) document.body.classList.add('intro-wait');
 
       // Camera (birds ride along as its children: they fly with it)
       const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 400);
-      camera.position.set(0, 3, 0);
+      camera.position.set(0, CLOUD.camHeight, 0);
       const scene = new THREE.Scene();
       scene.add(camera);
       scene.fog = new THREE.Fog(0xf6d9d6, 25, 95);         // far birds melt into the pastel air
@@ -723,7 +729,7 @@
       new GLTFLoader().load('flamingo.glb', (gltf) => {
         const source = gltf.scene.children[0];
         const clip   = gltf.animations[0];
-        // 3-tone pastel toon ramp
+        // 4-step pastel toon ramp
         const ramp = new THREE.DataTexture(new Uint8Array([150, 195, 235, 255]), 4, 1, THREE.RedFormat);
         ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
         ramp.needsUpdate = true;
@@ -742,7 +748,8 @@
           camera.add(mesh);
           birds.push({
             mesh, mixer, slot, beat,
-            rank:   slot.drift ? Math.random() * 6 : FLOCK.length - 1 - i, // 0 = leader (the farthest, ahead)
+            // place in the line, 0 = leader (the farthest); for strays a random rank only shifts their wander
+            rank:   slot.drift ? Math.random() * 6 : FLOCK.length - 1 - i,
             phase:  Math.random() * Math.PI * 2,
             offset: slot.drift ? Math.random() * 3 : Math.random() * 0.08, // the flock flaps nearly in step
           });
@@ -753,27 +760,29 @@
         beginIntro();
       });
 
+      // A wingbeat pose's actual vertex positions: glTF morph targets are
+      // stored as offsets from the rest pose
+      function posePositions(geometry, target) {
+        const base = geometry.attributes.position, pos = base.clone();
+        for (let i = 0; i < pos.count; i++) {
+          pos.setXYZ(i, base.getX(i) + target.getX(i), base.getY(i) + target.getY(i), base.getZ(i) + target.getZ(i));
+        }
+        return pos;
+      }
+
       // Smooth normals for the rest pose AND for every wingbeat pose (morph
-      // target), so the toon light follows the wings as they flap.
+      // target), so the toon light follows the wings as they flap. Like the
+      // positions, the pose normals are stored as offsets from the rest pose.
       function addMorphNormals(geometry) {
         geometry.computeVertexNormals();
-        const base     = geometry.attributes.position;
-        const baseN    = geometry.attributes.normal;
-        const relative = geometry.morphTargetsRelative;  // glTF morphs are offsets from the rest pose
+        const baseN = geometry.attributes.normal;
         geometry.morphAttributes.normal = geometry.morphAttributes.position.map((target) => {
           const pose = new THREE.BufferGeometry();
-          const pos  = base.clone();
-          for (let i = 0; i < pos.count; i++) {
-            pos.setXYZ(i,
-              target.getX(i) + (relative ? base.getX(i) : 0),
-              target.getY(i) + (relative ? base.getY(i) : 0),
-              target.getZ(i) + (relative ? base.getZ(i) : 0));
-          }
-          pose.setAttribute('position', pos);
+          pose.setAttribute('position', posePositions(geometry, target));
           pose.setIndex(geometry.index);
           pose.computeVertexNormals();
           const n = pose.attributes.normal;
-          if (relative) for (let i = 0; i < n.count; i++) {
+          for (let i = 0; i < n.count; i++) {
             n.setXYZ(i, n.getX(i) - baseN.getX(i), n.getY(i) - baseN.getY(i), n.getZ(i) - baseN.getZ(i));
           }
           return n;
@@ -800,12 +809,7 @@
       // Each vertex's position with the wings fully spread. Feather zones and
       // wing ids are drawn from it, so they stay on the wing as it flaps.
       function addSpreadPose(geometry) {
-        const spread = geometry.attributes.position.clone();
-        const delta  = geometry.morphAttributes.position[SPREAD_POSE]; // glTF morphs are offsets
-        for (let i = 0; i < spread.count; i++) {
-          spread.setXYZ(i, spread.getX(i) + delta.getX(i), spread.getY(i) + delta.getY(i), spread.getZ(i) + delta.getZ(i));
-        }
-        geometry.setAttribute('aSpread', spread);
+        geometry.setAttribute('aSpread', posePositions(geometry, geometry.morphAttributes.position[SPREAD_POSE]));
       }
 
       // Toon material + plumage: black flight feathers with light gaps, and a
@@ -846,7 +850,10 @@
         sunLight.position.copy(sunDir).multiplyScalar(50);
         frameCount = 0;                                    // resized sky target: redraw it on the next frame
       }
-      addEventListener('resize', () => { resize(); if (reduceMotion && started) render(STILL_TIME); });
+      // Reduced motion draws a single frame: draw it again after a resize or a restored GPU context
+      const redrawStill = () => { if (reduceMotion && started) render(STILL_TIME); };
+      addEventListener('resize', () => { resize(); redrawStill(); });
+      canvas.addEventListener('webglcontextrestored', redrawStill);
       resize();
 
       /* ── One frame at time t (seconds) ── */
@@ -860,11 +867,11 @@
         camera.rotation.x = pitch;
         const horizon = 0.5 - Math.tan(pitch) / (2 * tanHalf);
 
-        // Intro progress (seconds since the model was ready)
-        if (introStart === null) introStart = t;
-        const it = t - introStart;
-        screenMat.uniforms.uLine.value = smooth(INTRO.lineFrom, INTRO.lineTo, it);
-        screenMat.uniforms.uWash.value = smooth(INTRO.washFrom, INTRO.washTo, it);
+        // Intro progress: the clock starts when the model is ready;
+        // with reduced motion the intro is already over
+        const introT = reduceMotion ? Infinity : t;
+        screenMat.uniforms.uLine.value = smooth(INTRO.lineFrom, INTRO.lineTo, introT);
+        screenMat.uniforms.uWash.value = smooth(INTRO.washFrom, INTRO.washTo, introT);
 
         // Shared animation values
         const travel = t * TRAVEL_SPEED;
@@ -876,11 +883,12 @@
         // Clouds glide toward the camera; their world x is fixed, so they grow
         // and drift outward in true perspective. Near ones dissolve, then
         // re-form at the far end of the loop.
+        const screenX = (u, d) => (2 * u - 1) * aspect * tanHalf * d; // screen u ∈ [0, 1] → x at distance d
         const span  = CLOUD.far - CLOUD.near;
         const baseY = CLOUD.base - CLOUD.camHeight;        // camera-relative altitude
         clouds.forEach((cl, i) => {
           const dist = CLOUD.near + ((((cl.d - CLOUD.near) - t * CLOUD.speed) % span) + span) % span;
-          const x    = (2 * cl.u - 1) * aspect * tanHalf * CLOUD.ref;
+          const x    = screenX(cl.u, CLOUD.ref);
           uClusters[i].set(x, baseY + cl.centreY, -dist, cl.radius);
           skyMat.uniforms.uFade.value[i] = smooth(CLOUD.far, CLOUD.far - 1500, dist) * smooth(CLOUD.near, CLOUD.near + 700, dist);
           cl.puffs.forEach(([px, py, pz, r], j) => uPuffs[i * PUFFS_PER_CLUSTER + j].set(x + px, baseY + py, -dist + pz, r));
@@ -897,21 +905,21 @@
           const yaw   = drift < 0 ? -1.85 : 1.85;          // fly right (strays drifting left: left), slightly away
           const len   = BIRD_LENGTH * fit * (slot.size || 1);
           // Offsets in body lengths, and how fast they change (for the attitude).
-          // Perspective shrinks far motion, so farther birds wander a bit more:
-          // every bird's movement reads on screen like the nearest one's.
-          const reach = THREE.MathUtils.clamp(0.35 + slot.d / 40, 0.6, 1.6);
-          const m  = wander(b, t, reach);
-          const m2 = wander(b, t + 0.1, reach);
-          const vRise = (m2.rise - m.rise) * 10, vSide = (m2.side - m.side) * 10;
+          // Perspective shrinks far motion, so farther birds wander a bit more
+          // and their movement still reads on screen.
+          const reach   = THREE.MathUtils.clamp(0.35 + slot.d / 40, 0.6, 1.6);
+          const off     = wander(b, t, reach);
+          const offNext = wander(b, t + 0.1, reach);
+          const vRise = (offNext.rise - off.rise) * 10, vSide = (offNext.side - off.side) * 10;
           // Wingbeat on its own clock: after the bird ahead (a ripple down the
           // line), a little ahead while surging forward (it flaps harder to catch up)
-          const flapT = t + b.offset - b.rank * FLAP_LAG + 0.15 * m.surge;
+          const flapT = t + b.offset - b.rank * FLAP_LAG + 0.15 * off.surge;
           const bob   = 0.035 * Math.cos((2 * Math.PI * flapT) / b.beat); // body lifts with each downstroke
           const fx = Math.sin(yaw), fz = Math.cos(yaw);   // forward along the flight line; (fz, -fx) is the bird's left
           mesh.position.set(
-            (u * 2 - 1) * aspect * tanHalf * slot.d + (fx * m.surge + fz * m.side) * len,
-            (slot.v * 2 - 1) * tanHalf * slot.d + (m.rise + bob) * len,
-            -slot.d + (fz * m.surge - fx * m.side) * len,
+            screenX(u, slot.d) + (fx * off.surge + fz * off.side) * len,
+            (slot.v * 2 - 1) * tanHalf * slot.d + (off.rise + bob) * len,
+            -slot.d + (fz * off.surge - fx * off.side) * len,
           );
           // Attitude follows the motion: nose up while climbing, a slight turn
           // and bank toward the side it's sliding to (3 body lengths/s ≈ its airspeed)

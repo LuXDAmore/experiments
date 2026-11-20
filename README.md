@@ -2,7 +2,7 @@
 
 A **monorepo** of interactive frontend portfolio experiments built with ThreeJS, GSAP, Lenis, and TailwindCSS.
 
-Each experiment is self-contained — a single `index.html` with all assets — and lives in its own package under `packages/`.
+Each experiment is self-contained — a single `index.html` with all assets (experiment 15 also ships its 3D flamingo model) — and lives in its own package under `packages/`.
 
 ---
 
