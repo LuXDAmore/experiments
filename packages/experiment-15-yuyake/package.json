@@ -1,0 +1,10 @@
+{
+  "name": "@experiments/experiment-15-yuyake",
+  "version": "1.0.0",
+  "description": "YŪYAKE — An ambient, pencil-drawn sunset over a mirror sea, crossed by a flock of pink flamingos.",
+  "main": "index.html",
+  "scripts": {"serve":"npx serve . -p 3015 --no-clipboard","dev":"npx serve . -p 3015 --no-clipboard","preview":"npx serve . -p 3015 --no-clipboard"},
+  "keywords": ["threejs","webgl","glsl","shader","sunset","reflection","flamingo","pencil","illustration","japanese","yuyake"],
+  "author": "LuXDAmore",
+  "license": "MIT"
+}

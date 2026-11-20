@@ -93,6 +93,16 @@ experiments/
 - **GSAP** hero entrance, scroll reveals, parallax, pinned horizontal seasonal gallery
 - Custom leaf cursor, lightbox, `prefers-reduced-motion` guard
 
+### 15 · YŪYAKE 夕焼け
+*The glow of sunset — a flock of pink flamingos gliding over a mirror sea.*
+
+- **ThreeJS** two-pass render: the world (sky + flock) goes to a render target, then one fullscreen shader composes it
+- **Mirror sea**: the world texture read flipped around the horizon, with perspective noise ripples flowing toward the camera and a sun glitter path
+- Cel-shaded **cumulus** built from round puffs (sunlit tops, violet undersides, gold rim), perspective cirrus streaks
+- **Flamingos** drawn procedurally in Canvas 2D (4-frame flap atlas animated "on threes"), one instanced draw call, flying in a loose diagonal formation
+- **Coloured-pencil** post effect: Sobel outlines with a hand-drawn wobble, shadow hatching, paper grain
+- Ambient loop, no scroll; `prefers-reduced-motion` shows a single still frame
+
 ---
 
 ## Tech stack (per experiment, loaded via CDN)

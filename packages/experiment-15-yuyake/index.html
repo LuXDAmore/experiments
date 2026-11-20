@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="YŪYAKE — Un tramonto disegnato a matita su un mare-specchio, attraversato da uno stormo di fenicotteri rosa.">
+  <title>YŪYAKE 夕焼け — Experiment 15</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,300;1,400&family=Noto+Serif+JP:wght@300&family=Space+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* The gradient is the no-WebGL fallback: a flat sunset over a violet sea
+       (horizon at 62% from the top, matching HORIZON = 0.38 in the script). */
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      background: linear-gradient(to bottom,
+        #33265e 0%, #e8577e 42%, #ffb06a 58%, #ffd27a 62%,
+        #6b3f72 62%, #2e2152 100%);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      color: #fff4e6;
+    }
+
+    /* ── Fullscreen WebGL canvas ── */
+    #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+    /* ── Navigation (same pattern as the other experiments) ── */
+    .back-link, .exp-label {
+      position: fixed;
+      top: 28px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; letter-spacing: .3em;
+      color: rgba(255,244,230,.55);
+      z-index: 2;
+    }
+    .back-link {
+      left: clamp(24px,4vw,60px);
+      text-decoration: none;
+      display: flex; align-items: center; gap: 8px;
+      transition: color .25s;
+    }
+    .back-link:hover, .back-link:focus-visible { color: #fff4e6; }
+    .back-link::before { content: '←'; }
+    .exp-label { right: clamp(24px,4vw,60px); pointer-events: none; }
+
+    /* ── Title, resting on the water ── */
+    .title {
+      position: fixed;
+      left: clamp(24px,4vw,60px);
+      bottom: clamp(28px,6vh,64px);
+      z-index: 2;
+      pointer-events: none;
+      text-shadow: 0 1px 12px rgba(40,20,60,.45);
+      animation: fade-in 2.4s ease-out .4s both;
+    }
+    .title__jp  { font-family: 'Noto Serif JP', serif; font-weight: 300; font-size: 14px; letter-spacing: .4em; opacity: .8; }
+    .title__en  { font-style: italic; font-weight: 300; font-size: clamp(44px,8vw,96px); line-height: 1; }
+    .title__sub { font-style: italic; font-size: clamp(15px,1.6vw,19px); opacity: .75; margin-top: 6px; }
+
+    @keyframes fade-in { from { opacity: 0; transform: translateY(8px); } }
+    @media (prefers-reduced-motion: reduce) { .title { animation: none; } }
+  </style>
+</head>
+<body>
+
+  <canvas id="c" aria-hidden="true"></canvas>
+
+  <a class="back-link" href="../landing/index.html" aria-label="Back to all experiments">EXPERIMENTS</a>
+  <span class="exp-label" aria-hidden="true">EXP · 15</span>
+
+  <header class="title">
+    <p class="title__jp" lang="ja">夕焼け</p>
+    <h1 class="title__en">Yūyake</h1>
+    <p class="title__sub">Il bagliore del tramonto</p>
+  </header>
+
+  <!-- Three.js r167 via importmap (same as experiment 14) -->
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.167.1/build/three.module.js" } }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    /* ================================================================
+       HOW IT WORKS
+       1. WORLD pass  → an off-screen texture with the sunset sky
+                        (shader) and the flamingos (instanced sprites).
+       2. SCREEN pass → one fullscreen shader that shows the world above
+                        the horizon and the same texture flipped + rippled
+                        below it (the mirror sea), then adds the
+                        coloured-pencil look (outlines, hatching, paper).
+       ================================================================ */
+
+    /* ── Scene constants ── */
+    const HORIZON     = 0.38;                 // horizon height in screen UV (0 = bottom, 1 = top)
+    const SUN         = new THREE.Vector2(0.68, HORIZON + 0.15); // sun position in screen UV
+    const FLOCK_SIZE  = 8;
+    const STILL_TIME  = 8;                    // frozen moment shown with prefers-reduced-motion
+    const MAX_DPR     = 1.5;                  // caps the fullscreen shaders' cost on retina screens
+
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canvas = document.getElementById('c');
+
+    /* ── Renderer — if WebGL is missing, the CSS gradient stays visible ── */
+    let renderer = null;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas });
+    } catch (err) {
+      console.warn('[YUYAKE] WebGL unavailable, showing CSS fallback.', err);
+      canvas.remove();
+    }
+
+    /* ================================================================
+       GLSL — value noise + fbm, shared by both passes
+       ================================================================ */
+    // The hash avoids sin(): the ripple coordinates grow with time, and sin()
+    // of large values loses precision on many (mobile) GPUs → blocky noise.
+    const NOISE_GLSL = /* glsl */`
+      float hash(vec2 p) {                                   // "hash12" by Dave Hoskins
+        vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+        p3 += dot(p3, p3.yzx + 33.33);
+        return fract((p3.x + p3.y) * p3.z);
+      }
+      float noise(vec2 p) {
+        vec2 i = floor(p), f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+                   mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+      }
+      float fbm(vec2 p) {
+        float v = 0.0, a = 0.5;
+        for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+        return v;
+      }
+    `;
+
+    // Fullscreen quad: positions are already in clip space, the camera is ignored
+    const FULLSCREEN_VERT = /* glsl */`
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+    `;
+
+    /* ================================================================
+       SKY — sunset gradient, cel-shaded sun and clouds
+       ================================================================ */
+    const SKY_FRAG = /* glsl */`
+      uniform float uTime, uAspect, uHorizon, uDrift, uTravel;
+      uniform vec2  uSun;
+      varying vec2  vUv;
+      ${NOISE_GLSL}
+
+      // Vertical gradient: h = 0 at the horizon → 1 at the top of the screen
+      vec3 skyGradient(float h) {
+        vec3 c = mix(vec3(1.00, 0.84, 0.52), vec3(1.00, 0.60, 0.42), smoothstep(0.00, 0.16, h)); // gold → orange
+        c = mix(c, vec3(0.93, 0.40, 0.52), smoothstep(0.10, 0.40, h));                           // → flamingo pink
+        c = mix(c, vec3(0.47, 0.28, 0.56), smoothstep(0.36, 0.75, h));                           // → violet
+        return mix(c, vec3(0.20, 0.15, 0.38), smoothstep(0.70, 1.00, h));                        // → indigo
+      }
+
+      // ── Cumulus: a union of round puffs standing on the horizon ──
+      // Cluster height along the horizon: tall where the noise is high, clear sky (0) elsewhere
+      // (linear in the noise, so each cluster gets a rounded dome rather than a flat top)
+      float envelope(float x) { return 0.32 * max(noise(vec2(x * 1.8, 4.2)) - 0.48, 0.0); }
+
+      // One row of puffs (one per cell, with random offset and size), painted
+      // like discs over what came before (painter's order).
+      // best.x = signed distance to the cloud surface (< 0 inside),
+      // best.y = 1 on the sunlit top of the last puff painted here, 0 on its shaded underside.
+      vec2 puffs(vec2 p, float cell, float lift, float size, float row, vec2 best) {
+        float id0 = floor(p.x / cell);
+        for (int k = -2; k <= 2; k++) {
+          float id  = id0 + float(k);
+          float rnd = hash(vec2(id, row));
+          float cx  = (id + 0.5 + (rnd - 0.5) * 0.6) * cell;
+          float env = envelope(cx);
+          float r   = size * env * (0.75 + 0.5 * rnd)
+                    * (1.0 + 0.06 * sin(uTime * 0.3 + id));   // slow billowing
+          vec2  c   = vec2(cx, env * lift * (0.85 + 0.3 * fract(rnd * 7.13)));
+          float d   = length(p - c) - r;
+          if (d < 0.0) best.y = step(-0.4, (p.y - c.y) / r);  // this puff covers what is behind it
+          best.x = min(best.x, d);
+        }
+        return best;
+      }
+
+      // Very far away, so the clouds barely drift sideways: they only billow.
+      // x is centred on the screen (+ an offset that frames a cluster near the
+      // sun), so portrait and landscape screens see the same clouds.
+      vec2 cumulus(vec2 uv) {
+        vec2 p    = vec2((uv.x - 0.5) * uAspect + 1.1 + uDrift * 0.2, uv.y - uHorizon);
+        vec2 best = vec2(p.y - envelope(p.x) * 0.35, 0.0);   // flat, shaded base filling the gaps between puffs
+        best = puffs(p, 0.070, 0.30, 0.60, 0.0, best);       // big puffs: the body, always touching the base
+        best = puffs(p, 0.045, 0.90, 0.28, 1.0, best);       // small puffs: the cauliflower top
+        return best;
+      }
+
+      void main() {
+        vec2  uv  = vUv;
+        float h   = clamp((uv.y - uHorizon) / (1.0 - uHorizon), 0.0, 1.0);
+        vec3  col = skyGradient(h);
+
+        // Warm haze hugging the horizon
+        col = mix(col, vec3(1.0, 0.86, 0.62), exp(-h * 22.0) * 0.45);
+
+        // High cirrus streaks on a sky plane seen in perspective: like the sea,
+        // they stream out of the horizon toward us as the camera travels.
+        // Cut into hard-edged bands (anime cel look).
+        float zc     = 1.0 / (h + 0.1);                      // distance on the sky plane
+        vec2  cp     = vec2((uv.x - 0.5) * uAspect * zc * 0.5 + uDrift, zc * 1.6 + uTravel * 0.25);
+        float cirrus = fbm(cp * vec2(1.0, 3.0));
+        float band   = smoothstep(0.35, 0.55, h) * smoothstep(0.95, 0.70, h);
+        col = mix(col, vec3(1.0, 0.66, 0.62), smoothstep(0.60, 0.62, cirrus) * band * 0.55);
+
+        // Sun: banded halo + faint rays + hard disc
+        vec2  d    = (uv - uSun) * vec2(uAspect, 1.0);
+        float r    = length(d);
+        float halo = floor(exp(-r * 8.0) * 4.0) / 4.0;       // 4 flat rings instead of a smooth glow
+        col = mix(col, vec3(1.0, 0.84, 0.58), halo * 0.5);
+        float a    = atan(d.y, d.x);
+        float rays = pow(max(0.0, sin(a * 7.0 + uTime * 0.04) * sin(a * 13.0 - 1.3)), 6.0);
+        col += vec3(1.0, 0.82, 0.55) * rays * exp(-r * 3.0) * 0.35;
+        col  = mix(col, vec3(1.0, 0.96, 0.82), smoothstep(0.058, 0.054, r));
+
+        // Cumulus: 3 flat tones — pink sunlit tops, violet undersides,
+        // gold rim where the cloud's edge faces the sun
+        vec2  c     = cumulus(uv);
+        vec2  toSun = normalize((uSun - uv) * vec2(uAspect, 1.0) + 1e-5) / vec2(uAspect, 1.0); // aspect-correct direction
+        float rim   = step(0.0, cumulus(uv + toSun * 0.008).x); // just outside toward the sun
+        vec3 cloud = mix(vec3(0.58, 0.36, 0.60), vec3(0.97, 0.60, 0.62), c.y);
+        cloud = mix(cloud, vec3(1.0, 0.85, 0.60), rim);
+        col = mix(col, cloud, smoothstep(0.0015, -0.0015, c.x));
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    /* ================================================================
+       FLAMINGOS — hand-drawn sprite atlas (Canvas 2D, 4 flap frames)
+       ================================================================ */
+    const FRAME_W = 256, FRAME_H = 200, FRAMES = 4, ATLAS_SCALE = 2;
+    const WING_LIFT = [0.95, 0.45, -0.7, -0.35];          // up → mid → down → mid (one flap)
+    const INK = '#7a2348';                                // dark magenta pencil
+
+    // Wing outline pointing straight up: [x offset in px, height as a fraction of the wing length].
+    // Leading edge first, then the trailing edge with the long flight feathers ("fingers").
+    const WING_SHAPE = [
+      [18, 0], [26, -0.28], [18, -0.55], [6, -0.82], [-4, -1],
+      [-12, -0.93], [-9, -0.86], [-18, -0.8], [-14, -0.71], [-23, -0.63],
+      [-19, -0.54], [-27, -0.4], [-30, -0.2], [-24, 0],
+    ];
+    const WING_LENGTH = 90;
+    const PRIMARIES = [[-40, -0.45], [40, -0.62], [40, -1.2], [-40, -1.2]]; // outer part of the wing, painted black
+
+    // Fills a path, then strokes it twice with a small random offset:
+    // the doubled, imperfect line is what makes it read as "pencil".
+    function sketch(ctx, path, fill, width = 1.6) {
+      if (fill) { ctx.beginPath(); path(); ctx.fillStyle = fill; ctx.fill(); }
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = width;
+      for (let i = 0; i < 2; i++) {
+        ctx.save();
+        ctx.translate((Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 1.4);
+        ctx.globalAlpha = 0.85 - i * 0.35;
+        ctx.beginPath(); path(); ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Wing seen from the side: lift 1 = straight up, -1 = straight down.
+    // The same WING_SHAPE is squashed (foreshortened) or flipped by `lift`;
+    // it never collapses below 35% so mid-flap frames still show a wing.
+    function drawWing(ctx, lift, dx, coverColor) {
+      const reach = WING_LENGTH * Math.sign(lift) * Math.max(Math.abs(lift), 0.35);
+      const at    = (x, y) => [122 + dx + x, 78 + y * reach]; // shoulder at (122, 78)
+      const poly  = pts => pts.forEach(([x, y], i) => ctx[i ? 'lineTo' : 'moveTo'](...at(x, y)));
+      const path  = () => { poly(WING_SHAPE); ctx.closePath(); };
+
+      ctx.beginPath(); path(); ctx.fillStyle = coverColor; ctx.fill();
+      // Black flight feathers on the outer part, like real flamingos in flight
+      ctx.save();
+      ctx.beginPath(); path(); ctx.clip();
+      ctx.beginPath(); poly(PRIMARIES);
+      ctx.fillStyle = '#2a1a2e';
+      ctx.fill();
+      ctx.restore();
+      sketch(ctx, path, null);                            // pencil outline last, over both fills
+    }
+
+    // One flamingo flying to the right, in a FRAME_W × FRAME_H cell
+    function drawFlamingo(ctx, lift) {
+      ctx.lineCap = ctx.lineJoin = 'round';
+      ctx.translate(0, 20);                               // vertical room for the raised/lowered wing
+
+      // Legs trailing behind: dark stroke under a pink stroke = outlined leg
+      const leg = () => { ctx.moveTo(98, 86); ctx.lineTo(58, 89); ctx.lineTo(18, 91); };
+      ctx.beginPath(); leg(); ctx.strokeStyle = INK; ctx.lineWidth = 5.5; ctx.stroke();
+      ctx.beginPath(); leg(); ctx.strokeStyle = '#ea6f8f'; ctx.lineWidth = 3; ctx.stroke();
+      sketch(ctx, () => { ctx.moveTo(20, 88); ctx.lineTo(8, 92); ctx.lineTo(20, 95); ctx.closePath(); }, '#d9547a', 1.2);
+
+      drawWing(ctx, lift, 8, '#c94a72');                    // far wing, darker and behind the body
+
+      // Tail + slim body
+      sketch(ctx, () => { ctx.moveTo(100, 77); ctx.lineTo(86, 81); ctx.lineTo(100, 87); ctx.closePath(); }, '#ec5f86');
+      sketch(ctx, () => ctx.ellipse(122, 82, 26, 10, -0.05, 0, Math.PI * 2), '#f7a1b8');
+
+      // Long neck stretched forward (outlined stroke) and head
+      const neck = () => { ctx.moveTo(144, 78); ctx.quadraticCurveTo(178, 66, 206, 70); };
+      ctx.beginPath(); neck(); ctx.strokeStyle = INK; ctx.lineWidth = 8.5; ctx.stroke();
+      ctx.beginPath(); neck(); ctx.strokeStyle = '#f7a1b8'; ctx.lineWidth = 5.5; ctx.stroke();
+      sketch(ctx, () => ctx.ellipse(210, 70, 8, 6.5, 0, 0, Math.PI * 2), '#f7a1b8');
+
+      // Bent beak: pale base, black tip
+      sketch(ctx, () => {
+        ctx.moveTo(215, 65); ctx.lineTo(227, 66); ctx.lineTo(234, 73); ctx.lineTo(232, 81);
+        ctx.lineTo(227, 79); ctx.lineTo(224, 73); ctx.lineTo(215, 75); ctx.closePath();
+      }, '#f6dde3', 1.3);
+      sketch(ctx, () => {
+        ctx.moveTo(228, 70); ctx.lineTo(234, 73); ctx.lineTo(232, 81); ctx.lineTo(227, 79); ctx.closePath();
+      }, '#2a1a2e', 1);
+      ctx.beginPath(); ctx.arc(209, 68, 1.6, 0, Math.PI * 2); ctx.fillStyle = '#2a1a2e'; ctx.fill();
+
+      drawWing(ctx, lift, 0, '#f06a8f');                    // near wing, over the body
+    }
+
+    function createFlamingoAtlas() {
+      const atlas = document.createElement('canvas');
+      atlas.width  = FRAME_W * FRAMES * ATLAS_SCALE;
+      atlas.height = FRAME_H * ATLAS_SCALE;
+      const ctx = atlas.getContext('2d');
+      ctx.scale(ATLAS_SCALE, ATLAS_SCALE);
+      WING_LIFT.forEach((lift, i) => {
+        ctx.save();
+        ctx.translate(i * FRAME_W, 0);
+        drawFlamingo(ctx, lift);
+        ctx.restore();
+      });
+      // Premultiplied alpha: filtering then never mixes the transparent (black)
+      // pixels into the sprite edges, so small far birds stay clean
+      const texture = new THREE.CanvasTexture(atlas);
+      texture.premultiplyAlpha = true;
+      return texture;
+    }
+
+    // Picks the flap frame from the atlas. Time is stepped at 8 fps
+    // ("on threes"), like hand-drawn animation, instead of being smooth.
+    const BIRD_VERT = /* glsl */`
+      attribute float aPhase;
+      attribute float aHaze;
+      uniform float uTime;
+      varying vec2  vUv;
+      varying float vHaze;
+      void main() {
+        float frame = mod(floor(uTime * 8.0 + aPhase * 4.0), 4.0);
+        vUv   = vec2((uv.x + frame) / 4.0, uv.y);
+        vHaze = aHaze;
+        gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+      }
+    `;
+    // Distant birds fade into the warm horizon haze
+    const BIRD_FRAG = /* glsl */`
+      uniform sampler2D uAtlas;
+      varying vec2  vUv;
+      varying float vHaze;
+      void main() {
+        vec4 t = texture2D(uAtlas, vUv);                     // premultiplied colour
+        if (t.a < 0.02) discard;
+        gl_FragColor = vec4(mix(t.rgb, vec3(1.0, 0.78, 0.62) * t.a, vHaze), t.a);
+      }
+    `;
+
+    /* ================================================================
+       SCREEN — mirror sea + coloured-pencil stylisation
+       ================================================================ */
+    const SCREEN_FRAG = /* glsl */`
+      uniform sampler2D tWorld;
+      uniform vec2  uRes, uSun;
+      uniform float uTime, uAspect, uHorizon, uDrift, uTravel, uPixelRatio;
+      varying vec2  vUv;
+      ${NOISE_GLSL}
+
+      float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+      // Sobel edge strength of the world texture → pencil outlines
+      float edge(vec2 uv) {
+        vec2 px = 1.0 / uRes;
+        float tl = luma(texture2D(tWorld, uv + px * vec2(-1.0,  1.0)).rgb);
+        float t  = luma(texture2D(tWorld, uv + px * vec2( 0.0,  1.0)).rgb);
+        float tr = luma(texture2D(tWorld, uv + px * vec2( 1.0,  1.0)).rgb);
+        float l  = luma(texture2D(tWorld, uv + px * vec2(-1.0,  0.0)).rgb);
+        float r  = luma(texture2D(tWorld, uv + px * vec2( 1.0,  0.0)).rgb);
+        float bl = luma(texture2D(tWorld, uv + px * vec2(-1.0, -1.0)).rgb);
+        float b  = luma(texture2D(tWorld, uv + px * vec2( 0.0, -1.0)).rgb);
+        float br = luma(texture2D(tWorld, uv + px * vec2( 1.0, -1.0)).rgb);
+        float gx = (tr + 2.0 * r + br) - (tl + 2.0 * l + bl);
+        float gy = (tl + 2.0 * t + tr) - (bl + 2.0 * b + br);
+        return length(vec2(gx, gy));
+      }
+
+      void main() {
+        vec2  uv    = vUv;
+        vec2  src   = uv;                                  // where the world texture is read
+        float water = step(uv.y, uHorizon);                // 1 below the horizon
+        vec3  col;
+
+        if (water > 0.5) {
+          // ── Mirror sea ──
+          // Each pixel below the horizon is a point on a flat sea; z is its
+          // distance. Ripples are noise in sea coordinates, so they shrink
+          // toward the horizon and flow toward us as the camera travels.
+          float depth = (uHorizon - uv.y) / uHorizon;      // 0 at the horizon → 1 at the bottom
+          float z     = 1.0 / (uHorizon - uv.y + 0.015);
+          vec2  sea   = vec2((uv.x - 0.5) * uAspect * z * 0.7 + uDrift, z * 2.4 + uTravel);
+          float n1    = fbm(sea);
+          float n2    = fbm(sea + 17.3);
+          float fadeH = smoothstep(0.0, 0.12, depth);      // calm, perfect mirror at the horizon
+
+          // Read the world flipped around the horizon, pushed around by the ripples
+          vec2 off = vec2(n1 - 0.5, (n2 - 0.5) * 0.4) * 0.09 * depth;
+          src = vec2(uv.x + off.x, max(2.0 * uHorizon - uv.y + off.y, uHorizon + 0.002));
+          col = texture2D(tWorld, src).rgb;
+
+          // Water body: a violet tint that deepens toward the viewer (cheap Fresnel)
+          col = mix(col, vec3(0.30, 0.18, 0.42), 0.12 + 0.38 * depth);
+
+          // Flat light streaks on the ripple crests
+          col = mix(col, vec3(1.0, 0.80, 0.70), smoothstep(0.64, 0.66, n1) * fadeH * 0.45);
+
+          // Sun glitter path: a column under the sun that widens toward us
+          float w       = 0.012 + 0.11 * depth;
+          float path    = 1.0 - smoothstep(0.0, w, abs(uv.x - uSun.x - off.x));
+          float sparkle = step(0.62, noise(sea * vec2(3.0, 1.5) + uTime * 1.5));
+          col = mix(col, vec3(1.0, 0.92, 0.70), path * sparkle * fadeH * 0.85);
+        } else {
+          col = texture2D(tWorld, src).rgb;
+        }
+
+        // Thin bright line where sky meets sea
+        float px = 1.0 / uRes.y;
+        col = mix(col, vec3(1.0, 0.88, 0.66), (1.0 - smoothstep(0.0, 2.0 * px, abs(uv.y - uHorizon))) * 0.5);
+
+        // ── Coloured pencil ──
+        vec2 fc = gl_FragCoord.xy / uPixelRatio;           // CSS pixels: same grain size on every screen
+
+        // 1. Outlines, with a static wobble like a hand-drawn line
+        vec2  wob = (vec2(noise(fc * 0.05), noise(fc * 0.05 + 7.0)) - 0.5) * 3.0 / uRes;
+        float e   = smoothstep(0.10, 0.30, edge(src + wob)) * (1.0 - 0.4 * water);
+        col = mix(col, vec3(0.36, 0.13, 0.30), e * 0.6);
+
+        // 2. Diagonal hatching, only in the darker areas, with broken strokes
+        float shade  = smoothstep(0.62, 0.25, luma(col));
+        float stroke = abs(fract((fc.x + fc.y) / 6.0 + noise(fc * 0.02) * 0.6) - 0.5) * 2.0;
+        float line   = (1.0 - smoothstep(0.15, 0.4, stroke))
+                     * smoothstep(0.3, 0.6, noise(vec2(fc.x - fc.y, fc.x + fc.y) * vec2(0.06, 0.3)));
+        col = mix(col, col * vec3(0.70, 0.58, 0.86), line * shade * 0.45);
+
+        // 3. Paper grain: tooth that the pigment skips + soft fibres
+        float grain = noise(fc * 0.9) * 0.5 + noise(fc * 0.21) * 0.5;
+        col *= 0.93 + 0.08 * grain;
+        col  = mix(col, vec3(1.0, 0.96, 0.90), smoothstep(0.80, 0.97, noise(fc * 0.65)) * 0.18);
+
+        // 4. Soft vignette
+        col *= mix(0.82, 1.0, smoothstep(1.25, 0.35, length((uv - 0.5) * vec2(uAspect, 1.0))));
+
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `;
+
+    /* ================================================================
+       SCENE SETUP
+       ================================================================ */
+    if (renderer) start(renderer);
+
+    function start(renderer) {
+      // Uniforms shared by every material: updating them once updates all passes
+      const shared = {
+        uTime:    { value: 0 },
+        uAspect:  { value: 1 },
+        uHorizon: { value: HORIZON },
+        uDrift:   { value: 0 },
+        uTravel:  { value: 0 },
+        uSun:     { value: SUN },
+      };
+
+      const camera   = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1); // world: y ∈ [-1, 1], x ∈ [-aspect, aspect]
+      const worldRT  = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: false });
+      const world    = new THREE.Scene();
+      const screen   = new THREE.Scene();
+      const quad     = new THREE.PlaneGeometry(2, 2);
+
+      // Sky (fullscreen, drawn first)
+      const sky = new THREE.Mesh(quad, new THREE.ShaderMaterial({
+        uniforms: shared, vertexShader: FULLSCREEN_VERT, fragmentShader: SKY_FRAG, depthTest: false,
+      }));
+      sky.frustumCulled = false;
+      world.add(sky);
+
+      // Flock: the camera flies along with it, so the birds keep their place in a
+      // diagonal formation — near and big at the top-left, far and small toward
+      // the sun on the horizon — and only drift around their slot.
+      // Slots are in screen terms: x ∈ [-1, 1] across the width, y in world units.
+      const horizonY = HORIZON * 2 - 1;                   // horizon in world units
+      const birds = Array.from({ length: FLOCK_SIZE }, (_, i) => {
+        const k = i / (FLOCK_SIZE - 1);                   // 0 = leader of the line (near) → 1 = farthest
+        const jitter = () => Math.random() - 0.5;         // keeps the line loose, not a ruler
+        return {
+          size:  1 - 0.7 * k + jitter() * 0.12,
+          x:     -0.7 + 1.15 * k + jitter() * 0.25,
+          y:     THREE.MathUtils.lerp(horizonY + 0.1, 0.75, (1 - k) ** 1.3) + jitter() * 0.08,
+          phase: Math.random(),
+        };
+      }).sort((a, b) => a.size - b.size);                 // far → near, so near birds draw on top
+
+      const birdGeo = new THREE.PlaneGeometry(0.48, 0.48 * FRAME_H / FRAME_W);
+      birdGeo.setAttribute('aPhase', new THREE.InstancedBufferAttribute(Float32Array.from(birds, b => b.phase), 1));
+      birdGeo.setAttribute('aHaze',  new THREE.InstancedBufferAttribute(Float32Array.from(birds, b => Math.max(0, 1 - b.size) * 0.7), 1));
+      const flock = new THREE.InstancedMesh(birdGeo, new THREE.ShaderMaterial({
+        uniforms: { uTime: shared.uTime, uAtlas: { value: createFlamingoAtlas() } },
+        vertexShader: BIRD_VERT, fragmentShader: BIRD_FRAG,
+        transparent: true, premultipliedAlpha: true, depthTest: false,
+      }), FLOCK_SIZE);
+      flock.frustumCulled = false;                        // instances move every frame
+      world.add(flock);
+
+      // Screen pass: mirror sea + pencil look, reading the world texture
+      const screenMat = new THREE.ShaderMaterial({
+        uniforms: {
+          ...shared,
+          tWorld:      { value: worldRT.texture },
+          uRes:        { value: new THREE.Vector2() },
+          uPixelRatio: { value: 1 },
+        },
+        vertexShader: FULLSCREEN_VERT, fragmentShader: SCREEN_FRAG, depthTest: false,
+      });
+      const screenQuad = new THREE.Mesh(quad, screenMat);
+      screenQuad.frustumCulled = false;
+      screen.add(screenQuad);
+
+      /* ── Resize: canvas, render target and world bounds follow the window ──
+         (DPR too: it changes with browser zoom or when moving to another screen) */
+      function resize() {
+        const w = innerWidth, h = innerHeight, aspect = w / h;
+        renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_DPR));
+        screenMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+        renderer.setSize(w, h, false);
+        renderer.getDrawingBufferSize(screenMat.uniforms.uRes.value);
+        worldRT.setSize(screenMat.uniforms.uRes.value.x, screenMat.uniforms.uRes.value.y);
+        camera.left = -aspect; camera.right = aspect;
+        camera.updateProjectionMatrix();
+        shared.uAspect.value = aspect;
+      }
+
+      /* ── One frame at time t (seconds). Everything is a function of t ── */
+      const dummy = new THREE.Object3D();
+      function render(t) {
+        shared.uTime.value    = t;
+        shared.uHorizon.value = HORIZON + Math.sin(t * 0.4) * 0.004; // gentle camera bob
+        shared.uDrift.value   = t * 0.02;                            // slow sideways drift
+        shared.uTravel.value  = t * 0.35;                            // gliding forward over the sea
+
+        // Each bird floats around its slot: up/down and forward/back on slow
+        // sine waves, each bird with its own phase so they never move in sync.
+        // On narrow (portrait) screens the birds shrink so the line still fits.
+        const aspect = shared.uAspect.value;
+        const fit    = Math.min(1, aspect ** 0.6);
+        birds.forEach((b, i) => {
+          const p    = b.phase * Math.PI * 2;
+          const rise = Math.sin(t * 0.55 + p);
+          const surge = Math.sin(t * 0.31 + p * 1.7);
+          dummy.position.set(
+            b.x * aspect + surge * 0.07 * b.size,
+            b.y + rise * 0.04 * b.size,
+            0,
+          );
+          dummy.rotation.z = Math.cos(t * 0.55 + p) * 0.06;  // nose follows the climb/dive
+          dummy.scale.setScalar(b.size * fit);
+          dummy.updateMatrix();
+          flock.setMatrixAt(i, dummy.matrix);
+        });
+        flock.instanceMatrix.needsUpdate = true;
+
+        renderer.setRenderTarget(worldRT);
+        renderer.render(world, camera);
+        renderer.setRenderTarget(null);
+        renderer.render(screen, camera);
+      }
+
+      resize();
+      if (reduceMotion) {
+        render(STILL_TIME);                                // one still drawing, no animation loop
+        addEventListener('resize', () => { resize(); render(STILL_TIME); });
+      } else {
+        const clock = new THREE.Clock();
+        addEventListener('resize', resize);
+        renderer.setAnimationLoop(() => render(clock.getElapsedTime()));
+      }
+    }
+  </script>
+</body>
+</html>
