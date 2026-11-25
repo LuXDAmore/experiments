@@ -43,6 +43,7 @@ jobs:
           cp -r packages/experiment-13-shoganai _site/
           cp -r packages/experiment-14-tabibito _site/
           cp -r packages/experiment-15-yuyake _site/
+          cp -r packages/experiment-16-hamorebi _site/
           cp -r packages/landing _site/
           cat > _site/index.html << 'EOF'
           <!DOCTYPE html>
