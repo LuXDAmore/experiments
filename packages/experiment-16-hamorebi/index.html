@@ -16,8 +16,6 @@
        the kanji runs vertically along the left edge, the controls sit top-right. */
     :root {
       --ink:    #4a1f35;   /* deep rose-plum */
-      --ink-60: rgba(74, 31, 53, .62);
-      --rose:   #ffaaa5;
       --peach:  #ffb48b;
       --dusk:   #c5887a;
       --font-display: 'Fraunces', 'Cormorant Garamond', Georgia, serif;
@@ -41,31 +39,32 @@
     .gl-lost #c { visibility: hidden; }        /* GPU context lost: the gradient shows through */
 
     /* ── Chrome ── */
+    /* The scene is mid-tone, so the small text uses the full ink for contrast */
     .back-link, .exp-label {
       position: fixed; z-index: 2; top: 28px;
       font-family: var(--font-mono);
       font-size: 10px; letter-spacing: .3em; text-transform: uppercase;
-      color: var(--ink-60);
+      color: var(--ink);
     }
     .back-link {
       left: clamp(20px, 4vw, 60px);
       text-decoration: none;
       display: flex; align-items: center; gap: 8px;
-      transition: color .25s;
+      touch-action: none;                      /* a drag starting here still moves the light; taps still navigate */
     }
-    .back-link:hover, .back-link:focus-visible { color: var(--ink); }
+    .back-link:hover, .back-link:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
     .back-link::before { content: '←'; }
     .exp-label { right: 72px; }                /* left of the controls button */
+    .exp-label, .kanji { pointer-events: none; }   /* decorative: touches fall through to the canvas */
 
-    /* ── Vertical kanji on the left edge ── */
+    /* ── Vertical kanji on the left edge, below the top bar ── */
     .kanji {
       position: fixed; z-index: 2;
-      left: clamp(18px, 3.4vw, 52px); top: 50%;
-      transform: translateY(-50%);
+      left: clamp(18px, 3.4vw, 52px); top: clamp(84px, 14vh, 140px);
       writing-mode: vertical-rl;
       font-family: var(--font-jp); font-size: clamp(20px, 2.2vw, 30px);
       letter-spacing: .5em;
-      color: var(--ink-60);
+      color: var(--ink);
     }
     @media (max-height: 560px) { .kanji { display: none; } }   /* short screens: room for the label */
 
@@ -78,7 +77,6 @@
     }
     .label__kicker {
       font-family: var(--font-mono); font-size: 10px; letter-spacing: .32em; text-transform: uppercase;
-      color: var(--ink-60);
     }
     .label__title {
       font-style: italic; font-weight: 300;
@@ -87,12 +85,13 @@
       letter-spacing: -.02em;
       margin: .12em 0 .1em -.04em;
     }
-    .label__meta { font-style: italic; font-size: clamp(15px, 1.4vw, 19px); color: var(--ink-60); }
+    .label__meta { font-style: italic; font-size: clamp(15px, 1.4vw, 19px); }
     .label__hint {
       margin-top: 14px;
       font-family: var(--font-mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase;
-      color: var(--ink-60);
+      visibility: hidden;                      /* shown once the light can follow the pointer (.gl) */
     }
+    .gl .label__hint { visibility: visible; }
 
     /* ── Controls (Tweakpane) ── */
     #tp-toggle {
@@ -110,10 +109,9 @@
     /* ── Entrance: the chrome comes into focus, like the light ── */
     @keyframes focus-in { from { opacity: 0; transform: translateY(.3em); filter: blur(8px); } }
     .label, .kanji, .back-link, .exp-label { animation: focus-in 1.6s cubic-bezier(.2, .7, .1, 1) .3s both; }
-    .kanji { animation-name: fade; }
-    @keyframes fade { from { opacity: 0; } }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; }
+      .label__hint { display: none; }          /* the gaze stays centred: nothing to follow */
     }
   </style>
 </head>
@@ -135,7 +133,7 @@
   <button id="tp-toggle" type="button" aria-label="Mostra o nascondi i controlli" aria-controls="tp" aria-expanded="true" hidden>⚙</button>
   <div id="tp"></div>
 
-  <!-- Three.js r169 via importmap from jsDelivr, same as experiments 01–15; Tweakpane for the controls -->
+  <!-- Three.js r169 via importmap from jsDelivr (the series' version, as in experiments 01–13 and 15); Tweakpane for the controls -->
   <script type="importmap">
   {
     "imports": {
@@ -149,8 +147,10 @@
     import * as THREE from 'three';
 
     /* ================================================================
-       Light through leaves, seen out of focus. Inspired by the background
-       of microsoft.ai; written from scratch with our own shaders.
+       Light through leaves, seen out of focus. After the background of
+       microsoft.ai: the same look, colours and parameter values,
+       re-implemented with our own shaders and code; the site's gradient
+       image is replaced by a procedural fit (COMPOSE, washField).
 
        HOW IT WORKS — five fullscreen passes per frame, at half resolution:
 
@@ -485,6 +485,7 @@
       /* ── Loop: starts once the blue noise is decoded ── */
       new THREE.TextureLoader().loadAsync(blueNoise()).then((noise) => {
         blur.uniforms.tBlueNoise.value = noise;
+        document.body.classList.add('gl');               // the scene runs: the pointer hint can show
         let elapsed = 0, last = performance.now();
         renderer.setAnimationLoop((time) => {
           const dt = Math.min((time - last) / 1000, 0.1);   // clamp: no jump when coming back to the tab

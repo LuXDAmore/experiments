@@ -113,7 +113,7 @@ experiments/
 - **Warm wash**: a procedural two-colour field (a slope plus six soft patches) overlaid on the base colour
 - **Tweakpane** controls with style presets (Originale, Miele velato, Bosco, Crepuscolo); every value stays adjustable
 - Pointer and touch move the gaze; `prefers-reduced-motion` shows one still frame; CSS gradient fallback without WebGL
-- Inspired by the background of [microsoft.ai](https://microsoft.ai); shaders and code written from scratch
+- After the background of [microsoft.ai](https://microsoft.ai): the same look, colours and parameter values, re-implemented with our own shaders and code; the site's gradient image is replaced by a procedural fit
 
 ---
 
