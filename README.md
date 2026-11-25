@@ -97,11 +97,11 @@ experiments/
 *L'ora rosa — a flock of flamingos flying toward a pastel sunset over a mirror sea, drawn in coloured pencil.*
 
 - **ThreeJS** three-pass render: sky (half resolution, every other frame) → world (sky + flock, MSAA + mipmaps) → one fullscreen screen shader
-- **Cumulus** as sphere-traced signed distance fields: soft unions of puffs with smooth flat bases and round lumps of two sizes (bigger toward the tops), shaded in four soft toon tones like the flamingos and outlined in pencil; they glide toward the camera in true perspective, dissolve when close and re-form far away
-- **Flamingos**: 3D model with its wingbeat morph animation, smooth normals computed per pose, pastel toon shading, black flight feathers with light gaps, black beak tip and eyes; a few small strays cross the sky on their own
-- **Flock motion** after field studies of formation flight: each bird wanders around its slot in the line, a positional wave runs back from the leader, wingbeats ripple down the line, a bird flaps faster while catching up, its body lifts with every downstroke and it pitches, turns and banks with its own motion
+- **Cumulus** as sphere-traced signed distance fields: soft unions of puffs with smooth flat bases and round lumps of two sizes (bigger toward the tops), shaded in four soft toon tones like the flamingos and outlined in pencil; they glide toward the camera in true perspective, dissolve when close and re-form far away. Behind them, a far bank of small cumulus painted once on a canvas with round brush dabs
+- **Flamingos**: 3D model whose 14 wingbeat poses are blended by hand, smooth normals computed per pose, pastel toon shading, black flight feathers with light gaps, black beak tip and eyes; a few far strays cross the sky on their own, softened by the haze (lines included)
+- **Flock motion** after field studies of formation flight: each bird wanders around its slot in the line, a positional wave runs back from the leader, wingbeats ripple down the line, the powered downstroke takes the longer part of a beat, short glides on spread wings ripple along the line, a bird flaps faster while catching up, its body lifts with every downstroke and it pitches, turns and banks with its own motion
 - **Liquid mirror sea**: the world flipped around the horizon and pushed by domain-warped noise into soft islands, thin horizontal streaks near the horizon, sun glints
-- **Coloured pencil on paper**: outlines and inner lines from a per-part bird mask (wings vs body), diagonal lilac hatching, paper tooth, dreamy mip-level glow
+- **Coloured pencil on paper**: outlines and inner lines from a per-part bird mask (wings vs body), redrawn 6 times a second like hand-drawn animation, diagonal lilac hatching, paper tooth, dreamy mip-level glow
 - **Drawn intro**: a pencil line traces the horizon, colour spreads from it, then the title rises; `prefers-reduced-motion` shows one still frame
 - Flamingo model by [mirada](https://mirada.com/) from [ro.me](http://www.ro.me), licensed [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) (the model file only; the rest of the repo is MIT)
 
