@@ -176,10 +176,13 @@
     const TRAVEL_SPEED = 10;                         // camera glide toward the clouds (units/s)
     const BIRD_LENGTH  = 1.5;                        // flamingo length in world units
     const MODEL_LENGTH = 176;                        // flamingo.glb is ~176 units nose to toes (nose toward +z)
-    const FLAP_SECONDS = 0.9;                        // one wingbeat: flamingos flap steadily and rarely glide
+    const FLAP_SECONDS = 0.9;                        // one wingbeat: flamingos flap steadily, gliding only now and then
+    const DOWNSTROKE   = 0.58;                       // share of a beat spent pushing down (the slower, powered half)
+    const GLIDE        = { cycle: 8, share: 0.2, lag: 0.7 }; // a short glide every ~8 s (~20% of it), 0.7 s later per bird back
     const WAVE_LAG     = 0.9;                        // s: a position change reaches the next bird back this much later
     const FLAP_LAG     = 0.16;                       // s: each bird flaps a little after the one ahead of it
-    const SPREAD_POSE  = 5;                          // wingbeat frame with the wings fully spread (feather zones)
+    const POSES        = 14;                         // flamingo.glb's flap clip: 14 poses (one per morph target), in order
+    const SPREAD_POSE  = 5;                          // the pose with the wings fully spread (gliding, feather zones)
     const INTRO = { lineFrom: 0.2, lineTo: 1.4, washFrom: 1.0, washTo: 2.8 }; // seconds (CSS --intro: title near washTo)
     const STILL_TIME   = 12;                         // frozen moment shown with prefers-reduced-motion
     const MAX_DPR      = 1.5;
@@ -192,14 +195,19 @@
       { u: 0.47, v: 0.51, d: 31 }, { u: 0.56, v: 0.55, d: 39 },
       { u: 0.60, v: 0.46, d: 48 }, { u: 0.67, v: 0.50, d: 58 },
     ];
-    // Strays: small far birds crossing the sky on their own, for depth (like the reel).
-    // drift = screen widths per second (the sign is the direction), size = scale vs the flock.
+    // Strays: far birds crossing the sky on their own, for depth (like the reel);
+    // the haze softens them. drift = screen widths per second (the sign is the direction).
     const STRAYS = [
-      { u: 0.12, v: 0.86, d: 40, drift:  0.012, size: 0.55 },
-      { u: 0.78, v: 0.90, d: 46, drift: -0.009, size: 0.5  },
-      { u: 0.52, v: 0.72, d: 52, drift: -0.014, size: 0.45 },
-      { u: 0.95, v: 0.64, d: 44, drift:  0.007, size: 0.5  },
+      { u: 0.12, v: 0.86, d: 64, drift:  0.012 },
+      { u: 0.78, v: 0.90, d: 80, drift: -0.009 },
+      { u: 0.52, v: 0.72, d: 88, drift: -0.014 },
+      { u: 0.95, v: 0.64, d: 74, drift:  0.007 },
     ];
+
+    // Painted cloud bank: a far row of cumulus on the horizon, painted once on a
+    // canvas with round brush dabs, behind the 3D clouds (the reel's sky is
+    // painted too). width = the azimuth it spans, in radians.
+    const PAINTED = { clouds: 18, width: 2.0 };
 
     // Cumulus clusters: screen anchor u (at the CLOUD.ref distance), starting
     // distance d, width w and height h in world units. They glide toward the
@@ -287,6 +295,8 @@
       uniform vec4  uClusters[CLUSTERS];       // camera-relative bounding sphere: xyz centre, w radius
       uniform float uFade[CLUSTERS];           // 0 = dissolved, 1 = fully formed
       uniform vec4  uPuffs[CLUSTERS * PUFFS];  // camera-relative puff spheres: xyz centre, w radius
+      uniform sampler2D tPainted;              // painted cloud bank: r = light, a = paint
+      uniform vec2  uPainted;                  // its azimuth span and top elevation (radians)
       varying vec2  vUv;
 
       float hash13(vec3 p3) {
@@ -315,6 +325,24 @@
         c += vec3(1.0, 0.62, 0.42) * pow(sun, 10.0) * 0.16;                                    // warm glow
         c += vec3(1.0, 0.86, 0.70) * pow(sun, 300.0) * 0.30;                                   // tight halo
         return mix(c, vec3(1.0, 0.97, 0.90), smoothstep(0.99955, 0.99975, sun));              // sun disc
+      }
+
+      // Four soft-edged cloud tones: the same steps as the flamingos' toon shading
+      vec3 cloudTone(float light) {
+        vec3 c = mix(SHADOW, SHADE, smoothstep(0.30, 0.40, light));
+        c = mix(c, MID, smoothstep(0.50, 0.60, light));
+        return mix(c, LIT, smoothstep(0.70, 0.80, light));
+      }
+
+      // The far painted bank on the horizon: the same tones, hazier, backlit
+      // near the sun, which shines through it
+      vec4 paintedBank(vec3 rd) {
+        float el = asin(clamp(rd.y, -1.0, 1.0));
+        if (el < 0.0 || el > uPainted.y) return vec4(0.0);
+        vec4  p   = textureLod(tPainted, vec2(atan(rd.x, -rd.z) / uPainted.x + 0.5, el / uPainted.y), 0.0);
+        float sun = max(dot(rd, uSunDir), 0.0);
+        vec3  c   = mix(cloudTone(p.r), HAZE, 0.45) + RIM * pow(sun, 40.0) * 0.4;
+        return vec4(c, p.a * (1.0 - smoothstep(0.9990, 0.9998, sun)));
       }
 
       // ── Cumulus: each cluster is a soft union of round puffs (signed distance
@@ -438,10 +466,7 @@
         float sun   = clamp((dot(n, uSunDir) + 0.35) / 1.35, 0.0, 1.0);
         float body  = smoothstep(uBase, uBase + 400.0, p.y);
         float light = max(sun, n.y * 0.6 + 0.35) * mix(0.7, 1.0, body);
-        // Four soft-edged tones: the same steps as the flamingos' toon shading
-        vec3  c = mix(SHADOW, SHADE, smoothstep(0.30, 0.40, light));
-        c = mix(c, MID, smoothstep(0.50, 0.60, light));
-        c = mix(c, LIT, smoothstep(0.70, 0.80, light));
+        vec3  c = cloudTone(light);
         c = mix(c, vec3(0.93, 0.70, 0.80), smoothstep(-0.1, -0.8, n.y) * 0.5); // rosy undersides: sea bounce
         float rim = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
         c += RIM * rim * pow(sunward, 3.0) * 0.9;                       // silver lining, only toward the sun
@@ -458,9 +483,12 @@
 
         float pix = length(fwidth(rd));                     // angular size of one pixel
         float cover;
-        vec3 col = skyColor(rd);
-        vec4 cl  = clouds(rd, pix, cover);                  // clouds are placed relative to the camera
-        gl_FragColor = vec4(col * (1.0 - cl.a) + cl.rgb, cover);  // alpha = cloud cover, for the outline
+        vec3 col  = skyColor(rd);
+        vec4 bank = paintedBank(rd);                        // far painted clouds, behind the 3D ones
+        col = mix(col, bank.rgb, bank.a);
+        vec4 cl   = clouds(rd, pix, cover);                 // clouds are placed relative to the camera
+        // alpha = cloud cover, for the pencil outline (lighter on the far bank)
+        gl_FragColor = vec4(col * (1.0 - cl.a) + cl.rgb, max(cover, bank.a * 0.6));
       }
     `;
 
@@ -511,6 +539,7 @@
       }
 
       // Alpha = part id for the pencil outlines: body, neck and head 1, wings 0.70 / 0.82
+      // (scaled down by the haze on far birds, so their lines fade too)
       float partId(vec3 p) { return mix(1.0, p.x < 0.0 ? 0.70 : 0.82, wingMask(p)); }
     `;
 
@@ -586,7 +615,9 @@
         // Outlines from the alpha ids: strong around the birds, lighter on the
         // cloud silhouettes; plus a faint line where the tone changes (luma)
         vec2  px   = 1.0 / uRes;
-        vec2  wob  = (vec2(noise(fc * 0.06), noise(fc * 0.06 + 5.0)) - 0.5) * 2.5 * px;
+        // The wobble is redrawn 6 times a second, like hand-drawn animation ("line boil")
+        float boil = mod(floor(uTime * 6.0), 64.0);
+        vec2  wob  = (vec2(noise(fc * 0.06 + boil * 13.7), noise(fc * 0.06 + 5.0 + boil * 7.3)) - 0.5) * 2.5 * px;
         float aC   = world(src + wob, 0.0).a;
         float aEdge = abs(world(src + wob + vec2(px.x, 0.0), 0.0).a - aC)
                     + abs(world(src + wob + vec2(0.0, px.y), 0.0).a - aC);
@@ -644,7 +675,7 @@
       camera.position.set(0, CLOUD.camHeight, 0);
       const scene = new THREE.Scene();
       scene.add(camera);
-      scene.fog = new THREE.Fog(0xf6d9d6, 25, 95);         // far birds melt into the pastel air
+      scene.fog = new THREE.Fog(0xf6d9d6, 12, 120);        // far birds melt into the pastel air
 
       // Lights: lilac sky fill + warm low sun behind the flock
       scene.add(new THREE.HemisphereLight(0xd4c8ff, 0xffcfc6, 2.4));
@@ -671,6 +702,11 @@
       const uClusters = clouds.map(() => new THREE.Vector4());
       const uPuffs    = clouds.flatMap((c) => c.puffs.map(() => new THREE.Vector4()));
 
+      // The far painted bank; its top elevation keeps the same scale as its
+      // width (radians per pixel), so the round dabs stay round on screen
+      const painted    = paintCloudBank();
+      const paintedTop = (PAINTED.width * painted.image.height) / painted.image.width;
+
       const skyMat = new THREE.ShaderMaterial({
         vertexShader: FULLSCREEN_VERT, fragmentShader: SKY_FRAG, depthTest: false, depthWrite: false,
         uniforms: {
@@ -678,8 +714,41 @@
           uPitch: { value: PITCH }, uSunDir: { value: sunDir }, uBase: { value: CLOUD.base - CLOUD.camHeight },
           uSteps: { value: 64 },
           uClusters: { value: uClusters }, uFade: { value: clouds.map(() => 1) }, uPuffs: { value: uPuffs },
+          tPainted: { value: painted }, uPainted: { value: new THREE.Vector2(PAINTED.width, paintedTop) },
         },
       });
+
+      // Paints the far cloud bank once on a 2D canvas, the way a painter would:
+      // each cloud is a dome of round dabs, the low ones first so the bright
+      // tops land on top. Red = light (1 sunlit … 0 shade), alpha = paint.
+      function paintCloudBank() {
+        const W = 2048, H = 256, base = H - 4;             // the bank sits on the horizon (canvas bottom)
+        const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
+        const g = canvas.getContext('2d');
+        for (let k = 0; k < PAINTED.clouds; k++) {
+          const cx = W * (0.06 + (0.88 * (k + 0.2 + Math.random() * 0.6)) / PAINTED.clouds); // evenly, a bit loose
+          const w  = 90 + Math.random() * 150, h = 18 + Math.random() * 55; // far away: low and small
+          const dabs = Array.from({ length: Math.round(w / 3) }, () => {
+            const x = (Math.random() - 0.5) * w;
+            const y = Math.random() * h * Math.sqrt(Math.max(0, 1 - ((2 * x) / w) ** 2)); // inside a dome
+            return { x: cx + x, y, r: 4 + Math.random() * 9 * (1 - (0.4 * y) / h) };
+          }).sort((a, b) => a.y - b.y);                    // low dabs first
+          for (const { x, y, r } of dabs) {
+            const up    = y / h;                           // 0 at the base → 1 at the top: tops catch more light
+            const light = Math.round(255 * (0.55 + 0.45 * up));
+            const shade = Math.round(255 * (0.15 + 0.3 * up));
+            // Each dab lit from above, a little from the sun's side (right)
+            const grad = g.createRadialGradient(x + r * 0.35, base - y - r * 0.45, r * 0.1, x, base - y, r);
+            grad.addColorStop(0, `rgb(${light}, 0, 0)`);
+            grad.addColorStop(1, `rgb(${shade}, 0, 0)`);
+            g.fillStyle = grad;
+            g.beginPath();
+            g.arc(x, base - y, r, 0, Math.PI * 2);
+            g.fill();
+          }
+        }
+        return new THREE.CanvasTexture(canvas);
+      }
 
       // A cumulus silhouette from PUFF_ROWS: each row narrower and higher.
       // Returns [x, y, z, radius] relative to the cluster's base centre.
@@ -727,8 +796,7 @@
       /* ── Flock: one cloned flamingo per slot, each with its own wingbeat ── */
       const birds = [];
       new GLTFLoader().load('flamingo.glb', (gltf) => {
-        const source = gltf.scene.children[0];
-        const clip   = gltf.animations[0];
+        const source = gltf.scene.children[0];               // its flap poses are driven by setWingPose()
         // 4-step pastel toon ramp
         const ramp = new THREE.DataTexture(new Uint8Array([150, 195, 235, 255]), 4, 1, THREE.RedFormat);
         ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
@@ -742,16 +810,15 @@
           const mesh = source.clone();
           mesh.material = material;
           mesh.rotation.order = 'YXZ';                     // heading, then pitch, then bank
-          const mixer = new THREE.AnimationMixer(mesh);
-          const beat  = FLAP_SECONDS * (slot.drift ? 0.75 : 1) * (0.95 + 0.1 * Math.random()); // small birds beat faster
-          mixer.clipAction(clip).setDuration(beat).play();
           camera.add(mesh);
           birds.push({
-            mesh, mixer, slot, beat,
-            // place in the line, 0 = leader (the farthest); for strays a random rank only shifts their wander
+            mesh, slot,
+            beat:   FLAP_SECONDS * (0.95 + 0.1 * Math.random()),
+            // place in the line, 0 = leader (the farthest); for strays a random rank only shifts their timing
             rank:   slot.drift ? Math.random() * 6 : FLOCK.length - 1 - i,
             phase:  Math.random() * Math.PI * 2,
             offset: slot.drift ? Math.random() * 3 : Math.random() * 0.08, // the flock flaps nearly in step
+            glide:  GLIDE.share * (0.75 + 0.5 * Math.random()),           // some glide a little longer
           });
         });
         beginIntro();
@@ -820,7 +887,12 @@
           .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vSpread = aSpread;');
         shader.fragmentShader = 'varying vec3 vSpread;\n' + PLUMAGE_GLSL + shader.fragmentShader
           .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = plumage(diffuseColor.rgb, vSpread);')
-          .replace('#include <dithering_fragment>', '#include <dithering_fragment>\n  gl_FragColor.a = partId(vSpread);');
+          .replace('#include <dithering_fragment>', `#include <dithering_fragment>
+            float haze = 0.0;                              // far birds: the haze lightens their pencil lines too
+            #ifdef USE_FOG
+              haze = smoothstep(fogNear, fogFar, vFogDepth);
+            #endif
+            gl_FragColor.a = partId(vSpread) * (1.0 - 0.65 * haze);`);
       }
 
       function beginIntro() {
@@ -899,11 +971,11 @@
         // Narrow (portrait) screens get slightly smaller birds so the line fits.
         const fit = Math.min(1, aspect ** 0.5);
         birds.forEach((b) => {
-          const { mesh, mixer, slot } = b;
+          const { mesh, slot } = b;
           const drift = slot.drift || 0;
           const u     = ((slot.u + drift * t + 0.15) % 1.3 + 1.3) % 1.3 - 0.15; // -0.15 … 1.15
           const yaw   = drift < 0 ? -1.85 : 1.85;          // fly right (strays drifting left: left), slightly away
-          const len   = BIRD_LENGTH * fit * (slot.size || 1);
+          const len   = BIRD_LENGTH * fit;
           // Offsets in body lengths, and how fast they change (for the attitude).
           // Perspective shrinks far motion, so farther birds wander a bit more
           // and their movement still reads on screen.
@@ -914,7 +986,12 @@
           // Wingbeat on its own clock: after the bird ahead (a ripple down the
           // line), a little ahead while surging forward (it flaps harder to catch up)
           const flapT = t + b.offset - b.rank * FLAP_LAG + 0.15 * off.surge;
-          const bob   = 0.035 * Math.cos((2 * Math.PI * flapT) / b.beat); // body lifts with each downstroke
+          const phase = (((flapT / b.beat) % 1) + 1) % 1; // 0 → 1 through one beat
+          const flap  = flapAmount(b, t);                  // 1 flapping, 0 gliding
+          setWingPose(mesh, phase, flap);
+          // The body lifts with each downstroke; while gliding it rocks gently on the air
+          const bob  = 0.035 * Math.cos(2 * Math.PI * phase) * flap;
+          const rock = 0.06 * Math.sin(t * 1.7 + b.phase) * (1 - flap);
           const fx = Math.sin(yaw), fz = Math.cos(yaw);   // forward along the flight line; (fz, -fx) is the bird's left
           mesh.position.set(
             screenX(u, slot.d) + (fx * off.surge + fz * off.side) * len,
@@ -923,9 +1000,8 @@
           );
           // Attitude follows the motion: nose up while climbing, a slight turn
           // and bank toward the side it's sliding to (3 body lengths/s ≈ its airspeed)
-          mesh.rotation.set(-Math.atan2(vRise, 3), yaw + Math.atan2(vSide, 3), -vSide * 0.25);
+          mesh.rotation.set(-Math.atan2(vRise, 3), yaw + Math.atan2(vSide, 3), -vSide * 0.25 + rock);
           mesh.scale.setScalar(len / MODEL_LENGTH);
-          mixer.setTime(flapT);
         });
 
         // 1. Sky (every other frame: clouds change slowly)
@@ -954,6 +1030,30 @@
           rise:  reach * (0.3 * Math.sin(w * 0.37 + 1.1) + 0.2 * Math.sin(t * 0.61 + b.phase * 2.3)),
           side:  reach * 0.45 * Math.sin(t * 0.29 + b.phase * 1.7),
         };
+      }
+
+      // 1 = flapping, 0 = gliding. Every GLIDE.cycle seconds a bird holds its
+      // wings out for a short glide; the glide reaches each bird back in the
+      // line a little later, a ripple like the one of the positions.
+      function flapAmount(b, t) {
+        const c = ((((t - b.rank * GLIDE.lag) / GLIDE.cycle) % 1) + 1) % 1;
+        return smooth(b.glide / 2 - 0.04, b.glide / 2 + 0.04, Math.abs(c - 0.5)); // glide around c = 0.5
+      }
+
+      // Wing pose for a beat phase (0 → 1), blended toward the spread pose while
+      // gliding. The clip's poses 0→8 lift the wings and 8→14 push them down:
+      // the timing is stretched so the powered downstroke takes DOWNSTROKE of
+      // the beat, as in real birds.
+      function setWingPose(mesh, phase, flap) {
+        const UP   = 8;                                    // poses in the upstroke
+        const lift = 1 - DOWNSTROKE;
+        const pose = phase < lift ? (phase / lift) * UP : UP + ((phase - lift) / DOWNSTROKE) * (POSES - UP);
+        const i0 = Math.floor(pose) % POSES, i1 = (i0 + 1) % POSES, f = pose - Math.floor(pose);
+        const w  = mesh.morphTargetInfluences;
+        w.fill(0);
+        w[i0] += (1 - f) * flap;
+        w[i1] += f * flap;
+        w[SPREAD_POSE] += 1 - flap;
       }
 
       function smooth(a, b, x) {
