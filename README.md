@@ -110,9 +110,9 @@ experiments/
 
 - **ThreeJS** five fullscreen passes at half resolution: gaze (an ellipse around the pointer) → shimmer (sine warp) → leaves (animated, stretched Voronoi cells) → blur → compose
 - **Bokeh**: a 50-tap golden-angle disc precomputed in JS, bright taps weighted up to 31× so light blooms into discs, rotated per pixel by blue noise ([Christoph Peters](https://momentsingraphics.de/BlueNoise.html), CC0)
-- **Warm wash**: a procedural two-colour field (a slope plus six soft patches) overlaid on the base colour
+- **Warm wash**: two procedural fields over the same six soft patches, one from light to shade and one toward a golden accent, overlaid on the base colour
 - **Tweakpane** controls with style presets (Originale, Miele velato, Bosco, Crepuscolo); every value stays adjustable
-- Pointer and touch move the gaze; `prefers-reduced-motion` shows one still frame; CSS gradient fallback without WebGL
+- Pointer and touch move the gaze; a small info line (the three.js revision) sits bottom-left; `prefers-reduced-motion` shows one still frame; CSS gradient fallback without WebGL
 - After the background of [microsoft.ai](https://microsoft.ai): the same look, colours and parameter values, re-implemented with our own shaders and code; the site's gradient image is replaced by a procedural fit
 
 ---

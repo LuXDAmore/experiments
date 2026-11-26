@@ -25,13 +25,15 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* The gradient is also the no-WebGL fallback: warm light in the middle, dusk at the edges */
+    /* Until the first frame: a flat dusk, so the light switches on in one step */
     html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
     body {
-      background: radial-gradient(ellipse at 50% 50%, var(--peach) 0%, #db957f 55%, var(--dusk) 100%);
+      background: var(--dusk);
       color: var(--ink);
       font-family: var(--font-display);
     }
+    /* No WebGL, or the GPU context is lost: warm light in the middle, dusk at the edges */
+    body.no-gl, body.gl-lost { background: radial-gradient(ellipse at 50% 50%, var(--peach) 0%, #db957f 55%, var(--dusk) 100%); }
 
     /* The drawing buffer is half the CSS size: CSS stretches it full screen.
        touch-action: none → a finger sends continuous pointermove, no browser pan/zoom */
@@ -71,7 +73,7 @@
     /* ── Museum label ── */
     .label {
       position: fixed; z-index: 2;
-      left: clamp(20px, 4vw, 60px); bottom: clamp(28px, 6vh, 64px);
+      left: clamp(20px, 4vw, 60px); bottom: clamp(40px, 6vh, 64px);   /* clear of the info line */
       max-width: min(560px, 80vw);
       pointer-events: none;
     }
@@ -86,24 +88,25 @@
       margin: .12em 0 .1em -.04em;
     }
     .label__meta { font-style: italic; font-size: clamp(15px, 1.4vw, 19px); }
-    .label__hint {
-      margin-top: 14px;
-      font-family: var(--font-mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase;
-      visibility: hidden;                      /* shown once the light can follow the pointer (.gl) */
-    }
-    .gl .label__hint { visibility: visible; }
 
-    /* ── Controls (Tweakpane) ── */
+    /* ── Info line, as in the study: small, light, out of the way (written by the script) ── */
+    #info {
+      position: fixed; z-index: 2; left: 16px; bottom: 16px;
+      font: 11px/1.4 ui-monospace, monospace; color: rgb(255 255 255 / .6);
+      pointer-events: none; user-select: none;
+    }
+
+    /* ── Controls (Tweakpane), placed as in the study ── */
     #tp-toggle {
-      position: fixed; z-index: 3; top: 16px; right: 16px;
+      position: fixed; z-index: 3; top: 12px; right: 12px;
       width: 40px; height: 40px; border: 0; border-radius: 8px;
       background: rgb(20 15 25 / .85); color: #fff; font-size: 18px;
       cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
     #tp-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
     #tp {
-      position: fixed; z-index: 3; top: 64px; right: 16px;
-      width: min(280px, calc(100vw - 32px)); max-height: calc(100dvh - 80px); overflow-y: auto;
+      position: fixed; z-index: 3; top: 60px; right: 12px;
+      width: min(280px, calc(100vw - 24px)); max-height: calc(100dvh - 72px); overflow-y: auto;
     }
 
     /* ── Entrance: the chrome comes into focus, like the light ── */
@@ -111,7 +114,6 @@
     .label, .kanji, .back-link, .exp-label { animation: focus-in 1.6s cubic-bezier(.2, .7, .1, 1) .3s both; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; }
-      .label__hint { display: none; }          /* the gaze stays centred: nothing to follow */
     }
   </style>
 </head>
@@ -127,8 +129,8 @@
     <p class="label__kicker">Esperimento 16 — Il sole tra le foglie</p>
     <h1 class="label__title">Hamorebi</h1>
     <p class="label__meta">Luce che filtra tra le foglie, fuori fuoco</p>
-    <p class="label__hint">Muovi il mouse o il dito: la luce segue lo sguardo</p>
   </header>
+  <p id="info"></p>
 
   <button id="tp-toggle" type="button" aria-label="Mostra o nascondi i controlli" aria-controls="tp" aria-expanded="true" hidden>⚙</button>
   <div id="tp"></div>
@@ -142,15 +144,18 @@
     }
   }
   </script>
+  <!-- Fetch Tweakpane alongside three, so the panel arrives with the first frame (it's still imported on its own, below) -->
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js">
 
-  <script type="module">
+  <!-- onerror: three.js couldn't load (CDN blocked), so the script never runs: show the gradient fallback -->
+  <script type="module" onerror="document.body.classList.add('no-gl')">
     import * as THREE from 'three';
 
     /* ================================================================
        Light through leaves, seen out of focus. After the background of
        microsoft.ai: the same look, colours and parameter values,
        re-implemented with our own shaders and code; the site's gradient
-       image is replaced by a procedural fit (COMPOSE, washField).
+       image is replaced by a procedural fit (COMPOSE, washFields).
 
        HOW IT WORKS — five fullscreen passes per frame, at half resolution:
 
@@ -178,11 +183,12 @@
       leafScale: 0.534, leafSpread: 1, leafAngle: 44, leafStretch: 0.84,   // leafAngle in degrees
       blurRadius: 0.754, blurTilt: 0.5,
     };
+    // wash*: the three colours of the warm wash under the light (light, shade, and the accent it leans toward)
     const STYLES = {
-      'Originale':    { base: '#ffaaa5', shade: '#4a0035', light: '#ffd198', washLight: '#f4d18d', washShade: '#e0713c' },
-      'Miele velato': { base: '#f8d27a', shade: '#2e4a50', light: '#fff4da', washLight: '#f6e3b0', washShade: '#d9913f' },
-      'Bosco':        { base: '#b6d39c', shade: '#14321f', light: '#fff1b8', washLight: '#e6ecae', washShade: '#6e9a5a' },
-      'Crepuscolo':   { base: '#c9b3e6', shade: '#1e1a3a', light: '#ffc9a8', washLight: '#f2c6d8', washShade: '#8a6fc0' },
+      'Originale':    { base: '#ffaaa5', shade: '#4a0035', light: '#ffd198', washLight: '#f4d18d', washShade: '#e0713c', washTint: '#eaba4a' },
+      'Miele velato': { base: '#f8d27a', shade: '#2e4a50', light: '#fff4da', washLight: '#f6e3b0', washShade: '#d9913f', washTint: '#e0d474' },
+      'Bosco':        { base: '#b6d39c', shade: '#14321f', light: '#fff1b8', washLight: '#e6ecae', washShade: '#6e9a5a', washTint: '#91daa4' },
+      'Crepuscolo':   { base: '#c9b3e6', shade: '#1e1a3a', light: '#ffc9a8', washLight: '#f2c6d8', washShade: '#8a6fc0', washTint: '#e29fc9' },
     };
     const params = { style: 'Originale', ...SHAPE, ...STYLES['Originale'] };   // live state (the panel edits it)
 
@@ -208,6 +214,7 @@
     } catch (err) {
       console.warn('[HAMOREBI] WebGL unavailable, showing CSS fallback.', err);
       canvas.remove();
+      document.body.classList.add('no-gl');
     }
 
     /* ================================================================
@@ -337,12 +344,13 @@
       }
     `;
 
-    // 5. COMPOSE — a warm wash (two colours mixed by a soft field: a left-to-right
-    // slope plus six blurred patches) overlaid on the base colour, then tinted
-    // by the blurred light at 26%
+    // 5. COMPOSE — a warm wash overlaid on the base colour, then tinted by the
+    // blurred light at 26%. The wash is two soft fields over the same six blurred
+    // patches: one moves it from light to shade, the other leans it toward the
+    // accent colour (golden on top, pinker along the diagonal streaks)
     const COMPOSE_FRAG = /* glsl */`
       uniform sampler2D tInput;
-      uniform vec3 uBase, uWashLight, uWashShade;
+      uniform vec3 uBase, uWashLight, uWashShade, uWashTint;
       in  vec2 vUv;
       out vec4 fragColor;
       ${COMMON}
@@ -351,21 +359,28 @@
         vec2 d = turn(uv - p.xy, -a) / p.zw;
         return exp(-dot(d, d));
       }
-      float washField(vec2 uv) {
-        return 0.4527 - 0.5523 * uv.x
-          + 0.3495 * patchAt(uv, vec4(-0.02, 0.83, 0.135, 0.227),  0.187)
-          + 0.4050 * patchAt(uv, vec4( 0.32, 0.30, 0.243, 0.620),  0.150)
-          + 0.5196 * patchAt(uv, vec4( 0.66, 0.67, 0.285, 0.133), -1.163)
-          + 0.6067 * patchAt(uv, vec4(-0.04, 0.06, 0.175, 0.363),  0.300)
-          + 0.2129 * patchAt(uv, vec4( 0.73, 0.38, 0.268, 0.040), -1.088)
-          + 0.5928 * patchAt(uv, vec4( 1.04, 0.91, 0.188, 0.600),  0.000);
+      // x: light (0) → shade (1); y: how far toward the accent (negative = away from it)
+      vec2 washFields(vec2 uv) {
+        float p1 = patchAt(uv, vec4(-0.02, 0.83, 0.135, 0.227),  0.187);
+        float p2 = patchAt(uv, vec4( 0.32, 0.30, 0.243, 0.620),  0.150);
+        float p3 = patchAt(uv, vec4( 0.66, 0.67, 0.285, 0.133), -1.163);
+        float p4 = patchAt(uv, vec4(-0.04, 0.06, 0.175, 0.363),  0.300);
+        float p5 = patchAt(uv, vec4( 0.73, 0.38, 0.268, 0.040), -1.088);
+        float p6 = patchAt(uv, vec4( 1.04, 0.91, 0.188, 0.600),  0.000);
+        return vec2(
+          0.4527 - 0.5523 * uv.x
+            + 0.3495 * p1 + 0.4050 * p2 + 0.5196 * p3 + 0.6067 * p4 + 0.2129 * p5 + 0.5928 * p6,
+          0.1852 - 0.2600 * uv.x + 0.0973 * uv.y
+            - 0.5226 * p1 - 0.1476 * p2 - 0.1755 * p3 - 0.2392 * p4 - 0.1866 * p5 + 0.0145 * p6);
       }
       // W3C "overlay" blend mode
       vec3 overlay(vec3 base, vec3 top) {
         return mix(2.0 * base * top, 1.0 - 2.0 * (1.0 - base) * (1.0 - top), step(0.5, base));
       }
       void main() {
-        vec3 wash  = mix(uWashLight, uWashShade, washField(vUv));
+        vec2 field = washFields(vUv);
+        vec3 mid   = mix(uWashLight, uWashShade, 0.5);
+        vec3 wash  = mix(uWashLight, uWashShade, field.x) + (uWashTint - mid) * field.y;
         vec3 under = mix(uBase, overlay(uBase, wash), 0.61);
         vec4 fx    = texture(tInput, vUv);
         fragColor  = vec4(under * mix(vec3(1.0), mix(uLight, fx.rgb, fx.a), 0.26), 1.0);
@@ -417,6 +432,7 @@
       const compose = pass(COMPOSE_FRAG, {
         uLight: shared.uLight, uBase: shared.uBase, tInput: { value: targetB.texture },
         uWashLight: { value: new THREE.Vector3() }, uWashShade: { value: new THREE.Vector3() },
+        uWashTint: { value: new THREE.Vector3() },
       });
 
       // The taps of the blur disc: golden-angle (Vogel) spiral, the radius
@@ -439,6 +455,7 @@
         setHex(gaze.uniforms.uShade.value, params.shade);
         setHex(compose.uniforms.uWashLight.value, params.washLight);
         setHex(compose.uniforms.uWashShade.value, params.washShade);
+        setHex(compose.uniforms.uWashTint.value, params.washTint);
         gaze.uniforms.uRadius.value    = params.gazeRadius;
         gaze.uniforms.uSoftness.value  = params.gazeSoftness;
         gaze.uniforms.uSquash.value    = params.gazeSquash;
@@ -479,13 +496,20 @@
 
       // Reduced motion: centred gaze, time stopped; redraw only on demand
       const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-      reducedMotion.addEventListener('change', () => { needsRender = true; });
       canvas.addEventListener('webglcontextrestored', () => { needsRender = true; });
+
+      // The info line, as in the study. With reduced motion the light stays
+      // centred, so it doesn't invite you to move the pointer.
+      const info = document.getElementById('info');
+      const writeInfo = () => {
+        info.textContent = `Three.js r${THREE.REVISION}` + (reducedMotion.matches ? '' : ' — muovi il mouse (o il dito)');
+      };
+      writeInfo();
+      reducedMotion.addEventListener('change', () => { needsRender = true; writeInfo(); });
 
       /* ── Loop: starts once the blue noise is decoded ── */
       new THREE.TextureLoader().loadAsync(blueNoise()).then((noise) => {
         blur.uniforms.tBlueNoise.value = noise;
-        document.body.classList.add('gl');               // the scene runs: the pointer hint can show
         let elapsed = 0, last = performance.now();
         renderer.setAnimationLoop((time) => {
           const dt = Math.min((time - last) / 1000, 0.1);   // clamp: no jump when coming back to the tab
@@ -522,7 +546,8 @@
     /* ── Tweakpane: style presets, then every value (UI → params → applyParams → uniforms) ── */
     function buildPanel(Pane, applyParams) {
       const tp   = document.getElementById('tp');
-      const pane = new Pane({ title: 'Hamorebi', container: tp });
+      // Title, folders and labels as in the study; the style list and the wash colours are the additions
+      const pane = new Pane({ title: 'Bokeh', container: tp });
 
       // A style sets the colours; everything stays adjustable afterwards
       const styleOptions = Object.fromEntries(Object.keys(STYLES).map((k) => [k, k]));
@@ -533,33 +558,36 @@
       });
 
       const colours = pane.addFolder({ title: 'Colori' });
-      colours.addBinding(params, 'base',      { label: 'Fondo',          view: 'color' });
-      colours.addBinding(params, 'shade',     { label: 'Ombra',          view: 'color' });
-      colours.addBinding(params, 'light',     { label: 'Luce',           view: 'color' });
-      colours.addBinding(params, 'washLight', { label: 'Velatura chiara', view: 'color' });
-      colours.addBinding(params, 'washShade', { label: 'Velatura scura',  view: 'color' });
+      colours.addBinding(params, 'base',  { label: 'Sfondo',     view: 'color' });
+      colours.addBinding(params, 'shade', { label: 'Vignette',   view: 'color' });
+      colours.addBinding(params, 'light', { label: 'Tinta luce', view: 'color' });
+
+      const washF = pane.addFolder({ title: 'Velatura', expanded: false });
+      washF.addBinding(params, 'washLight', { label: 'Chiara',  view: 'color' });
+      washF.addBinding(params, 'washShade', { label: 'Scura',   view: 'color' });
+      washF.addBinding(params, 'washTint',  { label: 'Accento', view: 'color' });
 
       // Step 0.001 where a default has three decimals, so dragging can land on it again
-      const gazeF = pane.addFolder({ title: 'Sguardo', expanded: false });
+      const gazeF = pane.addFolder({ title: 'Vignette', expanded: false });
       gazeF.addBinding(params, 'gazeRadius',   { label: 'Raggio',    min: 0.01, max: 1.5, step: 0.001 });
       gazeF.addBinding(params, 'gazeSoftness', { label: 'Sfumatura', min: 0.01, max: 3,   step: 0.01 }); // 0 would break smoothstep
-      gazeF.addBinding(params, 'gazeSquash',   { label: 'Ellisse',   min: 0,    max: 1,   step: 0.01 });
-      gazeF.addBinding(params, 'gazeTurn',     { label: 'Rotazione', min: 0,    max: 1,   step: 0.001 });
+      gazeF.addBinding(params, 'gazeSquash',   { label: 'Skew',      min: 0,    max: 1,   step: 0.01 });
+      gazeF.addBinding(params, 'gazeTurn',     { label: 'Angolo',    min: 0,    max: 1,   step: 0.001 });
 
-      const shimmerF = pane.addFolder({ title: 'Tremolio', expanded: false });
+      const shimmerF = pane.addFolder({ title: 'Onde', expanded: false });
       shimmerF.addBinding(params, 'shimmerFreq', { label: 'Frequenza', min: 0, max: 2, step: 0.01 });
       shimmerF.addBinding(params, 'shimmerAmp',  { label: 'Ampiezza',  min: 0, max: 3, step: 0.01 });
-      shimmerF.addBinding(params, 'shimmerTurn', { label: 'Direzione', min: 0, max: 1, step: 0.01 });
+      shimmerF.addBinding(params, 'shimmerTurn', { label: 'Rotazione', min: 0, max: 1, step: 0.01 });
 
-      const leavesF = pane.addFolder({ title: 'Foglie', expanded: false });
-      leavesF.addBinding(params, 'leafScale',   { label: 'Scala',       min: 0.05, max: 2,   step: 0.001 });
+      const leavesF = pane.addFolder({ title: 'Foglie (shatter)', expanded: false });
+      leavesF.addBinding(params, 'leafScale',   { label: 'Scala celle', min: 0.05, max: 2,   step: 0.001 });
       leavesF.addBinding(params, 'leafSpread',  { label: 'Spostamento', min: 0,    max: 3,   step: 0.01 });
       leavesF.addBinding(params, 'leafAngle',   { label: 'Angolo (°)',  min: 0,    max: 360, step: 1 });
-      leavesF.addBinding(params, 'leafStretch', { label: 'Allungamento', min: 0,   max: 1,   step: 0.01 });
+      leavesF.addBinding(params, 'leafStretch', { label: 'Skew',        min: 0,    max: 1,   step: 0.01 });
 
-      const blurF = pane.addFolder({ title: 'Sfocatura' });
-      blurF.addBinding(params, 'blurRadius', { label: 'Raggio',       min: 0, max: 2, step: 0.001 });
-      blurF.addBinding(params, 'blurTilt',   { label: 'Fuoco (tilt)', min: 0, max: 1, step: 0.01 });
+      const blurF = pane.addFolder({ title: 'Bokeh' });
+      blurF.addBinding(params, 'blurRadius', { label: 'Raggio blur',  min: 0, max: 2, step: 0.001 });
+      blurF.addBinding(params, 'blurTilt',   { label: 'Tilt / fuoco', min: 0, max: 1, step: 0.01 });
 
       pane.addBlade({ view: 'separator' });
       pane.addButton({ title: 'Reset' }).on('click', () => {       // back to the current style's values
