@@ -105,6 +105,16 @@ experiments/
 - **Drawn intro**: a pencil line traces the horizon, colour spreads from it, then the title rises; `prefers-reduced-motion` shows one still frame
 - Flamingo model by [mirada](https://mirada.com/) from [ro.me](http://www.ro.me), licensed [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/) (the model file only; the rest of the repo is MIT)
 
+### 16 · HAMOREBI 葉漏れ日
+*Il sole tra le foglie — light filtering through leaves, out of focus, clearing where you look.*
+
+- **ThreeJS** five fullscreen passes at half resolution: gaze (an ellipse around the pointer) → shimmer (sine warp) → leaves (animated, stretched Voronoi cells) → blur → compose
+- **Bokeh**: a 50-tap golden-angle disc precomputed in JS, bright taps weighted up to 31× so light blooms into discs, rotated per pixel by blue noise ([Christoph Peters](https://momentsingraphics.de/BlueNoise.html), CC0)
+- **Warm wash**: two procedural fields over the same six soft patches, one from light to shade and one toward a golden accent, overlaid on the base colour
+- **Tweakpane** controls with style presets (Originale, Miele velato, Bosco, Crepuscolo); every value stays adjustable
+- Pointer and touch move the gaze; a small info line (the three.js revision) sits bottom-left; `prefers-reduced-motion` shows one still frame; CSS gradient fallback without WebGL
+- After the background of [microsoft.ai](https://microsoft.ai): the same look, colours and parameter values, re-implemented with our own shaders and code; the site's gradient image is replaced by a procedural fit
+
 ---
 
 ## Tech stack (per experiment, loaded via CDN)
@@ -112,6 +122,7 @@ experiments/
 | Library | Version | Role |
 |---------|---------|------|
 | [Three.js](https://threejs.org) | 0.169 | 3D rendering / WebGL |
+| [Tweakpane](https://tweakpane.github.io/docs/) | 4.0.5 | Live controls and style presets |
 | [GSAP](https://gsap.com) | 3.12.5 | Animations + ScrollTrigger |
 | [Lenis](https://lenis.darkroom.engineering) | 1.0.42 | Smooth scroll |
 | [TailwindCSS](https://tailwindcss.com) | Play CDN v4 | Utility CSS |

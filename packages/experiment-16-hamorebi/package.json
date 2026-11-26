@@ -1,0 +1,10 @@
+{
+  "name": "@experiments/experiment-16-hamorebi",
+  "version": "1.0.0",
+  "description": "HAMOREBI — Il sole tra le foglie: light filtering through leaves, out of focus — a gaze-following bokeh study in five WebGL passes, with style presets.",
+  "main": "index.html",
+  "scripts": {"serve":"npx serve . -p 3016 --no-clipboard","dev":"npx serve . -p 3016 --no-clipboard","preview":"npx serve . -p 3016 --no-clipboard"},
+  "keywords": ["threejs","webgl","glsl","shader","bokeh","voronoi","blue-noise","tweakpane","japanese","hamorebi"],
+  "author": "LuXDAmore",
+  "license": "MIT"
+}
